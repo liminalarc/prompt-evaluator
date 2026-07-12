@@ -1,4 +1,4 @@
-# Prompt Evaluator
+# LitmusAI
 
 Evaluation harness and regression tracker for the LLM/SLM prompts embedded across our
 applications. Pull prompts into a versioned registry, run them against curated datasets,
@@ -115,7 +115,7 @@ first release aligns all three.)
 ## Project Structure
 
 ```
-prompt-evaluator/
+litmus-ai/
 ├── CLAUDE.md              # this file — root conventions (always loaded)
 ├── README.md             # clone → running locally
 ├── SPECIFICATIONS.md     # the index — single source of truth for status

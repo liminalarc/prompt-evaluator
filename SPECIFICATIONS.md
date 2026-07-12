@@ -1,4 +1,4 @@
-# Prompt Evaluator — Specifications
+# LitmusAI — Specifications
 
 > Index only. Each spec's detail is in `specs/<id>.md`. **Status here is the
 > single source of truth** for lifecycle — edit it as work moves.

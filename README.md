@@ -1,4 +1,4 @@
-# Prompt Evaluator
+# LitmusAI
 
 Evaluation harness and regression tracker for the LLM/SLM prompts embedded across our
 applications. Copy prompts into a versioned registry, run them against curated datasets,
@@ -44,8 +44,8 @@ The whole stack runs in containers on a shared network — this is the fastest p
 running app and the one CI smoke-tests.
 
 ```bash
-git clone <repo-url> prompt-evaluator
-cd prompt-evaluator
+git clone <repo-url> litmus-ai
+cd litmus-ai
 cp .env.example .env          # set ANTHROPIC_API_KEY (not needed for the skeleton echo path)
 docker compose up --build     # brings up db, eval-runner, api, web (healthy, in order)
 docker compose ps             # all services should report healthy
@@ -74,8 +74,8 @@ stack; add `-v` to also drop the data volume.
 
 1. **Clone and enter the repo**
    ```bash
-   git clone <repo-url> prompt-evaluator
-   cd prompt-evaluator
+   git clone <repo-url> litmus-ai
+   cd litmus-ai
    ```
 
 2. **Start PostgreSQL** (Docker option)
