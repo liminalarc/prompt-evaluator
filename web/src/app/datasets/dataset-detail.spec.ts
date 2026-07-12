@@ -1,9 +1,11 @@
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { Dataset } from '../dataset';
 import { DatasetDetail } from './dataset-detail';
 import { DatasetsApiService } from './datasets-api.service';
+import { EvalRunsApiService } from '../eval-runs/eval-runs-api.service';
+import { PromptsApiService } from '../prompts/prompts-api.service';
 
 const dataset: Dataset = {
   id: 'abc',
@@ -37,7 +39,13 @@ describe('DatasetDetail origin filter', () => {
       imports: [DatasetDetail],
       providers: [
         { provide: DatasetsApiService, useValue: { getDataset: () => of(dataset) } },
+        {
+          provide: EvalRunsApiService,
+          useValue: { listScorers: () => of([]), listRuns: () => of([]) },
+        },
+        { provide: PromptsApiService, useValue: { listPrompts: () => of([]) } },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => 'abc' } } } },
+        provideRouter([]),
       ],
     });
     const fixture = TestBed.createComponent(DatasetDetail);

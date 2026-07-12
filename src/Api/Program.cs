@@ -1,4 +1,5 @@
 using Api.Datasets;
+using Api.EvalRuns;
 using Api.Prompts;
 using Api.Seam;
 using Api.Version;
@@ -38,6 +39,7 @@ app.MapVersionEndpoints();
 app.MapEchoEndpoints();
 app.MapPromptEndpoints();
 app.MapDatasetEndpoints();
+app.MapEvalHarnessEndpoints();
 
 // Apply migrations on startup once a database is configured (skipped when none is,
 // e.g. the bare /health integration test).
