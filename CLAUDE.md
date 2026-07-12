@@ -40,6 +40,12 @@ improvements. An advisory layer (prompt-engineering advice) comes later.
   Python: pytest. Angular: Jasmine/Karma (unit) + Playwright (e2e).
 - **Thin vertical slices.** Each slice is runnable and testable end-to-end; commit per
   slice. No big-bang layers.
+- **No silent deferrals.** Anything a spec put *in scope* but you don't deliver — plus any
+  "future/noted/out-of-scope" pointer that doesn't already name a spec — must be re-homed
+  into a new or existing spec. **Each re-homing is a user decision**, surfaced at plan-time
+  and again at close-out; never narrow scope unilaterally. A spec is not `DONE` until its
+  deferrals are reconciled (see the checklist). When work is split out, cross-link both ways
+  (the closing spec names the new one; the new one names its origin).
 - **No premature abstractions.** Introduce a port/interface when a second implementation
   or a test seam actually demands it — not speculatively. (The three named ports above are
   the deliberate exceptions; they exist because the concept requires them.)
@@ -59,13 +65,52 @@ Status lives **only** in `SPECIFICATIONS.md` (the index) — never in a `specs/<
 
 When a spec is done:
 
-1. **Tests green** — backend (xUnit), eval-runner (pytest), web (Karma/Playwright) as touched.
-2. **Update the index** — set the spec `DONE` in `SPECIFICATIONS.md`; move its entry to
+1. **Deferrals reconciled** — every in-scope item you didn't deliver (and every unhomed
+   "future" pointer) has a spec home the **user chose**. Cross-link origin ↔ new spec. This
+   gates `DONE` (see *No silent deferrals*).
+2. **Tests green** — backend (xUnit), eval-runner (pytest), web (Karma/Playwright) as touched.
+3. **Update the index** — set the spec `DONE` in `SPECIFICATIONS.md`; move its entry to
    `## Archive` and relocate the detail file to `specs/archive/<id>.md` (id never reused).
-3. **Update the detail file** — tick AC checkboxes, append Decisions/Verification, add a
+4. **Update the detail file** — tick AC checkboxes, append Decisions/Verification, add a
    Progress-log entry with the commit SHA(s).
-4. **Update this CLAUDE.md** (or a subdir one) if a new convention was introduced.
-5. **README** stays runnable — if setup/commands changed, update it.
+5. **Update this CLAUDE.md** (or a subdir one) if a new convention was introduced.
+6. **README** stays runnable — if setup/commands changed, update it.
+
+## Releasing (flow-ship)
+
+`/flow-ship` reads this section for the release mechanism. Today the deployable artifact is
+the **compose stack** (local + CI only — there is no hosted environment yet; **production
+deployment is spec 3.2**). A release here is a **tagged, verified build**, not a deploy.
+
+**Version — one unified product SemVer** (pre-1.0 `0.x`), bumped together in all three places
+so `/version` and the git tag agree:
+
+- API — `ServiceVersionNumber` in `src/Api/Version/VersionEndpoints.cs`
+- web — `version` in `web/package.json`
+- eval-runner — its version string under `eval-runner/`
+
+The bump is commit-derived (`feat:` → minor, `fix:` → patch, breaking → major) and confirmed
+with the user before tagging. (The strings currently drift — api `0.1.0`, web `0.0.0` — so the
+first release aligns all three.)
+
+**Pre-ship validation (all must hold):**
+
+- On `main`, clean tree, up to date with origin.
+- **No unreconciled deferrals** — every closed spec's in-scope gaps were re-homed per the
+  deferral protocol (see *No silent deferrals*).
+- Every spec in the release is `DONE` in `SPECIFICATIONS.md`.
+- The four CI gates are green on the release commit: `backend`, `eval-runner`, `web`,
+  `compose-smoke`. Locally: `cd src && dotnet test`; `cd eval-runner && pytest`;
+  `cd web && npm run test:ci && npm run build`; optionally `docker compose up --build --wait`.
+
+**Cut the release:**
+
+1. Bump the three version strings to `X.Y.Z`; commit `chore: release vX.Y.Z`.
+2. Update `CHANGELOG.md` from the commits since the last tag (link `[#id]` → `specs/archive/<id>.md`).
+3. Annotated tag: `git tag -a vX.Y.Z -m "…"` listing the specs shipped; push `main` + the tag.
+4. CI runs on the pushed commit. **Stop here** — no deploy step until spec 3.2 lands.
+
+`--dry-run` prints the computed version, changelog, and tag without writing or pushing.
 
 ## Project Structure
 
