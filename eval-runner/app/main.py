@@ -6,9 +6,17 @@ fixture generation. It holds no domain authority and no persistence.
 """
 
 import os
+from typing import Annotated
 
-from fastapi import FastAPI
+from anthropic import Anthropic
+from fastapi import Depends, FastAPI
 from pydantic import BaseModel
+
+from app.generation import (
+    GenerateFixturesRequest,
+    GenerateFixturesResponse,
+    generate_fixtures,
+)
 
 SERVICE_NAME = "eval-runner"
 VERSION = "0.1.0"
@@ -49,3 +57,17 @@ def version() -> VersionResponse:
 def echo(request: EchoRequest) -> EchoResponse:
     # Skeleton behaviour: prove the seam by echoing the prompt straight back.
     return EchoResponse(output=request.prompt)
+
+
+def get_anthropic_client() -> Anthropic:
+    # Resolves credentials from the environment (ANTHROPIC_API_KEY / profile). Injected as a
+    # dependency so tests can override it with a mock — no live API calls in the suite.
+    return Anthropic()
+
+
+@app.post("/generate-fixtures", response_model=GenerateFixturesResponse)
+def generate_fixtures_endpoint(
+    request: GenerateFixturesRequest,
+    client: Annotated[Anthropic, Depends(get_anthropic_client)],
+) -> GenerateFixturesResponse:
+    return generate_fixtures(client, request)
