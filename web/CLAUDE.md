@@ -42,6 +42,18 @@ The operator-facing UI:
 - The app is **routed** (`provideRouter` in `app.config.ts`, routes in `app.routes.ts`). `App`
   is the shell (topbar nav + `<router-outlet>`); each page is its own standalone component.
   `Home` holds the skeleton round-trip at `/`.
-- **One typed API client per bounded area**: `ApiService` (eval-runs) and `PromptsApiService`
-  (prompts) — components never touch `HttpClient`. DTO-mirroring models live next to them
-  (`prompt.ts`, `eval-run.ts`).
+- **One typed API client per bounded area**: `ApiService` (eval-runs), `PromptsApiService`
+  (prompts), `DatasetsApiService` (datasets) — components never touch `HttpClient`.
+  DTO-mirroring models live next to them (`prompt.ts`, `eval-run.ts`, `dataset.ts`).
+
+## Routing (from 1.2)
+
+- `/datasets` (list) + `/datasets/:id` (fixture browse with origin filter, capture form, generate
+  trigger). Feature components in `datasets/`; they reuse `prompts/prompts.css` via `styleUrl`.
+
+## E2e that needs a model (from 1.2)
+
+- An e2e that would trigger a live model call (synthetic generation) runs against a **stubbed
+  eval-runner**: `docker-compose.e2e.yml` sets `EVAL_RUNNER_STUB=1`, and the spec self-skips
+  unless `E2E_EVAL_RUNNER_STUB` is set. Keep such specs skipped by default so the normal e2e run
+  never hits the API — see `e2e/datasets-generate.spec.ts`.

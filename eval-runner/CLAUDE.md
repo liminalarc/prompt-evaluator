@@ -26,6 +26,8 @@ persistence — .NET owns the data and decides what to store.
 - **pytest** for tests. Mock the Anthropic client at the boundary — no live API calls in
   the test suite. A thin set of contract tests asserts the request/response shapes match
   what .NET sends.
-- Config via environment variables (`ANTHROPIC_API_KEY`, model overrides). No secrets in code.
+- Config via environment variables (`ANTHROPIC_API_KEY`, `EVAL_RUNNER_MODEL`). No secrets in code.
+- **Stub mode** (`EVAL_RUNNER_STUB`) makes generation model-free and deterministic for e2e — the
+  Anthropic client is never constructed. Test-only; enabled via `docker-compose.e2e.yml`.
 - Keep endpoints thin: validate → call model → shape response. Business decisions
   (which scorer, which dataset) are made on the .NET side and passed in.
