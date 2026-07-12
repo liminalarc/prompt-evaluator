@@ -36,3 +36,12 @@ The operator-facing UI:
   compose nginx both route them to the API. No per-environment base URL in the client.
 - **Playwright e2e runs against a running stack** (compose), not an `ng serve` webServer;
   point it with `E2E_BASE_URL`. Unit tests use `npm run test:ci` (Karma headless).
+
+## Routing (from 1.1)
+
+- The app is **routed** (`provideRouter` in `app.config.ts`, routes in `app.routes.ts`). `App`
+  is the shell (topbar nav + `<router-outlet>`); each page is its own standalone component.
+  `Home` holds the skeleton round-trip at `/`.
+- **One typed API client per bounded area**: `ApiService` (eval-runs) and `PromptsApiService`
+  (prompts) — components never touch `HttpClient`. DTO-mirroring models live next to them
+  (`prompt.ts`, `eval-run.ts`).
