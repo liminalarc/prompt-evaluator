@@ -4,7 +4,7 @@
 > single source of truth** for lifecycle — edit it as work moves.
 
 ## Phase 0 — Foundation
-- **0.1** Walking Skeleton — `NOT STARTED` — [detail](specs/0.1.md)
+- **0.1** Walking Skeleton — `IN PROGRESS` — [detail](specs/0.1.md)
 
 ## Phase 1 — Core Evaluation Loop
 - **1.1** Prompt Registry — `NOT STARTED` — [detail](specs/1.1.md)
