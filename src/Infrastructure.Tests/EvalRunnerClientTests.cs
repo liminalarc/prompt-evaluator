@@ -40,4 +40,23 @@ public class EvalRunnerClientTests
         var sent = await handler.LastRequest.Content!.ReadFromJsonAsync<Dictionary<string, string>>();
         Assert.Equal("round trip", sent!["prompt"]);
     }
+
+    [Fact]
+    public async Task GetVersionAsync_reads_the_version_endpoint()
+    {
+        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(new { service = "eval-runner", version = "0.1.0", commit = "abc1234" }),
+        });
+        var http = new HttpClient(handler) { BaseAddress = new Uri("http://eval-runner:8000") };
+        var client = new EvalRunnerClient(http);
+
+        var version = await client.GetVersionAsync();
+
+        Assert.NotNull(version);
+        Assert.Equal("eval-runner", version!.Service);
+        Assert.Equal("0.1.0", version.Version);
+        Assert.Equal("abc1234", version.Commit);
+        Assert.Equal("/version", handler.LastRequest!.RequestUri!.AbsolutePath);
+    }
 }

@@ -114,6 +114,15 @@ stack; add `-v` to also drop the data volume.
 With all three running, open <http://localhost:4240>. The Angular app talks to the .NET
 API, which delegates LLM-judge scoring and synthetic fixture generation to the eval-runner.
 
+### Ops endpoints
+
+- `GET /health` — liveness (API and eval-runner).
+- `GET /version` — the API returns its own `version` + build `commit` and aggregates its
+  dependencies (a live eval-runner probe and the Postgres engine version). eval-runner
+  exposes its own `GET /version`. In compose these are on `http://localhost:4241/version`
+  (api) and `http://localhost:4242/version` (eval-runner). The build `commit` comes from the
+  `GIT_COMMIT` build-arg (`dev` when unset).
+
 ## Running Tests
 
 ```bash

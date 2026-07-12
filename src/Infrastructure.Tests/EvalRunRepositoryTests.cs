@@ -1,4 +1,5 @@
 using Domain;
+using Infrastructure;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.PostgreSql;
@@ -41,5 +42,15 @@ public sealed class EvalRunRepositoryTests : IAsyncLifetime
         Assert.Equal(run.Id, loaded!.Id);
         Assert.Equal("ping", loaded.Prompt);
         Assert.Equal("ping", loaded.Output);
+    }
+
+    [Fact]
+    public async Task SystemInfo_reports_the_postgres_engine_version()
+    {
+        var systemInfo = new SystemInfo(_db);
+
+        var version = await systemInfo.GetDatabaseVersionAsync();
+
+        Assert.StartsWith("PostgreSQL", version);
     }
 }

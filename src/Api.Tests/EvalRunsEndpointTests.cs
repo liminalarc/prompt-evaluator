@@ -19,6 +19,10 @@ public sealed class EvalRunsEndpointTests : IAsyncLifetime
     {
         public Task<string> EchoAsync(string prompt, CancellationToken ct = default)
             => Task.FromResult(prompt);
+
+        public Task<Application.ServiceVersion?> GetVersionAsync(CancellationToken ct = default)
+            => Task.FromResult<Application.ServiceVersion?>(
+                new Application.ServiceVersion("eval-runner", "0.1.0", "faketest"));
     }
 
     private sealed class Factory(string connectionString) : WebApplicationFactory<Program>
@@ -74,5 +78,27 @@ public sealed class EvalRunsEndpointTests : IAsyncLifetime
         var client = _factory.CreateClient();
         var get = await client.GetAsync($"/api/eval-runs/{Guid.NewGuid()}");
         Assert.Equal(HttpStatusCode.NotFound, get.StatusCode);
+    }
+
+    private sealed record VersionDto(string Service, string Version, string Commit, DepsDto Dependencies);
+    private sealed record DepsDto(SvcDto? EvalRunner, DbDto? Db);
+    private sealed record SvcDto(string Service, string Version, string Commit);
+    private sealed record DbDto(string Version);
+
+    [Fact]
+    public async Task Version_aggregates_api_eval_runner_and_db()
+    {
+        var client = _factory.CreateClient();
+
+        var res = await client.GetFromJsonAsync<VersionDto>("/version");
+
+        Assert.NotNull(res);
+        Assert.Equal("prompt-evaluator-api", res!.Service);
+        Assert.Equal("0.1.0", res.Version);
+        // eval-runner probed via the faked runner
+        Assert.Equal("eval-runner", res.Dependencies.EvalRunner!.Service);
+        Assert.Equal("faketest", res.Dependencies.EvalRunner.Commit);
+        // db version read from the real Testcontainers Postgres
+        Assert.StartsWith("PostgreSQL", res.Dependencies.Db!.Version);
     }
 }

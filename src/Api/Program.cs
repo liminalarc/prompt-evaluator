@@ -1,4 +1,5 @@
 using Api.EvalRuns;
+using Api.Version;
 using Application.EvalRuns;
 using Infrastructure;
 using Infrastructure.Persistence;
@@ -22,6 +23,7 @@ var app = builder.Build();
 app.UseCors(DevCors);
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+app.MapVersionEndpoints();
 app.MapEvalRunEndpoints();
 
 // Apply migrations on startup once a database is configured (skipped when none is,

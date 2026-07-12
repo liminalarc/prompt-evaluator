@@ -5,10 +5,15 @@ walking skeleton it only echoes the prompt; later specs add LLM-judge scoring an
 fixture generation. It holds no domain authority and no persistence.
 """
 
+import os
+
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-app = FastAPI(title="Prompt Evaluator eval-runner", version="0.1.0")
+SERVICE_NAME = "eval-runner"
+VERSION = "0.1.0"
+
+app = FastAPI(title="Prompt Evaluator eval-runner", version=VERSION)
 
 
 class EchoRequest(BaseModel):
@@ -19,9 +24,25 @@ class EchoResponse(BaseModel):
     output: str
 
 
+class VersionResponse(BaseModel):
+    service: str
+    version: str
+    commit: str
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/version", response_model=VersionResponse)
+def version() -> VersionResponse:
+    # GIT_COMMIT is baked in at image build time; "dev" for local/per-process runs.
+    return VersionResponse(
+        service=SERVICE_NAME,
+        version=VERSION,
+        commit=os.environ.get("GIT_COMMIT", "dev"),
+    )
 
 
 @app.post("/echo", response_model=EchoResponse)

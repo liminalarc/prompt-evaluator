@@ -78,6 +78,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build and start the stack
+        env:
+          GIT_COMMIT: ${{ github.sha }}
         run: docker compose up -d --build --wait --wait-timeout 300
       - name: Show status
         if: always()
@@ -89,6 +91,17 @@ jobs:
             -H 'Content-Type: application/json' -d '{"prompt":"ci smoke"}')
           echo "$resp"
           echo "$resp" | grep -q '"output":"ci smoke"'
+      - name: Aggregated /version reports every service
+        run: |
+          set -euo pipefail
+          ver=$(curl -sf http://localhost:4241/version)
+          echo "$ver"
+          echo "$ver" | grep -q '"service":"prompt-evaluator-api"'
+          echo "$ver" | grep -q '"eval-runner"'
+          echo "$ver" | grep -q 'PostgreSQL'
+          echo "$ver" | grep -q "${GITHUB_SHA}"
+        env:
+          GITHUB_SHA: ${{ github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: '20'

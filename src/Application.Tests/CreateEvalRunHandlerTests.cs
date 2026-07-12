@@ -10,6 +10,9 @@ public class CreateEvalRunHandlerTests
     {
         public Task<string> EchoAsync(string prompt, CancellationToken ct = default)
             => Task.FromResult(prompt);
+
+        public Task<ServiceVersion?> GetVersionAsync(CancellationToken ct = default)
+            => Task.FromResult<ServiceVersion?>(new ServiceVersion("eval-runner", "0.1.0", "test"));
     }
 
     private sealed class InMemoryRepo : IEvalRunRepository
