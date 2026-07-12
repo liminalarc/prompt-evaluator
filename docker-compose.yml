@@ -1,4 +1,4 @@
-name: prompt-evaluator
+name: litmus-ai
 
 services:
   db:

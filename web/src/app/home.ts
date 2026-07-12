@@ -12,7 +12,7 @@ import { EchoResult } from './echo';
 export class Home {
   private readonly api = inject(ApiService);
 
-  protected readonly prompt = signal('Hello, Prompt Evaluator');
+  protected readonly prompt = signal('Hello, LitmusAI');
   protected readonly result = signal<EchoResult | null>(null);
   protected readonly error = signal<string | null>(null);
   protected readonly loading = signal(false);

@@ -20,7 +20,7 @@ describe('Home', () => {
     const fixture = TestBed.createComponent(Home);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Prompt Evaluator');
+    expect(compiled.querySelector('h1')?.textContent).toContain('LitmusAI');
   });
 
   it('posts the prompt and shows the echoed output', () => {
@@ -31,12 +31,12 @@ describe('Home', () => {
 
     const req = httpMock.expectOne('/api/echo');
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ prompt: 'Hello, Prompt Evaluator' });
-    req.flush({ output: 'Hello, Prompt Evaluator' });
+    expect(req.request.body).toEqual({ prompt: 'Hello, LitmusAI' });
+    req.flush({ output: 'Hello, LitmusAI' });
     fixture.detectChanges();
 
     const result = fixture.nativeElement.querySelector('[data-testid="result"]') as HTMLElement;
-    expect(result.textContent).toContain('Hello, Prompt Evaluator');
+    expect(result.textContent).toContain('Hello, LitmusAI');
   });
 
   it('shows an error when the round trip fails', () => {
