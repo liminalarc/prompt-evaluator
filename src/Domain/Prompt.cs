@@ -15,7 +15,8 @@ public sealed class Prompt
     public string? Description { get; private set; }
 
     /// <summary>The full version history, oldest first. Append-only from the outside.</summary>
-    public IReadOnlyList<PromptVersion> Versions => _versions.AsReadOnly();
+    public IReadOnlyList<PromptVersion> Versions
+        => _versions.OrderBy(v => v.VersionNumber).ToList().AsReadOnly();
 
     private Prompt(Guid id, string name, string? description)
     {
