@@ -1,4 +1,4 @@
-"""Prompt Evaluator eval-runner.
+"""LitmusAI eval-runner.
 
 A thin, stateless FastAPI service the .NET Infrastructure layer calls over HTTP. In the
 walking skeleton it only echoes the prompt; later specs add LLM-judge scoring and synthetic
@@ -34,7 +34,7 @@ from app.judging import (
 SERVICE_NAME = "eval-runner"
 VERSION = "0.2.0"
 
-app = FastAPI(title="Prompt Evaluator eval-runner", version=VERSION)
+app = FastAPI(title="LitmusAI eval-runner", version=VERSION)
 
 
 class EchoRequest(BaseModel):
