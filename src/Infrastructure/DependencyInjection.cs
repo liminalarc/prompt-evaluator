@@ -19,7 +19,9 @@ public static class DependencyInjection
         services.AddScoped<IEvalRunRepository, EvalRunRepository>();
         services.AddScoped<IPromptRepository, PromptRepository>();
         services.AddScoped<IDatasetRepository, DatasetRepository>();
+        services.AddScoped<IScorerConfigRepository, ScorerConfigRepository>();
         services.AddScoped<ISystemInfo, SystemInfo>();
+        services.AddScoped<Application.Scoring.ScorerFactory>();
         services.AddSingleton(TimeProvider.System);
 
         services.AddHttpClient<IEvaluationRunner, EvalRunnerClient>(client =>

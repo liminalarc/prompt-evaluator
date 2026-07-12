@@ -102,4 +102,62 @@ public class EvalRunnerClientTests
         Assert.Equal("coverage", guidance.GetProperty("coverage_goals").GetString());
         Assert.Equal("edges", guidance.GetProperty("edge_cases").GetString());
     }
+
+    [Fact]
+    public async Task ExecutePromptAsync_posts_snake_case_and_parses_the_execution()
+    {
+        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(new
+            {
+                output = "the summary",
+                latency_ms = 512,
+                input_tokens = 1000,
+                output_tokens = 500,
+                cost_usd = 0.0175,
+            }),
+        });
+        var http = new HttpClient(handler) { BaseAddress = new Uri("http://eval-runner:8000") };
+        var client = new EvalRunnerClient(http);
+
+        var execution = await client.ExecutePromptAsync(
+            "You summarize.", "claude-opus-4-8", "long article", "raw slm output");
+
+        Assert.Equal("the summary", execution.Output);
+        Assert.Equal(512, execution.LatencyMs);
+        Assert.Equal(0.0175m, execution.CostUsd);
+        Assert.Equal("/execute-prompt", handler.LastRequest!.RequestUri!.AbsolutePath);
+
+        using var sent = JsonDocument.Parse(await handler.LastRequest.Content!.ReadAsStringAsync());
+        var root = sent.RootElement;
+        Assert.Equal("You summarize.", root.GetProperty("prompt").GetString());
+        Assert.Equal("claude-opus-4-8", root.GetProperty("model").GetString());
+        Assert.Equal("long article", root.GetProperty("input").GetString());
+        Assert.Equal("raw slm output", root.GetProperty("upstream_context").GetString());
+    }
+
+    [Fact]
+    public async Task JudgeAsync_posts_snake_case_and_parses_the_verdict()
+    {
+        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(new { score = 0.8, passed = true, rationale = "accurate" }),
+        });
+        var http = new HttpClient(handler) { BaseAddress = new Uri("http://eval-runner:8000") };
+        var client = new EvalRunnerClient(http);
+
+        var verdict = await client.JudgeAsync(
+            "Is it correct?", "the question", "the answer", "expected", "claude-opus-4-8");
+
+        Assert.Equal(0.8, verdict.Score);
+        Assert.True(verdict.Passed);
+        Assert.Equal("accurate", verdict.Rationale);
+        Assert.Equal("/judge", handler.LastRequest!.RequestUri!.AbsolutePath);
+
+        using var sent = JsonDocument.Parse(await handler.LastRequest.Content!.ReadAsStringAsync());
+        var root = sent.RootElement;
+        Assert.Equal("Is it correct?", root.GetProperty("rubric").GetString());
+        Assert.Equal("the answer", root.GetProperty("output").GetString());
+        Assert.Equal("claude-opus-4-8", root.GetProperty("model").GetString());
+    }
 }

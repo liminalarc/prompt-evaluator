@@ -22,4 +22,30 @@ public interface IEvaluationRunner
         GenerationGuidanceData guidance,
         int count,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Runs a prompt version's <paramref name="promptContent"/> against a fixture
+    /// <paramref name="input"/> on its <paramref name="targetModel"/>, returning the output plus
+    /// the latency/cost of producing it. The subject model is opaque to the domain (1.5 is where
+    /// non-Claude execution lands).
+    /// </summary>
+    Task<PromptExecution> ExecutePromptAsync(
+        string promptContent,
+        string targetModel,
+        string input,
+        string? upstreamContext,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Scores an <paramref name="output"/> against a <paramref name="rubric"/> using the given
+    /// <paramref name="judgeModel"/>, returning a structured verdict (never parsed from prose).
+    /// The judge model is part of the scorer's identity, so it is passed explicitly here.
+    /// </summary>
+    Task<JudgeVerdict> JudgeAsync(
+        string rubric,
+        string input,
+        string output,
+        string? expected,
+        string judgeModel,
+        CancellationToken ct = default);
 }

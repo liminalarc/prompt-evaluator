@@ -27,6 +27,11 @@ public sealed class DatasetsEndpointTests : IAsyncLifetime
             IReadOnlyList<SeedExampleData> seeds, GenerationGuidanceData guidance, int count, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<GeneratedFixtureData>>(
                 new[] { new GeneratedFixtureData($"generated from: {seeds[0].Input}", "slm-shaped", null, 0) });
+
+        public Task<PromptExecution> ExecutePromptAsync(string promptContent, string targetModel, string input, string? upstreamContext, CancellationToken ct = default)
+            => throw new NotSupportedException();
+        public Task<JudgeVerdict> JudgeAsync(string rubric, string input, string output, string? expected, string judgeModel, CancellationToken ct = default)
+            => throw new NotSupportedException();
     }
 
     private sealed class Factory(string connectionString) : WebApplicationFactory<Program>

@@ -12,6 +12,13 @@ public sealed class EvalRunRepository(EvalDbContext db) : IEvalRunRepository
         await db.SaveChangesAsync(ct);
     }
 
+    // Owned collections (fixture_runs → scores) load eagerly with the run — no explicit Include.
     public Task<EvalRun?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => db.EvalRuns.SingleOrDefaultAsync(r => r.Id == id, ct);
+
+    public async Task<IReadOnlyList<EvalRun>> ListByDatasetAsync(Guid datasetId, CancellationToken ct = default)
+        => await db.EvalRuns
+            .Where(r => r.DatasetId == datasetId)
+            .OrderByDescending(r => r.CreatedAt)
+            .ToListAsync(ct);
 }

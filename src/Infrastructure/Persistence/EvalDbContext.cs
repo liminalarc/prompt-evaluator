@@ -8,6 +8,7 @@ public sealed class EvalDbContext(DbContextOptions<EvalDbContext> options) : DbC
     public DbSet<EvalRun> EvalRuns => Set<EvalRun>();
     public DbSet<Prompt> Prompts => Set<Prompt>();
     public DbSet<Dataset> Datasets => Set<Dataset>();
+    public DbSet<ScorerConfig> ScorerConfigs => Set<ScorerConfig>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

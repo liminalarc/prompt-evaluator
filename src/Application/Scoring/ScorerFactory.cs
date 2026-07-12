@@ -5,10 +5,11 @@ namespace Application.Scoring;
 
 /// <summary>
 /// Builds the concrete <see cref="IScorer"/> for a <see cref="ScorerDescriptor"/>. Deterministic
-/// kinds are constructed in-process here; the LLM-judge scorer is wired in slice 4 once the
-/// eval-runner seam (<c>IEvaluationRunner.JudgeAsync</c>) exists.
+/// kinds are constructed in-process; the LLM-judge scorer delegates to the eval-runner via the
+/// injected <see cref="IEvaluationRunner"/>. When no runner is supplied, LLM-judge scorers cannot
+/// be built (deterministic-only construction remains valid).
 /// </summary>
-public sealed class ScorerFactory
+public sealed class ScorerFactory(IEvaluationRunner? runner = null)
 {
     public IScorer Create(ScorerDescriptor descriptor)
     {
@@ -22,8 +23,9 @@ public sealed class ScorerFactory
             ScorerKind.FuzzyMatch => new FuzzyMatchScorer(descriptor),
             ScorerKind.Latency => new LatencyScorer(descriptor),
             ScorerKind.Cost => new CostScorer(descriptor),
-            ScorerKind.LlmJudge => throw new NotSupportedException(
-                "LLM-judge scoring is wired in slice 4 (needs IEvaluationRunner)."),
+            ScorerKind.LlmJudge => runner is not null
+                ? new LlmJudgeScorer(descriptor, runner)
+                : throw new NotSupportedException("LLM-judge scoring requires an IEvaluationRunner."),
             _ => throw new NotSupportedException($"Unknown scorer kind '{descriptor.Kind}'."),
         };
     }

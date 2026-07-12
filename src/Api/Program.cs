@@ -3,6 +3,7 @@ using Api.Prompts;
 using Api.Seam;
 using Api.Version;
 using Application.Datasets;
+using Application.EvalRuns;
 using Application.Prompts;
 using Infrastructure;
 using Infrastructure.Persistence;
@@ -19,6 +20,8 @@ builder.Services.AddScoped<AddPromptVersionHandler>();
 builder.Services.AddScoped<CreateDatasetHandler>();
 builder.Services.AddScoped<CaptureFixturesHandler>();
 builder.Services.AddScoped<GenerateSyntheticFixturesHandler>();
+builder.Services.AddScoped<ConfigureDatasetScorersHandler>();
+builder.Services.AddScoped<RunEvaluationHandler>();
 builder.Services.AddSingleton<FixtureRedactor>();
 
 // Allow the Angular dev server to reach the API during per-process development.

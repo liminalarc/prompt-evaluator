@@ -47,6 +47,30 @@ public sealed class EvalRunnerClient(HttpClient http) : IEvaluationRunner
             .ToList();
     }
 
+    public async Task<PromptExecution> ExecutePromptAsync(
+        string promptContent, string targetModel, string input, string? upstreamContext, CancellationToken ct = default)
+    {
+        var request = new ExecuteRequest(promptContent, targetModel, input, upstreamContext);
+        var response = await http.PostAsJsonAsync("/execute-prompt", request, ct);
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<ExecuteResponse>(ct)
+            ?? throw new InvalidOperationException("eval-runner returned an empty /execute-prompt body.");
+
+        return new PromptExecution(body.Output, body.LatencyMs, body.CostUsd);
+    }
+
+    public async Task<JudgeVerdict> JudgeAsync(
+        string rubric, string input, string output, string? expected, string judgeModel, CancellationToken ct = default)
+    {
+        var request = new JudgeRequest(rubric, input, output, expected, judgeModel);
+        var response = await http.PostAsJsonAsync("/judge", request, ct);
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<JudgeResponse>(ct)
+            ?? throw new InvalidOperationException("eval-runner returned an empty /judge body.");
+
+        return new JudgeVerdict(body.Score, body.Passed, body.Rationale);
+    }
+
     // Serialized with System.Text.Json web defaults (camelCase) -> {"prompt":...} / {"output":...}.
     private sealed record EchoRequest(string Prompt);
 
@@ -79,4 +103,27 @@ public sealed class EvalRunnerClient(HttpClient http) : IEvaluationRunner
         [property: JsonPropertyName("upstream_context")] string? UpstreamContext,
         [property: JsonPropertyName("expected_output")] string? ExpectedOutput,
         [property: JsonPropertyName("seed_index")] int? SeedIndex);
+
+    private sealed record ExecuteRequest(
+        [property: JsonPropertyName("prompt")] string Prompt,
+        [property: JsonPropertyName("model")] string Model,
+        [property: JsonPropertyName("input")] string Input,
+        [property: JsonPropertyName("upstream_context")] string? UpstreamContext);
+
+    private sealed record ExecuteResponse(
+        [property: JsonPropertyName("output")] string Output,
+        [property: JsonPropertyName("latency_ms")] int LatencyMs,
+        [property: JsonPropertyName("cost_usd")] decimal? CostUsd);
+
+    private sealed record JudgeRequest(
+        [property: JsonPropertyName("rubric")] string Rubric,
+        [property: JsonPropertyName("input")] string Input,
+        [property: JsonPropertyName("output")] string Output,
+        [property: JsonPropertyName("expected")] string? Expected,
+        [property: JsonPropertyName("model")] string Model);
+
+    private sealed record JudgeResponse(
+        [property: JsonPropertyName("score")] double Score,
+        [property: JsonPropertyName("passed")] bool Passed,
+        [property: JsonPropertyName("rationale")] string Rationale);
 }
