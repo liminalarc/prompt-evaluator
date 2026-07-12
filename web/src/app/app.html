@@ -1,41 +1,17 @@
-<main class="page">
-  <section class="sb-card panel">
-    <h1 class="title">Prompt Evaluator</h1>
-    <p class="subtitle">Walking skeleton — one prompt, round-tripped through every layer.</p>
-
-    <div class="sb-field">
-      <label for="prompt">Prompt</label>
-      <input
-        id="prompt"
-        name="prompt"
-        type="text"
-        [ngModel]="prompt()"
-        (ngModelChange)="prompt.set($event)"
-      />
-    </div>
-
-    <button
-      class="sb-btn sb-btn--primary"
-      type="button"
-      (click)="run()"
-      [disabled]="loading()"
-      data-testid="run"
+<header class="topbar">
+  <span class="brand">Prompt Evaluator</span>
+  <nav class="nav">
+    <a
+      routerLink="/"
+      routerLinkActive="nav__link--active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="nav__link"
+      >Home</a
     >
-      {{ loading() ? 'Running…' : 'Run round trip' }}
-    </button>
+    <a routerLink="/prompts" routerLinkActive="nav__link--active" class="nav__link">Prompts</a>
+  </nav>
+</header>
 
-    @if (result(); as run) {
-      <div class="result" data-testid="result">
-        <div class="result__row"><span class="result__key">output</span> {{ run.output }}</div>
-        <div class="result__row"><span class="result__key">id</span> {{ run.id }}</div>
-        <div class="result__row">
-          <span class="result__key">createdAt</span> {{ run.createdAt }}
-        </div>
-      </div>
-    }
-
-    @if (error(); as message) {
-      <div class="error-box" data-testid="error">{{ message }}</div>
-    }
-  </section>
+<main class="page">
+  <router-outlet />
 </main>
