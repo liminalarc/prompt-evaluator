@@ -1,0 +1,12 @@
+/* Brand tokens are the single styling source of truth — reference --sb-* only, no hex. */
+@import 'brand-tokens/css';
+@import 'brand-tokens/components';
+
+html,
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--sb-font-ui);
+  background: var(--sb-surface-variant);
+  color: var(--sb-text);
+}

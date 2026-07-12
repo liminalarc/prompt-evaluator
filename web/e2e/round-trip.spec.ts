@@ -1,0 +1,15 @@
+import { test, expect } from '@playwright/test';
+
+test('round-trips a prompt through every layer', async ({ page }) => {
+  await page.goto('/');
+
+  const prompt = `e2e ${Date.now()}`;
+  await page.fill('#prompt', prompt);
+  await page.getByTestId('run').click();
+
+  const result = page.getByTestId('result');
+  await expect(result).toBeVisible();
+  // The output is the eval-runner echo; its presence proves Angular -> API ->
+  // eval-runner -> Postgres and back.
+  await expect(result).toContainText(prompt);
+});
