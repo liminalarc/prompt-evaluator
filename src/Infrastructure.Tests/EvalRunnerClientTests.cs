@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using Application.Ports;
 using Infrastructure.Http;
 
 namespace Infrastructure.Tests;
@@ -58,5 +60,46 @@ public class EvalRunnerClientTests
         Assert.Equal("0.1.0", version.Version);
         Assert.Equal("abc1234", version.Commit);
         Assert.Equal("/version", handler.LastRequest!.RequestUri!.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task GenerateSyntheticFixturesAsync_posts_snake_case_and_parses_snake_case_response()
+    {
+        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(new
+            {
+                fixtures = new[]
+                {
+                    new { input = "generated", upstream_context = "slm-shaped", expected_output = (string?)null, seed_index = 0 },
+                },
+            }),
+        });
+        var http = new HttpClient(handler) { BaseAddress = new Uri("http://eval-runner:8000") };
+        var client = new EvalRunnerClient(http);
+
+        var result = await client.GenerateSyntheticFixturesAsync(
+            new[] { new SeedExampleData("captured input", "raw slm output", null) },
+            new GenerationGuidanceData("coverage", "edges", "limits"),
+            count: 1);
+
+        var fixture = Assert.Single(result);
+        Assert.Equal("generated", fixture.Input);
+        Assert.Equal("slm-shaped", fixture.UpstreamContext);
+        Assert.Equal(0, fixture.SeedIndex);
+
+        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+        Assert.Equal("/generate-fixtures", handler.LastRequest.RequestUri!.AbsolutePath);
+
+        // Wire format is snake_case — assert the exact keys the eval-runner (Pydantic) expects.
+        using var sent = JsonDocument.Parse(await handler.LastRequest.Content!.ReadAsStringAsync());
+        var root = sent.RootElement;
+        Assert.Equal(1, root.GetProperty("count").GetInt32());
+        var seed = root.GetProperty("seed_examples")[0];
+        Assert.Equal("captured input", seed.GetProperty("input").GetString());
+        Assert.Equal("raw slm output", seed.GetProperty("upstream_context").GetString());
+        var guidance = root.GetProperty("guidance");
+        Assert.Equal("coverage", guidance.GetProperty("coverage_goals").GetString());
+        Assert.Equal("edges", guidance.GetProperty("edge_cases").GetString());
     }
 }

@@ -1,7 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
+using Application.Ports;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Testcontainers.PostgreSql;
 
 namespace Api.Tests;
@@ -11,10 +15,31 @@ public sealed class DatasetsEndpointTests : IAsyncLifetime
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16").Build();
     private WebApplicationFactory<Program> _factory = null!;
 
+    // Stub generator: echoes back one synthetic fixture derived from the first seed, and
+    // records the guidance/count it was called with. Keeps generation tests off the network.
+    private sealed class StubRunner : IEvaluationRunner
+    {
+        public Task<string> EchoAsync(string prompt, CancellationToken ct = default) => Task.FromResult(prompt);
+        public Task<Application.ServiceVersion?> GetVersionAsync(CancellationToken ct = default)
+            => Task.FromResult<Application.ServiceVersion?>(null);
+
+        public Task<IReadOnlyList<GeneratedFixtureData>> GenerateSyntheticFixturesAsync(
+            IReadOnlyList<SeedExampleData> seeds, GenerationGuidanceData guidance, int count, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<GeneratedFixtureData>>(
+                new[] { new GeneratedFixtureData($"generated from: {seeds[0].Input}", "slm-shaped", null, 0) });
+    }
+
     private sealed class Factory(string connectionString) : WebApplicationFactory<Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
-            => builder.UseSetting("ConnectionStrings:Postgres", connectionString);
+        {
+            builder.UseSetting("ConnectionStrings:Postgres", connectionString);
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<IEvaluationRunner>();
+                services.AddScoped<IEvaluationRunner, StubRunner>();
+            });
+        }
     }
 
     public async Task InitializeAsync()
@@ -111,6 +136,54 @@ public sealed class DatasetsEndpointTests : IAsyncLifetime
         Assert.Equal(2, summary.FixtureCount);
         Assert.Equal(2, summary.CapturedCount);
         Assert.Equal(0, summary.SyntheticCount);
+    }
+
+    [Fact]
+    public async Task Generate_adds_synthetic_fixtures_linked_to_a_captured_seed()
+    {
+        var client = _factory.CreateClient();
+
+        var create = await client.PostAsJsonAsync("/api/datasets", new { name = "Gen", description = (string?)null });
+        var created = await create.Content.ReadFromJsonAsync<DatasetDto>();
+        await client.PostAsJsonAsync($"/api/datasets/{created!.Id}/fixtures/capture", new
+        {
+            tuples = new[] { new { promptInput = "seed input", input = (string?)null, slmOutput = (string?)null, downstreamResult = (string?)null } },
+        });
+
+        var generate = await client.PostAsJsonAsync($"/api/datasets/{created.Id}/fixtures/generate", new
+        {
+            guidance = new { coverageGoals = "cover more", edgeCases = (string?)null, constraints = (string?)null },
+            count = 1,
+        });
+        Assert.Equal(HttpStatusCode.OK, generate.StatusCode);
+
+        var fetched = await client.GetFromJsonAsync<DatasetDto>($"/api/datasets/{created.Id}");
+        var captured = Assert.Single(fetched!.Fixtures, f => f.Origin == "Captured");
+        var synthetic = Assert.Single(fetched.Fixtures, f => f.Origin == "Synthetic");
+        Assert.Equal("generated from: seed input", synthetic.Input);
+        Assert.Equal(captured.Id, synthetic.SeedFixtureId);
+    }
+
+    [Fact]
+    public async Task Generate_with_no_captured_fixtures_returns_400()
+    {
+        var client = _factory.CreateClient();
+        var create = await client.PostAsJsonAsync("/api/datasets", new { name = "Bare", description = (string?)null });
+        var created = await create.Content.ReadFromJsonAsync<DatasetDto>();
+
+        var generate = await client.PostAsJsonAsync($"/api/datasets/{created!.Id}/fixtures/generate",
+            new { guidance = (object?)null, count = 1 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, generate.StatusCode);
+    }
+
+    [Fact]
+    public async Task Generate_into_unknown_dataset_returns_404()
+    {
+        var client = _factory.CreateClient();
+        var res = await client.PostAsJsonAsync($"/api/datasets/{Guid.NewGuid()}/fixtures/generate",
+            new { guidance = (object?)null, count = 1 });
+        Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
     }
 
     [Fact]

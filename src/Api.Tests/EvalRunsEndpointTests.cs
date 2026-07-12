@@ -23,6 +23,10 @@ public sealed class EvalRunsEndpointTests : IAsyncLifetime
         public Task<Application.ServiceVersion?> GetVersionAsync(CancellationToken ct = default)
             => Task.FromResult<Application.ServiceVersion?>(
                 new Application.ServiceVersion("eval-runner", "0.1.0", "faketest"));
+
+        public Task<IReadOnlyList<GeneratedFixtureData>> GenerateSyntheticFixturesAsync(
+            IReadOnlyList<SeedExampleData> seeds, GenerationGuidanceData guidance, int count, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<GeneratedFixtureData>>([]);
     }
 
     private sealed class Factory(string connectionString) : WebApplicationFactory<Program>

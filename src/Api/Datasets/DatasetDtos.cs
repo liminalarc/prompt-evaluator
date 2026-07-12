@@ -22,6 +22,10 @@ public sealed record CaptureTupleRequest(
 
 public sealed record CaptureFixturesRequest(List<CaptureTupleRequest> Tuples);
 
+public sealed record GenerationGuidanceRequest(string? CoverageGoals, string? EdgeCases, string? Constraints);
+
+public sealed record GenerateFixturesRequest(GenerationGuidanceRequest? Guidance, int? Count);
+
 public sealed record FixtureResponse(
     Guid Id,
     string Origin,

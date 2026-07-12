@@ -13,6 +13,10 @@ public class CreateEvalRunHandlerTests
 
         public Task<ServiceVersion?> GetVersionAsync(CancellationToken ct = default)
             => Task.FromResult<ServiceVersion?>(new ServiceVersion("eval-runner", "0.1.0", "test"));
+
+        public Task<IReadOnlyList<GeneratedFixtureData>> GenerateSyntheticFixturesAsync(
+            IReadOnlyList<SeedExampleData> seeds, GenerationGuidanceData guidance, int count, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<GeneratedFixtureData>>([]);
     }
 
     private sealed class InMemoryRepo : IEvalRunRepository

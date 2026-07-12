@@ -20,6 +20,7 @@ builder.Services.AddScoped<CreatePromptHandler>();
 builder.Services.AddScoped<AddPromptVersionHandler>();
 builder.Services.AddScoped<CreateDatasetHandler>();
 builder.Services.AddScoped<CaptureFixturesHandler>();
+builder.Services.AddScoped<GenerateSyntheticFixturesHandler>();
 builder.Services.AddSingleton<FixtureRedactor>();
 
 // Allow the Angular dev server to reach the API during per-process development.

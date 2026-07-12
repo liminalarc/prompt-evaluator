@@ -3,6 +3,11 @@ using Application.Ports;
 
 namespace Api.Datasets;
 
+file static class GenerationDefaults
+{
+    public const int Count = 5;
+}
+
 public static class DatasetEndpoints
 {
     public static IEndpointRouteBuilder MapDatasetEndpoints(this IEndpointRouteBuilder app)
@@ -43,6 +48,23 @@ public static class DatasetEndpoints
                 try
                 {
                     var dataset = await handler.HandleAsync(id, tuples, ct);
+                    return dataset is null ? Results.NotFound() : Results.Ok(DatasetResponse.From(dataset));
+                }
+                catch (ArgumentException ex)
+                {
+                    return Results.BadRequest(new { error = ex.Message });
+                }
+            });
+
+        group.MapPost("/{id:guid}/fixtures/generate",
+            async (Guid id, GenerateFixturesRequest request, GenerateSyntheticFixturesHandler handler, CancellationToken ct) =>
+            {
+                var g = request.Guidance;
+                var guidance = new GenerationGuidanceData(g?.CoverageGoals, g?.EdgeCases, g?.Constraints);
+                var count = request.Count is int c && c > 0 ? c : GenerationDefaults.Count;
+                try
+                {
+                    var dataset = await handler.HandleAsync(id, guidance, count, ct);
                     return dataset is null ? Results.NotFound() : Results.Ok(DatasetResponse.From(dataset));
                 }
                 catch (ArgumentException ex)

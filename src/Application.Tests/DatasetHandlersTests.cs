@@ -121,4 +121,103 @@ public class DatasetHandlersTests
         Assert.Contains("[REDACTED-PHONE]", redactor.Redact("ring 212-555-0147 now"));
         Assert.Null(redactor.Redact(null));
     }
+
+    private sealed class RecordingRunner(IReadOnlyList<GeneratedFixtureData> result) : IEvaluationRunner
+    {
+        public IReadOnlyList<SeedExampleData>? Seeds { get; private set; }
+        public GenerationGuidanceData? Guidance { get; private set; }
+        public int Count { get; private set; }
+
+        public Task<string> EchoAsync(string prompt, CancellationToken ct = default) => Task.FromResult(prompt);
+        public Task<Application.ServiceVersion?> GetVersionAsync(CancellationToken ct = default)
+            => Task.FromResult<Application.ServiceVersion?>(null);
+
+        public Task<IReadOnlyList<GeneratedFixtureData>> GenerateSyntheticFixturesAsync(
+            IReadOnlyList<SeedExampleData> seeds, GenerationGuidanceData guidance, int count, CancellationToken ct = default)
+        {
+            Seeds = seeds;
+            Guidance = guidance;
+            Count = count;
+            return Task.FromResult(result);
+        }
+    }
+
+    private static readonly GenerationGuidanceData Guidance =
+        new("cover long inputs", "empty/adversarial", "under 200 tokens");
+
+    [Fact]
+    public async Task GenerateSynthetic_seeds_from_captured_links_the_seed_and_saves()
+    {
+        var repo = new InMemoryDatasetRepo();
+        var dataset = Dataset.Create("Summaries");
+        dataset.AddCapturedFixture("captured 0", When);
+        var seed1 = dataset.AddCapturedFixture("captured 1", When);
+        await repo.AddAsync(dataset);
+
+        var runner = new RecordingRunner(new[]
+        {
+            new GeneratedFixtureData("generated variant", "slm-shaped", null, SeedIndex: 1),
+        });
+        var handler = new GenerateSyntheticFixturesHandler(repo, runner, new FixedTime(When));
+
+        var updated = await handler.HandleAsync(dataset.Id, Guidance, count: 3);
+
+        Assert.NotNull(updated);
+        // Both captured fixtures were passed as seeds; operator guidance + count forwarded.
+        Assert.Equal(2, runner.Seeds!.Count);
+        Assert.Equal(Guidance, runner.Guidance);
+        Assert.Equal(3, runner.Count);
+
+        var synthetic = Assert.Single(updated!.Fixtures, f => f.Origin == FixtureOrigin.Synthetic);
+        Assert.Equal("generated variant", synthetic.Input);
+        Assert.Equal("slm-shaped", synthetic.UpstreamContext);
+        Assert.Equal(seed1.Id, synthetic.SeedFixtureId);
+        Assert.Equal(1, repo.SaveChangesCalls);
+    }
+
+    [Fact]
+    public async Task GenerateSynthetic_falls_back_to_first_seed_when_index_is_null_or_out_of_range()
+    {
+        var repo = new InMemoryDatasetRepo();
+        var dataset = Dataset.Create("Summaries");
+        var seed0 = dataset.AddCapturedFixture("captured 0", When);
+        await repo.AddAsync(dataset);
+
+        var runner = new RecordingRunner(new[]
+        {
+            new GeneratedFixtureData("no attribution", null, null, SeedIndex: null),
+            new GeneratedFixtureData("bad attribution", null, null, SeedIndex: 99),
+        });
+        var handler = new GenerateSyntheticFixturesHandler(repo, runner, new FixedTime(When));
+
+        var updated = await handler.HandleAsync(dataset.Id, Guidance, count: 2);
+
+        var synthetics = updated!.Fixtures.Where(f => f.Origin == FixtureOrigin.Synthetic).ToList();
+        Assert.Equal(2, synthetics.Count);
+        Assert.All(synthetics, s => Assert.Equal(seed0.Id, s.SeedFixtureId));
+    }
+
+    [Fact]
+    public async Task GenerateSynthetic_throws_when_no_captured_fixtures_to_seed_from()
+    {
+        var repo = new InMemoryDatasetRepo();
+        var dataset = Dataset.Create("Empty");
+        await repo.AddAsync(dataset);
+        var runner = new RecordingRunner([]);
+        var handler = new GenerateSyntheticFixturesHandler(repo, runner, new FixedTime(When));
+
+        await Assert.ThrowsAsync<ArgumentException>(() => handler.HandleAsync(dataset.Id, Guidance, count: 1));
+    }
+
+    [Fact]
+    public async Task GenerateSynthetic_returns_null_when_the_dataset_does_not_exist()
+    {
+        var repo = new InMemoryDatasetRepo();
+        var runner = new RecordingRunner([]);
+        var handler = new GenerateSyntheticFixturesHandler(repo, runner, new FixedTime(When));
+
+        var result = await handler.HandleAsync(Guid.NewGuid(), Guidance, count: 1);
+
+        Assert.Null(result);
+    }
 }
