@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using Application;
 using Application.Ports;
 
 namespace Infrastructure.Http;
@@ -18,8 +19,16 @@ public sealed class EvalRunnerClient(HttpClient http) : IEvaluationRunner
             ?? throw new InvalidOperationException("eval-runner returned an empty /echo body.");
     }
 
+    public async Task<ServiceVersion?> GetVersionAsync(CancellationToken ct = default)
+    {
+        var body = await http.GetFromJsonAsync<VersionDto>("/version", ct);
+        return body is null ? null : new ServiceVersion(body.Service, body.Version, body.Commit);
+    }
+
     // Serialized with System.Text.Json web defaults (camelCase) -> {"prompt":...} / {"output":...}.
     private sealed record EchoRequest(string Prompt);
 
     private sealed record EchoResponse(string Output);
+
+    private sealed record VersionDto(string Service, string Version, string Commit);
 }

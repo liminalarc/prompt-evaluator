@@ -12,5 +12,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /app .
+# Baked-in build metadata surfaced by GET /version.
+ARG GIT_COMMIT=dev
+ENV GIT_COMMIT=$GIT_COMMIT
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "Api.dll"]

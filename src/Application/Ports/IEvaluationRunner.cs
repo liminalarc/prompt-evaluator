@@ -8,4 +8,7 @@ namespace Application.Ports;
 public interface IEvaluationRunner
 {
     Task<string> EchoAsync(string prompt, CancellationToken ct = default);
+
+    /// <summary>The eval-runner's self-reported version, or null if unreachable.</summary>
+    Task<ServiceVersion?> GetVersionAsync(CancellationToken ct = default);
 }
