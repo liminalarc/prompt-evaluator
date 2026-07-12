@@ -76,9 +76,11 @@ volume. `docker compose down` stops the stack; add `-v` to also drop the data vo
    ```bash
    cd src
    dotnet restore
-   dotnet ef database update --project Infrastructure --startup-project Api
    dotnet run --project Api            # serves the API (default http://localhost:5080)
    ```
+   The API applies EF Core migrations on startup when a connection string is configured
+   (see user-secrets above), so no manual `dotnet ef database update` is needed. To scaffold
+   a new migration: `dotnet ef migrations add <Name> --project Infrastructure --startup-project Infrastructure`.
 
 4. **Eval-runner (Python)**
    ```bash
