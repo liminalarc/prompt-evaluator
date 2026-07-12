@@ -24,3 +24,15 @@ The operator-facing UI:
   data fetching lives in container components/services.
 - Charts follow the `dataviz` skill's guidance — read it before writing chart code,
   choosing colors, or building stat tiles / trend lines.
+
+## Skeleton conventions (from 0.1)
+
+- **Angular 20**, not the latest, while the toolchain is on Node 20 (Angular 22 needs
+  Node 22+). Bump together when Node moves.
+- **Styling is brand-tokens only** — import `brand-tokens/css` + `/components` in
+  `styles.css`, theme via `data-theme`, reference `--sb-*` custom properties; no hardcoded
+  hex. `.sb-*` classes are the component layer (`.sb-btn`, `.sb-card`, `.sb-field`, …).
+- **API calls are relative (`/api/...`)** — the ng-serve proxy (`proxy.conf.json`) and the
+  compose nginx both route them to the API. No per-environment base URL in the client.
+- **Playwright e2e runs against a running stack** (compose), not an `ng serve` webServer;
+  point it with `E2E_BASE_URL`. Unit tests use `npm run test:ci` (Karma headless).
