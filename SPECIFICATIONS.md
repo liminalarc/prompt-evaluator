@@ -11,6 +11,7 @@
 - **1.2** Datasets & Fixtures — `NOT STARTED` — [detail](specs/1.2.md)
 - **1.3** Eval Harness — `NOT STARTED` — [detail](specs/1.3.md)
 - **1.4** Score Tracking & Analytics — `NOT STARTED` — [detail](specs/1.4.md)
+- **1.5** Multi-Provider Model Support — `NOT STARTED` — [detail](specs/1.5.md)
 
 ## Phase 2 — Review & Advisory
 - **2.1** Human Review UI — `NOT STARTED` — [detail](specs/2.1.md)
