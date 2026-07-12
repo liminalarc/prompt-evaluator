@@ -4,7 +4,7 @@
 > single source of truth** for lifecycle — edit it as work moves.
 
 ## Phase 0 — Foundation
-- _All specs archived._
+- **0.2** Rename → LitmusAI — `IN PROGRESS` — [detail](specs/0.2.md)
 
 ## Phase 1 — Core Evaluation Loop
 - **1.4** Score Tracking & Analytics — `NOT STARTED` — [detail](specs/1.4.md)
