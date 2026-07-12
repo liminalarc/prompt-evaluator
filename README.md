@@ -155,6 +155,15 @@ cd web && npm test          # unit (Karma)
 cd web && npm run e2e       # end-to-end (Playwright)
 ```
 
+The synthetic-generation e2e (`e2e/datasets-generate.spec.ts`) is skipped by default because
+generation normally makes a live model call. To exercise the in-browser Generate flow
+deterministically, bring the stack up with the eval-runner in stub mode and set the flag:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d --build
+cd web && E2E_EVAL_RUNNER_STUB=1 npm run e2e
+```
+
 ## Docker
 
 Each service has its own `Dockerfile`; `docker-compose.yml` orchestrates all four (`db`,

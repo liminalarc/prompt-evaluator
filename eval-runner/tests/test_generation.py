@@ -109,6 +109,21 @@ def test_operator_guidance_is_reflected_in_the_request():
     assert "keep under 200 tokens" in prompt
 
 
+def test_stub_mode_returns_deterministic_fixtures_without_a_client(monkeypatch):
+    monkeypatch.setenv("EVAL_RUNNER_STUB", "1")
+    app.dependency_overrides.clear()  # exercise the real get_anthropic_client (stub branch)
+    resp = TestClient(app).post(
+        "/generate-fixtures",
+        json={"seed_examples": [{"input": "captured seed"}], "count": 2},
+    )
+
+    assert resp.status_code == 200
+    fixtures = resp.json()["fixtures"]
+    assert len(fixtures) == 2
+    assert all(f["input"].startswith("[synthetic] ") for f in fixtures)
+    assert all(f["seed_index"] == 0 for f in fixtures)
+
+
 def test_build_prompt_omits_guidance_section_when_empty():
     request = GenerateFixturesRequest(
         seed_examples=[SeedExample(input="seed")],

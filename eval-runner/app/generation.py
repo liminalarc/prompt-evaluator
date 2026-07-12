@@ -114,6 +114,27 @@ def build_prompt(request: GenerateFixturesRequest) -> str:
     return "\n".join(lines)
 
 
+def stub_fixtures(request: GenerateFixturesRequest) -> GenerateFixturesResponse:
+    """Deterministic, model-free generation for e2e. Enabled only when EVAL_RUNNER_STUB is set
+    (see docker-compose.e2e.yml); echoes each seed into a labelled synthetic fixture so the
+    browser flow can be exercised in CI without a live model call."""
+    seeds = request.seed_examples
+    if not seeds:
+        return GenerateFixturesResponse(fixtures=[])
+    fixtures = []
+    for i in range(max(request.count, 0)):
+        seed = seeds[i % len(seeds)]
+        fixtures.append(
+            GeneratedFixture(
+                input=f"[synthetic] {seed.input}",
+                upstream_context=seed.upstream_context,
+                expected_output=seed.expected_output,
+                seed_index=i % len(seeds),
+            )
+        )
+    return GenerateFixturesResponse(fixtures=fixtures)
+
+
 def generate_fixtures(client, request: GenerateFixturesRequest) -> GenerateFixturesResponse:
     """Call Claude with structured output and return the generated fixtures."""
     response = client.messages.create(

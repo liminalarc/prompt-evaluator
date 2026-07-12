@@ -16,6 +16,7 @@ from app.generation import (
     GenerateFixturesRequest,
     GenerateFixturesResponse,
     generate_fixtures,
+    stub_fixtures,
 )
 
 SERVICE_NAME = "eval-runner"
@@ -59,15 +60,20 @@ def echo(request: EchoRequest) -> EchoResponse:
     return EchoResponse(output=request.prompt)
 
 
-def get_anthropic_client() -> Anthropic:
+def get_anthropic_client() -> Anthropic | None:
     # Resolves credentials from the environment (ANTHROPIC_API_KEY / profile). Injected as a
-    # dependency so tests can override it with a mock — no live API calls in the suite.
+    # dependency so tests can override it with a mock — no live API calls in the suite. Returns
+    # None in stub mode (EVAL_RUNNER_STUB) so the client is never constructed without a key.
+    if os.environ.get("EVAL_RUNNER_STUB"):
+        return None
     return Anthropic()
 
 
 @app.post("/generate-fixtures", response_model=GenerateFixturesResponse)
 def generate_fixtures_endpoint(
     request: GenerateFixturesRequest,
-    client: Annotated[Anthropic, Depends(get_anthropic_client)],
+    client: Annotated[Anthropic | None, Depends(get_anthropic_client)],
 ) -> GenerateFixturesResponse:
+    if client is None:
+        return stub_fixtures(request)
     return generate_fixtures(client, request)

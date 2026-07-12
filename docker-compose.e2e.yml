@@ -1,0 +1,7 @@
+# E2E override: runs the eval-runner in deterministic stub mode so the browser "Generate"
+# flow can be exercised without a live model call or an API key.
+#   docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d --build
+services:
+  eval-runner:
+    environment:
+      EVAL_RUNNER_STUB: "1"
