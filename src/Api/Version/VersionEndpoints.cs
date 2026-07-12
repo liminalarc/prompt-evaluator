@@ -5,7 +5,7 @@ namespace Api.Version;
 
 public static class VersionEndpoints
 {
-    private const string ServiceName = "prompt-evaluator-api";
+    private const string ServiceName = "litmus-ai-api";
     private const string ServiceVersionNumber = "0.2.0";
 
     public static IEndpointRouteBuilder MapVersionEndpoints(this IEndpointRouteBuilder app)

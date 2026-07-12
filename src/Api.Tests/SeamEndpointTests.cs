@@ -96,7 +96,7 @@ public sealed class SeamEndpointTests : IAsyncLifetime
         var res = await client.GetFromJsonAsync<VersionDto>("/version");
 
         Assert.NotNull(res);
-        Assert.Equal("prompt-evaluator-api", res!.Service);
+        Assert.Equal("litmus-ai-api", res!.Service);
         Assert.Equal("0.2.0", res.Version);
         Assert.Equal("eval-runner", res.Dependencies.EvalRunner!.Service);
         Assert.Equal("faketest", res.Dependencies.EvalRunner.Commit);
