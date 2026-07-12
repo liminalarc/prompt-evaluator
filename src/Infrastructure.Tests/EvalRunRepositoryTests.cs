@@ -30,18 +30,44 @@ public sealed class EvalRunRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Add_then_GetById_round_trips_through_the_migrated_schema()
+    public async Task Add_then_GetById_round_trips_the_run_with_fixtures_and_scores()
     {
         var repo = new EvalRunRepository(_db);
-        var run = EvalRun.Create("ping", "ping", new DateTimeOffset(2026, 7, 11, 0, 0, 0, TimeSpan.Zero));
+        var promptId = Guid.NewGuid();
+        var versionId = Guid.NewGuid();
+        var datasetId = Guid.NewGuid();
+        var fixtureId = Guid.NewGuid();
+
+        var run = EvalRun.Create(promptId, versionId, datasetId,
+            new DateTimeOffset(2026, 7, 12, 0, 0, 0, TimeSpan.Zero));
+        var fixture = run.RecordFixture(fixtureId, "the answer is 42", latencyMs: 512, costUsd: 0.0034m);
+        fixture.AddScore(ScorerDescriptor.Deterministic(ScorerKind.Regex, @"^\D*\d+"), value: 1.0, passed: true, detail: null);
+        fixture.AddScore(ScorerDescriptor.LlmJudge("Is it correct?", "claude-opus-4-8"), value: 0.9, passed: null, detail: "accurate");
 
         await repo.AddAsync(run);
+        _db.ChangeTracker.Clear();
         var loaded = await repo.GetByIdAsync(run.Id);
 
         Assert.NotNull(loaded);
         Assert.Equal(run.Id, loaded!.Id);
-        Assert.Equal("ping", loaded.Prompt);
-        Assert.Equal("ping", loaded.Output);
+        Assert.Equal(promptId, loaded.PromptId);
+        Assert.Equal(versionId, loaded.PromptVersionId);
+        Assert.Equal(datasetId, loaded.DatasetId);
+
+        var loadedFixture = Assert.Single(loaded.Results);
+        Assert.Equal(fixtureId, loadedFixture.FixtureId);
+        Assert.Equal("the answer is 42", loadedFixture.ModelOutput);
+        Assert.Equal(512, loadedFixture.LatencyMs);
+        Assert.Equal(0.0034m, loadedFixture.CostUsd);
+
+        Assert.Equal(2, loadedFixture.Scores.Count);
+        var judge = Assert.Single(loadedFixture.Scores, s => s.Scorer.Kind == ScorerKind.LlmJudge);
+        Assert.Equal("claude-opus-4-8", judge.Scorer.JudgeModel);
+        Assert.Equal(0.9, judge.Value);
+        Assert.Equal("accurate", judge.Detail);
+        var regex = Assert.Single(loadedFixture.Scores, s => s.Scorer.Kind == ScorerKind.Regex);
+        Assert.True(regex.Passed);
+        Assert.Null(regex.Scorer.JudgeModel);
     }
 
     [Fact]

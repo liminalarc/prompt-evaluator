@@ -1,9 +1,8 @@
 using Api.Datasets;
-using Api.EvalRuns;
 using Api.Prompts;
+using Api.Seam;
 using Api.Version;
 using Application.Datasets;
-using Application.EvalRuns;
 using Application.Prompts;
 using Infrastructure;
 using Infrastructure.Persistence;
@@ -15,7 +14,6 @@ var postgres = builder.Configuration.GetConnectionString("Postgres") ?? "";
 var evalRunnerBaseUrl = builder.Configuration["EvalRunner:BaseUrl"] ?? "http://localhost:8000";
 
 builder.Services.AddInfrastructure(postgres, evalRunnerBaseUrl);
-builder.Services.AddScoped<CreateEvalRunHandler>();
 builder.Services.AddScoped<CreatePromptHandler>();
 builder.Services.AddScoped<AddPromptVersionHandler>();
 builder.Services.AddScoped<CreateDatasetHandler>();
@@ -34,7 +32,7 @@ app.UseCors(DevCors);
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapVersionEndpoints();
-app.MapEvalRunEndpoints();
+app.MapEchoEndpoints();
 app.MapPromptEndpoints();
 app.MapDatasetEndpoints();
 

@@ -29,15 +29,10 @@ describe('Home', () => {
 
     (fixture.nativeElement.querySelector('[data-testid="run"]') as HTMLButtonElement).click();
 
-    const req = httpMock.expectOne('/api/eval-runs');
+    const req = httpMock.expectOne('/api/echo');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ prompt: 'Hello, Prompt Evaluator' });
-    req.flush({
-      id: '11111111-1111-1111-1111-111111111111',
-      prompt: 'Hello, Prompt Evaluator',
-      output: 'Hello, Prompt Evaluator',
-      createdAt: '2026-07-11T12:00:00Z',
-    });
+    req.flush({ output: 'Hello, Prompt Evaluator' });
     fixture.detectChanges();
 
     const result = fixture.nativeElement.querySelector('[data-testid="result"]') as HTMLElement;
@@ -49,7 +44,7 @@ describe('Home', () => {
     fixture.detectChanges();
 
     (fixture.nativeElement.querySelector('[data-testid="run"]') as HTMLButtonElement).click();
-    httpMock.expectOne('/api/eval-runs').flush('boom', { status: 500, statusText: 'Server Error' });
+    httpMock.expectOne('/api/echo').flush('boom', { status: 500, statusText: 'Server Error' });
     fixture.detectChanges();
 
     const error = fixture.nativeElement.querySelector('[data-testid="error"]') as HTMLElement;

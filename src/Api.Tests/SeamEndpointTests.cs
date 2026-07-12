@@ -10,7 +10,7 @@ using Testcontainers.PostgreSql;
 
 namespace Api.Tests;
 
-public sealed class EvalRunsEndpointTests : IAsyncLifetime
+public sealed class SeamEndpointTests : IAsyncLifetime
 {
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16").Build();
     private WebApplicationFactory<Program> _factory = null!;
@@ -54,34 +54,28 @@ public sealed class EvalRunsEndpointTests : IAsyncLifetime
         await _postgres.DisposeAsync();
     }
 
-    private sealed record EvalRunDto(Guid Id, string Prompt, string Output, DateTimeOffset CreatedAt);
+    private sealed record EchoDto(string Output);
 
     [Fact]
-    public async Task Post_creates_run_then_Get_retrieves_the_persisted_row()
+    public async Task Echo_round_trips_the_prompt_through_the_eval_runner()
     {
         var client = _factory.CreateClient();
 
-        var post = await client.PostAsJsonAsync("/api/eval-runs", new { prompt = "round trip" });
-        Assert.Equal(HttpStatusCode.Created, post.StatusCode);
-        var created = await post.Content.ReadFromJsonAsync<EvalRunDto>();
-        Assert.NotNull(created);
-        Assert.Equal("round trip", created!.Prompt);
-        Assert.Equal("round trip", created.Output);
-        Assert.NotEqual(Guid.Empty, created.Id);
+        var res = await client.PostAsJsonAsync("/api/echo", new { prompt = "round trip" });
 
-        var get = await client.GetAsync($"/api/eval-runs/{created.Id}");
-        Assert.Equal(HttpStatusCode.OK, get.StatusCode);
-        var fetched = await get.Content.ReadFromJsonAsync<EvalRunDto>();
-        Assert.Equal(created.Id, fetched!.Id);
-        Assert.Equal("round trip", fetched.Output);
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        var body = await res.Content.ReadFromJsonAsync<EchoDto>();
+        Assert.Equal("round trip", body!.Output);
     }
 
     [Fact]
-    public async Task Get_unknown_id_returns_404()
+    public async Task Echo_rejects_a_blank_prompt()
     {
         var client = _factory.CreateClient();
-        var get = await client.GetAsync($"/api/eval-runs/{Guid.NewGuid()}");
-        Assert.Equal(HttpStatusCode.NotFound, get.StatusCode);
+
+        var res = await client.PostAsJsonAsync("/api/echo", new { prompt = "   " });
+
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
     }
 
     private sealed record VersionDto(string Service, string Version, string Commit, DepsDto Dependencies);
@@ -99,10 +93,8 @@ public sealed class EvalRunsEndpointTests : IAsyncLifetime
         Assert.NotNull(res);
         Assert.Equal("prompt-evaluator-api", res!.Service);
         Assert.Equal("0.2.0", res.Version);
-        // eval-runner probed via the faked runner
         Assert.Equal("eval-runner", res.Dependencies.EvalRunner!.Service);
         Assert.Equal("faketest", res.Dependencies.EvalRunner.Commit);
-        // db version read from the real Testcontainers Postgres
         Assert.StartsWith("PostgreSQL", res.Dependencies.Db!.Version);
     }
 }
