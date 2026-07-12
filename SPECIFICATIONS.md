@@ -4,7 +4,7 @@
 > single source of truth** for lifecycle — edit it as work moves.
 
 ## Phase 0 — Foundation
-- **0.2** Rename → LitmusAI — `IN PROGRESS` — [detail](specs/0.2.md)
+- _All specs archived._
 
 ## Phase 1 — Core Evaluation Loop
 - **1.4** Score Tracking & Analytics — `NOT STARTED` — [detail](specs/1.4.md)
@@ -25,6 +25,7 @@
 - **4.1** Authentication & Multi-User Access — `NOT STARTED` — [detail](specs/4.1.md)
 
 ## Archive
+- **0.2** Rename → LitmusAI — `DONE` — [detail](specs/archive/0.2.md)
 - **1.3** Eval Harness — `DONE` — [detail](specs/archive/1.3.md)
 - **1.2** Datasets & Fixtures — `DONE` — [detail](specs/archive/1.2.md)
 - **1.1** Prompt Registry — `DONE` — [detail](specs/archive/1.1.md)
