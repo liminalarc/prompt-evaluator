@@ -114,6 +114,24 @@ stack; add `-v` to also drop the data volume.
 With all three running, open <http://localhost:4240>. The Angular app talks to the .NET
 API, which delegates LLM-judge scoring and synthetic fixture generation to the eval-runner.
 
+### Capture-ingestion schema (datasets)
+
+Apps emit captured tuples to `POST /api/datasets/{id}/fixtures/capture` to land ground-truth
+fixtures. The body is `{ "tuples": [ <tuple>, ... ] }`, each tuple in provenance order:
+
+```jsonc
+{
+  "input":            "upstream input to the SLM (optional; provenance only, not stored)",
+  "slmOutput":        "the SLM's output (optional) -> fixture upstreamContext",
+  "promptInput":      "the prompt's actual input (required) -> fixture input",
+  "downstreamResult": "optional reference/expected output -> fixture expectedOutput"
+}
+```
+
+Every stored text field is run through a PII redaction pass at ingest (email/phone →
+`[REDACTED-*]`). Synthetic fixtures are added separately via generation (spec 1.2, slice 4)
+and always link back to the captured seed they were generated from.
+
 ### Ops endpoints
 
 - `GET /health` — liveness (API and eval-runner).

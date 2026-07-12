@@ -1,6 +1,8 @@
+using Api.Datasets;
 using Api.EvalRuns;
 using Api.Prompts;
 using Api.Version;
+using Application.Datasets;
 using Application.EvalRuns;
 using Application.Prompts;
 using Infrastructure;
@@ -16,6 +18,9 @@ builder.Services.AddInfrastructure(postgres, evalRunnerBaseUrl);
 builder.Services.AddScoped<CreateEvalRunHandler>();
 builder.Services.AddScoped<CreatePromptHandler>();
 builder.Services.AddScoped<AddPromptVersionHandler>();
+builder.Services.AddScoped<CreateDatasetHandler>();
+builder.Services.AddScoped<CaptureFixturesHandler>();
+builder.Services.AddSingleton<FixtureRedactor>();
 
 // Allow the Angular dev server to reach the API during per-process development.
 const string DevCors = "dev-cors";
@@ -30,6 +35,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapVersionEndpoints();
 app.MapEvalRunEndpoints();
 app.MapPromptEndpoints();
+app.MapDatasetEndpoints();
 
 // Apply migrations on startup once a database is configured (skipped when none is,
 // e.g. the bare /health integration test).

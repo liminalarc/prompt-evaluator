@@ -18,6 +18,7 @@ public static class DependencyInjection
 
         services.AddScoped<IEvalRunRepository, EvalRunRepository>();
         services.AddScoped<IPromptRepository, PromptRepository>();
+        services.AddScoped<IDatasetRepository, DatasetRepository>();
         services.AddScoped<ISystemInfo, SystemInfo>();
         services.AddSingleton(TimeProvider.System);
 
