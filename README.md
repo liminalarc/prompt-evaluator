@@ -132,6 +132,18 @@ Every stored text field is run through a PII redaction pass at ingest (email/pho
 `[REDACTED-*]`). Synthetic fixtures are added separately via generation (spec 1.2, slice 4)
 and always link back to the captured seed they were generated from.
 
+### Evaluation runs (spec 1.3)
+
+Scorers are configured **per dataset** and reused by every run, so version comparisons stay
+like-for-like:
+
+- `POST /api/datasets/{id}/scorers` — add a scorer: `{ "kind": "Regex|JsonSchema|ExactMatch|FuzzyMatch|Latency|Cost|LlmJudge", "config": "...", "judgeModel": "claude-opus-4-8" }`. `config` is the pattern / schema / threshold / rubric; `judgeModel` applies only to `LlmJudge` (default `claude-opus-4-8`, or `claude-sonnet-5` / `claude-haiku-4-5`) and is **part of the scorer's identity** — changing it starts a new score series.
+- `POST /api/datasets/{id}/eval-runs` — run a prompt version over the dataset: `{ "promptId": "...", "promptVersionId": "..." }`. Each fixture is executed on the prompt's target model (via the eval-runner), then every configured scorer scores the output. Runs are append-only.
+- `GET /api/eval-runs/{id}` — the run with per-fixture output, latency/cost, and one score per scorer. `GET /api/datasets/{id}/eval-runs` lists a dataset's runs.
+
+In the UI, the dataset page configures scorers and triggers a run; `/eval-runs/:id` shows the
+per-fixture scores.
+
 ### Ops endpoints
 
 - `GET /health` — liveness (API and eval-runner).

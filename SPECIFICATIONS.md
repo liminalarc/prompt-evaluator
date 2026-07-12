@@ -7,7 +7,6 @@
 - _All specs archived._
 
 ## Phase 1 — Core Evaluation Loop
-- **1.3** Eval Harness — `IN PROGRESS` — [detail](specs/1.3.md)
 - **1.4** Score Tracking & Analytics — `NOT STARTED` — [detail](specs/1.4.md)
 - **1.5** Multi-Provider Model Support — `NOT STARTED` — [detail](specs/1.5.md)
 - **1.6** Prompt Import (file / bulk) — `NOT STARTED` — [detail](specs/1.6.md)
@@ -26,6 +25,7 @@
 - **4.1** Authentication & Multi-User Access — `NOT STARTED` — [detail](specs/4.1.md)
 
 ## Archive
+- **1.3** Eval Harness — `DONE` — [detail](specs/archive/1.3.md)
 - **1.2** Datasets & Fixtures — `DONE` — [detail](specs/archive/1.2.md)
 - **1.1** Prompt Registry — `DONE` — [detail](specs/archive/1.1.md)
 - **0.1** Walking Skeleton — `DONE` — [detail](specs/archive/0.1.md)

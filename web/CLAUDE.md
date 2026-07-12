@@ -51,6 +51,15 @@ The operator-facing UI:
 - `/datasets` (list) + `/datasets/:id` (fixture browse with origin filter, capture form, generate
   trigger). Feature components in `datasets/`; they reuse `prompts/prompts.css` via `styleUrl`.
 
+## Routing (from 1.3)
+
+- `/eval-runs/:id` — a run's per-fixture results (output, latency/cost, one row per scorer).
+  Feature components + client in `eval-runs/` (`EvalRunsApiService`, `eval-run.ts` DTO mirrors).
+  `/datasets/:id` also hosts the scorer-config form, the prompt/version run trigger, and the
+  runs list (which link to `/eval-runs/:id`).
+- The 0.1 skeleton round-trip now posts to `/api/echo` (`ApiService.echo` + `echo.ts`), not an
+  eval-run — `EvalRun` is the real evaluation aggregate.
+
 ## E2e that needs a model (from 1.2)
 
 - An e2e that would trigger a live model call (synthetic generation) runs against a **stubbed
