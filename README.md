@@ -35,7 +35,7 @@ connection string and any keys:
 ```bash
 cd src/Api
 dotnet user-secrets init
-dotnet user-secrets set "ConnectionStrings:Postgres" "Host=localhost;Port=4243;Database=prompteval;Username=postgres;Password=postgres"
+dotnet user-secrets set "ConnectionStrings:Postgres" "Host=localhost;Port=4243;Database=litmusai;Username=postgres;Password=postgres"
 ```
 
 ## Quick Start (Docker Compose)
@@ -80,7 +80,7 @@ stack; add `-v` to also drop the data volume.
 
 2. **Start PostgreSQL** (Docker option)
    ```bash
-   docker run --name prompteval-db -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=prompteval -p 4243:5432 -d postgres:16
+   docker run --name litmusai-db -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=litmusai -p 4243:5432 -d postgres:16
    ```
 
 3. **Backend (.NET)**

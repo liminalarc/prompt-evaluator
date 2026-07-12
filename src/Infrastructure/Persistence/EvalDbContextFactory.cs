@@ -12,7 +12,7 @@ public sealed class EvalDbContextFactory : IDesignTimeDbContextFactory<EvalDbCon
     public EvalDbContext CreateDbContext(string[] args)
     {
         var options = new DbContextOptionsBuilder<EvalDbContext>()
-            .UseNpgsql("Host=localhost;Database=prompteval;Username=postgres;Password=postgres")
+            .UseNpgsql("Host=localhost;Database=litmusai;Username=postgres;Password=postgres")
             .Options;
         return new EvalDbContext(options);
     }
