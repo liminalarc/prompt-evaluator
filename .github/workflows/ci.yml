@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore
+        working-directory: src
+      - name: Build
+        run: dotnet build --no-restore -c Release
+        working-directory: src
+      - name: Test
+        run: dotnet test --no-build -c Release --verbosity normal
+        working-directory: src
+
+  eval-runner:
+    name: eval-runner
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install deps
+        run: pip install -r requirements-dev.txt
+        working-directory: eval-runner
+      - name: Lint (ruff)
+        run: ruff check .
+        working-directory: eval-runner
+      - name: Test (pytest)
+        run: pytest -q
+        working-directory: eval-runner
+
+  web:
+    name: web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install
+        run: npm ci
+        working-directory: web
+      - name: Lint (prettier)
+        run: npm run lint
+        working-directory: web
+      - name: Unit tests (Karma headless)
+        run: |
+          echo "CHROME_BIN=$(which google-chrome)" >> "$GITHUB_ENV"
+          npm run test:ci
+        working-directory: web
+      - name: Build
+        run: npm run build
+        working-directory: web
+
+  compose-smoke:
+    name: compose-smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and start the stack
+        run: docker compose up -d --build --wait --wait-timeout 300
+      - name: Show status
+        if: always()
+        run: docker compose ps
+      - name: End-to-end round trip through the compose network
+        run: |
+          set -euo pipefail
+          resp=$(curl -sf -X POST http://localhost:4200/api/eval-runs \
+            -H 'Content-Type: application/json' -d '{"prompt":"ci smoke"}')
+          echo "$resp"
+          echo "$resp" | grep -q '"output":"ci smoke"'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Playwright e2e against the composed stack
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          E2E_BASE_URL=http://localhost:4200 npx playwright test
+        working-directory: web
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose logs
