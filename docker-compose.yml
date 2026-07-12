@@ -10,7 +10,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "4243:5432"
     networks:
       - pe-net
     healthcheck:
@@ -25,7 +25,7 @@ services:
     environment:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
-      - "8000:8000"
+      - "4242:8000"
     networks:
       - pe-net
     healthcheck:
@@ -42,7 +42,7 @@ services:
       ConnectionStrings__Postgres: "Host=db;Port=5432;Database=${POSTGRES_DB:-prompteval};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
       EvalRunner__BaseUrl: "http://eval-runner:8000"
     ports:
-      - "5080:8080"
+      - "4241:8080"
     networks:
       - pe-net
     depends_on:
@@ -60,7 +60,7 @@ services:
     build:
       context: ./web
     ports:
-      - "4200:80"
+      - "4240:80"
     networks:
       - pe-net
     depends_on:

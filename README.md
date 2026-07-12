@@ -35,7 +35,7 @@ connection string and any keys:
 ```bash
 cd src/Api
 dotnet user-secrets init
-dotnet user-secrets set "ConnectionStrings:Postgres" "Host=localhost;Database=prompteval;Username=postgres;Password=postgres"
+dotnet user-secrets set "ConnectionStrings:Postgres" "Host=localhost;Port=4243;Database=prompteval;Username=postgres;Password=postgres"
 ```
 
 ## Quick Start (Docker Compose)
@@ -51,9 +51,20 @@ docker compose up --build     # brings up db, eval-runner, api, web (healthy, in
 docker compose ps             # all services should report healthy
 ```
 
-Then open <http://localhost:4200>. Services address each other by name over the compose
-network (`api` → `eval-runner:8000`, `api` → `db:5432`); Postgres data persists in a named
-volume. `docker compose down` stops the stack; add `-v` to also drop the data volume.
+Then open <http://localhost:4240>. Host ports are in a dedicated **4240–4243** block to
+avoid colliding with other local apps:
+
+| Service | Host port | In-container |
+|---|---|---|
+| web | **4240** | 80 |
+| api | 4241 | 8080 |
+| eval-runner | 4242 | 8000 |
+| db (Postgres) | 4243 | 5432 |
+
+Services still address each other by name over the compose network (`api` →
+`eval-runner:8000`, `api` → `db:5432`) — those are the *in-container* ports, unaffected by
+the host mappings. Postgres data persists in a named volume. `docker compose down` stops the
+stack; add `-v` to also drop the data volume.
 
 ## Local Setup (per-process)
 
@@ -69,7 +80,7 @@ volume. `docker compose down` stops the stack; add `-v` to also drop the data vo
 
 2. **Start PostgreSQL** (Docker option)
    ```bash
-   docker run --name prompteval-db -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=prompteval -p 5432:5432 -d postgres:16
+   docker run --name prompteval-db -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=prompteval -p 4243:5432 -d postgres:16
    ```
 
 3. **Backend (.NET)**
@@ -95,12 +106,12 @@ volume. `docker compose down` stops the stack; add `-v` to also drop the data vo
    ```bash
    cd web
    npm install
-   npm start                            # serves the SPA (default http://localhost:4200)
+   npm start                            # serves the SPA (http://localhost:4240)
    ```
 
 ## Running the App
 
-With all three running, open <http://localhost:4200>. The Angular app talks to the .NET
+With all three running, open <http://localhost:4240>. The Angular app talks to the .NET
 API, which delegates LLM-judge scoring and synthetic fixture generation to the eval-runner.
 
 ## Running Tests

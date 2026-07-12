@@ -85,7 +85,7 @@ jobs:
       - name: End-to-end round trip through the compose network
         run: |
           set -euo pipefail
-          resp=$(curl -sf -X POST http://localhost:4200/api/eval-runs \
+          resp=$(curl -sf -X POST http://localhost:4240/api/eval-runs \
             -H 'Content-Type: application/json' -d '{"prompt":"ci smoke"}')
           echo "$resp"
           echo "$resp" | grep -q '"output":"ci smoke"'
@@ -98,7 +98,7 @@ jobs:
         run: |
           npm ci
           npx playwright install --with-deps chromium
-          E2E_BASE_URL=http://localhost:4200 npx playwright test
+          E2E_BASE_URL=http://localhost:4240 npx playwright test
         working-directory: web
       - name: Dump logs on failure
         if: failure()
