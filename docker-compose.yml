@@ -1,0 +1,80 @@
+name: prompt-evaluator
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-prompteval}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - pe-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-prompteval}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  eval-runner:
+    build:
+      context: ./eval-runner
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    ports:
+      - "8000:8000"
+    networks:
+      - pe-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./src
+      dockerfile: Api/Dockerfile
+    environment:
+      ConnectionStrings__Postgres: "Host=db;Port=5432;Database=${POSTGRES_DB:-prompteval};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
+      EvalRunner__BaseUrl: "http://eval-runner:8000"
+    ports:
+      - "5080:8080"
+    networks:
+      - pe-net
+    depends_on:
+      db:
+        condition: service_healthy
+      eval-runner:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: ./web
+    ports:
+      - "4200:80"
+    networks:
+      - pe-net
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1/ || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+networks:
+  pe-net:
+    driver: bridge
+
+volumes:
+  pgdata:
