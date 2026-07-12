@@ -12,11 +12,23 @@ from anthropic import Anthropic
 from fastapi import Depends, FastAPI
 from pydantic import BaseModel
 
+from app.execution import (
+    ExecutePromptRequest,
+    ExecutePromptResponse,
+    execute_prompt,
+    stub_execute,
+)
 from app.generation import (
     GenerateFixturesRequest,
     GenerateFixturesResponse,
     generate_fixtures,
     stub_fixtures,
+)
+from app.judging import (
+    JudgeRequest,
+    JudgeResponse,
+    judge,
+    stub_judge,
 )
 
 SERVICE_NAME = "eval-runner"
@@ -77,3 +89,23 @@ def generate_fixtures_endpoint(
     if client is None:
         return stub_fixtures(request)
     return generate_fixtures(client, request)
+
+
+@app.post("/execute-prompt", response_model=ExecutePromptResponse)
+def execute_prompt_endpoint(
+    request: ExecutePromptRequest,
+    client: Annotated[Anthropic | None, Depends(get_anthropic_client)],
+) -> ExecutePromptResponse:
+    if client is None:
+        return stub_execute(request)
+    return execute_prompt(client, request)
+
+
+@app.post("/judge", response_model=JudgeResponse)
+def judge_endpoint(
+    request: JudgeRequest,
+    client: Annotated[Anthropic | None, Depends(get_anthropic_client)],
+) -> JudgeResponse:
+    if client is None:
+        return stub_judge(request)
+    return judge(client, request)
