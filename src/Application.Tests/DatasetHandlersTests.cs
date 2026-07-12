@@ -198,6 +198,27 @@ public class DatasetHandlersTests
     }
 
     [Fact]
+    public async Task GenerateSynthetic_skips_blank_input_variants_and_persists_the_rest()
+    {
+        var repo = new InMemoryDatasetRepo();
+        var dataset = Dataset.Create("Summaries");
+        dataset.AddCapturedFixture("captured 0", When);
+        await repo.AddAsync(dataset);
+
+        var runner = new RecordingRunner(new[]
+        {
+            new GeneratedFixtureData("valid variant", null, null, 0),
+            new GeneratedFixtureData("   ", null, null, 0),  // invalid: blank input
+        });
+        var handler = new GenerateSyntheticFixturesHandler(repo, runner, new FixedTime(When));
+
+        var updated = await handler.HandleAsync(dataset.Id, Guidance, count: 2);
+
+        var synthetic = Assert.Single(updated!.Fixtures, f => f.Origin == FixtureOrigin.Synthetic);
+        Assert.Equal("valid variant", synthetic.Input);
+    }
+
+    [Fact]
     public async Task GenerateSynthetic_throws_when_no_captured_fixtures_to_seed_from()
     {
         var repo = new InMemoryDatasetRepo();

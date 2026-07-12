@@ -38,6 +38,12 @@ public sealed class GenerateSyntheticFixturesHandler(
         var now = time.GetUtcNow();
         foreach (var g in generated)
         {
+            // The generator is an LLM, so a result can violate a domain invariant (e.g. an
+            // "empty input" edge-case variant). Skip those defensively rather than letting one
+            // bad item abort the whole batch — the valid generated fixtures still persist.
+            if (string.IsNullOrWhiteSpace(g.Input))
+                continue;
+
             // Resolve the seed link; fall back to the first captured seed if the generator
             // gave no (or an out-of-range) attribution, since a synthetic fixture must name one.
             var seedIndex = g.SeedIndex is int idx && idx >= 0 && idx < capturedSeeds.Count ? idx : 0;
