@@ -87,7 +87,7 @@ jobs:
       - name: End-to-end round trip through the compose network
         run: |
           set -euo pipefail
-          resp=$(curl -sf -X POST http://localhost:4240/api/eval-runs \
+          resp=$(curl -sf -X POST http://localhost:4240/api/echo \
             -H 'Content-Type: application/json' -d '{"prompt":"ci smoke"}')
           echo "$resp"
           echo "$resp" | grep -q '"output":"ci smoke"'
