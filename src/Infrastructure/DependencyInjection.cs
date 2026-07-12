@@ -17,6 +17,7 @@ public static class DependencyInjection
             options.UseNpgsql(postgresConnectionString));
 
         services.AddScoped<IEvalRunRepository, EvalRunRepository>();
+        services.AddScoped<IPromptRepository, PromptRepository>();
         services.AddScoped<ISystemInfo, SystemInfo>();
         services.AddSingleton(TimeProvider.System);
 
