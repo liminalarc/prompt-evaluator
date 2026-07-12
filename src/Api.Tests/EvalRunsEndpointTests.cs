@@ -98,7 +98,7 @@ public sealed class EvalRunsEndpointTests : IAsyncLifetime
 
         Assert.NotNull(res);
         Assert.Equal("prompt-evaluator-api", res!.Service);
-        Assert.Equal("0.1.0", res.Version);
+        Assert.Equal("0.2.0", res.Version);
         // eval-runner probed via the faked runner
         Assert.Equal("eval-runner", res.Dependencies.EvalRunner!.Service);
         Assert.Equal("faketest", res.Dependencies.EvalRunner.Commit);

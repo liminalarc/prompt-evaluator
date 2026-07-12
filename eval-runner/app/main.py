@@ -20,7 +20,7 @@ from app.generation import (
 )
 
 SERVICE_NAME = "eval-runner"
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 
 app = FastAPI(title="Prompt Evaluator eval-runner", version=VERSION)
 

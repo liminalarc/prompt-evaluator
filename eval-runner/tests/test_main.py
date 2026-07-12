@@ -27,5 +27,5 @@ def test_version_reports_service_and_commit() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["service"] == "eval-runner"
-    assert body["version"] == "0.1.0"
+    assert body["version"] == "0.2.0"
     assert body["commit"]  # "dev" locally, real SHA in a built image
