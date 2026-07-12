@@ -44,8 +44,22 @@ describe('EvalRunDetail', () => {
           latencyMs: 100,
           costUsd: 0.001,
           scores: [
-            { scorerKind: 'Regex', scorerIdentity: 'a', judgeModel: null, value: 1, passed: true, detail: null },
-            { scorerKind: 'LlmJudge', scorerIdentity: 'b', judgeModel: 'claude-opus-4-8', value: 0.9, passed: true, detail: 'judged' },
+            {
+              scorerKind: 'Regex',
+              scorerIdentity: 'a',
+              judgeModel: null,
+              value: 1,
+              passed: true,
+              detail: null,
+            },
+            {
+              scorerKind: 'LlmJudge',
+              scorerIdentity: 'b',
+              judgeModel: 'claude-opus-4-8',
+              value: 0.9,
+              passed: true,
+              detail: 'judged',
+            },
           ],
         },
       ],
@@ -66,9 +80,13 @@ describe('EvalRunDetail', () => {
     const fixture = TestBed.createComponent(EvalRunDetail);
     fixture.detectChanges();
 
-    httpMock.expectOne('/api/eval-runs/run-1').flush('boom', { status: 500, statusText: 'Server Error' });
+    httpMock
+      .expectOne('/api/eval-runs/run-1')
+      .flush('boom', { status: 500, statusText: 'Server Error' });
     fixture.detectChanges();
 
-    expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="error"]')).toBeTruthy();
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('[data-testid="error"]'),
+    ).toBeTruthy();
   });
 });

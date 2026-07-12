@@ -30,7 +30,10 @@ export class EvalRunsApiService {
   }
 
   triggerRun(datasetId: string, promptId: string, promptVersionId: string): Observable<EvalRun> {
-    return this.http.post<EvalRun>(`/api/datasets/${datasetId}/eval-runs`, { promptId, promptVersionId });
+    return this.http.post<EvalRun>(`/api/datasets/${datasetId}/eval-runs`, {
+      promptId,
+      promptVersionId,
+    });
   }
 
   getRun(runId: string): Observable<EvalRun> {
