@@ -1,0 +1,50 @@
+# ---- .NET ----
+bin/
+obj/
+*.user
+*.suo
+.vs/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+*.nupkg
+project.lock.json
+
+# ---- User secrets / env ----
+.env
+.env.*
+!.env.example
+appsettings.*.local.json
+secrets.json
+
+# ---- Python (eval-runner) ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.coverage
+htmlcov/
+
+# ---- Node / Angular (web) ----
+node_modules/
+web/dist/
+web/.angular/
+web/coverage/
+npm-debug.log*
+yarn-error.log
+
+# ---- IDE / OS ----
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ---- Playwright ----
+test-results/
+playwright-report/
+playwright/.cache/
