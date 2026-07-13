@@ -1,0 +1,27 @@
+.chart {
+  width: 100%;
+  height: 360px;
+}
+
+.empty {
+  color: var(--sb-text-muted);
+  padding: var(--sb-space-lg);
+}
+
+/* Theme ngx-charts' SVG chrome to the brand tokens (recessive axes/grid, ink-token text). */
+::ng-deep .chart .ngx-charts text {
+  fill: var(--sb-text-muted);
+  font-family: var(--sb-font-ui);
+}
+
+::ng-deep .chart .gridline-path {
+  stroke: var(--sb-border-light);
+}
+
+::ng-deep .chart .line-series .line {
+  stroke-width: 2px;
+}
+
+::ng-deep .chart .axis .tick line {
+  stroke: var(--sb-border);
+}

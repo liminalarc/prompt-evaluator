@@ -5,6 +5,7 @@ import { PromptDetail } from './prompts/prompt-detail';
 import { DatasetList } from './datasets/dataset-list';
 import { DatasetDetail } from './datasets/dataset-detail';
 import { EvalRunDetail } from './eval-runs/eval-run-detail';
+import { AnalyticsDashboard } from './analytics/analytics-dashboard';
 
 export const routes: Routes = [
   { path: '', component: Home },
@@ -13,4 +14,5 @@ export const routes: Routes = [
   { path: 'datasets', component: DatasetList },
   { path: 'datasets/:id', component: DatasetDetail },
   { path: 'eval-runs/:id', component: EvalRunDetail },
+  { path: 'analytics', component: AnalyticsDashboard },
 ];
