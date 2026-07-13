@@ -83,6 +83,9 @@ public class EvalHarnessTests
             => Task.FromResult(Saved.SingleOrDefault(r => r.Id == id));
         public Task<IReadOnlyList<EvalRun>> ListByDatasetAsync(Guid datasetId, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<EvalRun>>(Saved.Where(r => r.DatasetId == datasetId).ToList());
+        public Task<IReadOnlyList<EvalRun>> ListByPromptAndDatasetAsync(Guid promptId, Guid datasetId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<EvalRun>>(
+                Saved.Where(r => r.PromptId == promptId && r.DatasetId == datasetId).ToList());
     }
 
     private sealed record Harness(

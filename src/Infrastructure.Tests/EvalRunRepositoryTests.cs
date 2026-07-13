@@ -71,6 +71,39 @@ public sealed class EvalRunRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ListByPromptAndDataset_returns_only_that_prompts_runs_over_that_dataset()
+    {
+        var repo = new EvalRunRepository(_db);
+        var promptId = Guid.NewGuid();
+        var otherPromptId = Guid.NewGuid();
+        var datasetId = Guid.NewGuid();
+        var otherDatasetId = Guid.NewGuid();
+
+        async Task Seed(Guid prompt, Guid dataset, DateTimeOffset at)
+        {
+            var run = EvalRun.Create(prompt, Guid.NewGuid(), dataset, at);
+            run.RecordFixture(Guid.NewGuid(), "x", 1, 0.0m)
+                .AddScore(ScorerDescriptor.Deterministic(ScorerKind.Regex, "^x"), 1.0, true, null);
+            await repo.AddAsync(run);
+        }
+
+        var t0 = new DateTimeOffset(2026, 7, 12, 0, 0, 0, TimeSpan.Zero);
+        await Seed(promptId, datasetId, t0);
+        await Seed(promptId, datasetId, t0.AddHours(2));      // newer → first
+        await Seed(promptId, otherDatasetId, t0);            // wrong dataset
+        await Seed(otherPromptId, datasetId, t0);            // wrong prompt
+        _db.ChangeTracker.Clear();
+
+        var result = await repo.ListByPromptAndDatasetAsync(promptId, datasetId);
+
+        Assert.Equal(2, result.Count);
+        Assert.All(result, r => Assert.Equal(promptId, r.PromptId));
+        Assert.All(result, r => Assert.Equal(datasetId, r.DatasetId));
+        Assert.True(result[0].CreatedAt >= result[1].CreatedAt); // newest first
+        Assert.Single(result[0].Results); // fixture + score graph loaded eagerly
+    }
+
+    [Fact]
     public async Task SystemInfo_reports_the_postgres_engine_version()
     {
         var systemInfo = new SystemInfo(_db);

@@ -21,4 +21,11 @@ public sealed class EvalRunRepository(EvalDbContext db) : IEvalRunRepository
             .Where(r => r.DatasetId == datasetId)
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<EvalRun>> ListByPromptAndDatasetAsync(
+        Guid promptId, Guid datasetId, CancellationToken ct = default)
+        => await db.EvalRuns
+            .Where(r => r.PromptId == promptId && r.DatasetId == datasetId)
+            .OrderByDescending(r => r.CreatedAt)
+            .ToListAsync(ct);
 }

@@ -11,4 +11,11 @@ public interface IEvalRunRepository
 
     /// <summary>All runs over a dataset, newest first, with their fixture results and scores.</summary>
     Task<IReadOnlyList<EvalRun>> ListByDatasetAsync(Guid datasetId, CancellationToken ct = default);
+
+    /// <summary>
+    /// All runs of a specific prompt over a dataset (across every version), with their fixture
+    /// results and scores — the raw material for trend/regression analytics (1.4).
+    /// </summary>
+    Task<IReadOnlyList<EvalRun>> ListByPromptAndDatasetAsync(
+        Guid promptId, Guid datasetId, CancellationToken ct = default);
 }
