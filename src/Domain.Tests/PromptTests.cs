@@ -5,16 +5,24 @@ namespace Domain.Tests;
 public class PromptTests
 {
     private static readonly DateTimeOffset When = new(2026, 7, 12, 12, 0, 0, TimeSpan.Zero);
+    private static readonly Guid OrgId = Guid.NewGuid();
 
     [Fact]
     public void Create_sets_fields_generates_id_and_starts_with_no_versions()
     {
-        var prompt = Prompt.Create("Summarizer", "Summarizes captured SLM output");
+        var prompt = Prompt.Create(OrgId, "Summarizer", "Summarizes captured SLM output");
 
         Assert.NotEqual(Guid.Empty, prompt.Id);
+        Assert.Equal(OrgId, prompt.OrganizationId);
         Assert.Equal("Summarizer", prompt.Name);
         Assert.Equal("Summarizes captured SLM output", prompt.Description);
         Assert.Empty(prompt.Versions);
+    }
+
+    [Fact]
+    public void Create_rejects_an_empty_org_id()
+    {
+        Assert.Throws<ArgumentException>(() => Prompt.Create(Guid.Empty, "Summarizer"));
     }
 
     [Theory]
@@ -23,7 +31,7 @@ public class PromptTests
     [InlineData("   ")]
     public void Create_rejects_blank_name(string? name)
     {
-        Assert.Throws<ArgumentException>(() => Prompt.Create(name!));
+        Assert.Throws<ArgumentException>(() => Prompt.Create(OrgId, name!));
     }
 
     [Theory]
@@ -32,7 +40,7 @@ public class PromptTests
     [InlineData("   ")]
     public void Create_normalizes_blank_description_to_null(string? description)
     {
-        var prompt = Prompt.Create("Summarizer", description);
+        var prompt = Prompt.Create(OrgId, "Summarizer", description);
 
         Assert.Null(prompt.Description);
     }
@@ -40,7 +48,7 @@ public class PromptTests
     [Fact]
     public void AddVersion_appends_and_assigns_sequential_version_numbers()
     {
-        var prompt = Prompt.Create("Summarizer");
+        var prompt = Prompt.Create(OrgId, "Summarizer");
 
         var v1 = prompt.AddVersion("Summarize: {input}", "claude-sonnet-5", When);
         var v2 = prompt.AddVersion("Summarize concisely: {input}", "claude-sonnet-5", When);
@@ -53,7 +61,7 @@ public class PromptTests
     [Fact]
     public void AddVersion_records_content_target_model_label_and_source_app()
     {
-        var prompt = Prompt.Create("Summarizer");
+        var prompt = Prompt.Create(OrgId, "Summarizer");
 
         var version = prompt.AddVersion(
             "Summarize: {input}", "claude-opus-4-8", When, label: "baseline", sourceApp: "Stormboard");
@@ -69,7 +77,7 @@ public class PromptTests
     [Fact]
     public void AddVersion_normalizes_blank_label_and_source_app_to_null()
     {
-        var prompt = Prompt.Create("Summarizer");
+        var prompt = Prompt.Create(OrgId, "Summarizer");
 
         var version = prompt.AddVersion("Summarize: {input}", "claude-sonnet-5", When, label: "   ", sourceApp: "");
 
@@ -83,7 +91,7 @@ public class PromptTests
     [InlineData("   ")]
     public void AddVersion_rejects_blank_content(string? content)
     {
-        var prompt = Prompt.Create("Summarizer");
+        var prompt = Prompt.Create(OrgId, "Summarizer");
 
         Assert.Throws<ArgumentException>(() => prompt.AddVersion(content!, "claude-sonnet-5", When));
     }
@@ -94,7 +102,7 @@ public class PromptTests
     [InlineData("   ")]
     public void AddVersion_rejects_blank_target_model(string? targetModel)
     {
-        var prompt = Prompt.Create("Summarizer");
+        var prompt = Prompt.Create(OrgId, "Summarizer");
 
         Assert.Throws<ArgumentException>(() => prompt.AddVersion("Summarize: {input}", targetModel!, When));
     }
@@ -102,7 +110,7 @@ public class PromptTests
     [Fact]
     public void Create_leaves_a_prompt_unfiled_by_default()
     {
-        var prompt = Prompt.Create("Summarizer");
+        var prompt = Prompt.Create(OrgId, "Summarizer");
 
         Assert.Null(prompt.FolderId);
     }
@@ -112,7 +120,7 @@ public class PromptTests
     {
         var folderId = Guid.NewGuid();
 
-        var prompt = Prompt.Create("Summarizer", folderId: folderId);
+        var prompt = Prompt.Create(OrgId, "Summarizer", folderId: folderId);
 
         Assert.Equal(folderId, prompt.FolderId);
     }
@@ -120,7 +128,7 @@ public class PromptTests
     [Fact]
     public void MoveToFolder_files_the_prompt()
     {
-        var prompt = Prompt.Create("Summarizer");
+        var prompt = Prompt.Create(OrgId, "Summarizer");
         var folderId = Guid.NewGuid();
 
         prompt.MoveToFolder(folderId);
@@ -131,7 +139,7 @@ public class PromptTests
     [Fact]
     public void MoveToFolder_rejects_an_empty_folder_id()
     {
-        var prompt = Prompt.Create("Summarizer");
+        var prompt = Prompt.Create(OrgId, "Summarizer");
 
         Assert.Throws<ArgumentException>(() => prompt.MoveToFolder(Guid.Empty));
     }
@@ -139,7 +147,7 @@ public class PromptTests
     [Fact]
     public void Unfile_moves_the_prompt_back_to_the_root()
     {
-        var prompt = Prompt.Create("Summarizer", folderId: Guid.NewGuid());
+        var prompt = Prompt.Create(OrgId, "Summarizer", folderId: Guid.NewGuid());
 
         prompt.Unfile();
 
@@ -149,7 +157,7 @@ public class PromptTests
     [Fact]
     public void Versions_is_append_only_from_the_outside()
     {
-        var prompt = Prompt.Create("Summarizer");
+        var prompt = Prompt.Create(OrgId, "Summarizer");
         prompt.AddVersion("v1", "claude-sonnet-5", When);
 
         // The exposed collection must not permit external mutation of the aggregate's history.

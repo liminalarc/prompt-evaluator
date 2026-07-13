@@ -19,6 +19,9 @@ public sealed class FolderRepository(EvalDbContext db) : IFolderRepository
     public async Task<IReadOnlyList<Folder>> ListAsync(CancellationToken ct = default)
         => await db.Folders.ToListAsync(ct);
 
+    public async Task<IReadOnlyList<Folder>> ListByOrganizationAsync(Guid organizationId, CancellationToken ct = default)
+        => await db.Folders.Where(f => f.OrganizationId == organizationId).ToListAsync(ct);
+
     // Walk parents to the root in a single query. Folder trees are tiny, so the recursive CTE is
     // cheap and keeps folder-move a single-row update (no denormalized root ref to cascade).
     public async Task<Guid?> GetTopLevelAncestorIdAsync(Guid folderId, CancellationToken ct = default)

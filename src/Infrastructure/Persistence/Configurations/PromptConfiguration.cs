@@ -10,9 +10,19 @@ internal sealed class PromptConfiguration : IEntityTypeConfiguration<Prompt>
     {
         builder.ToTable("prompts");
         builder.HasKey(p => p.Id);
+        builder.Property(p => p.OrganizationId).IsRequired();
         builder.Property(p => p.Name).IsRequired();
         builder.Property(p => p.Description);
         builder.Property(p => p.FolderId);
+
+        // A prompt belongs to an organization (1.9) — the 4.1 permission boundary. Deleting an org
+        // takes its prompts with it.
+        builder.HasOne<Organization>()
+            .WithMany()
+            .HasForeignKey(p => p.OrganizationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasIndex(p => p.OrganizationId);
 
         // A prompt is filed into a folder (1.7); null = unfiled. Deleting a folder unfiles its
         // prompts (SET NULL) rather than deleting them.

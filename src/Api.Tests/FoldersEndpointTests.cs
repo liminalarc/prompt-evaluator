@@ -29,32 +29,40 @@ public sealed class FoldersEndpointTests : IAsyncLifetime
         await _postgres.DisposeAsync();
     }
 
+    private sealed record IdName(Guid Id, string Name);
     private sealed record FolderDto(Guid Id, Guid? ParentId, string Name);
     private sealed record PromptDto(Guid Id, Guid? FolderId, string Name);
     private sealed record PromptSummaryDto(Guid Id, Guid? FolderId, string Name);
 
-    private static async Task<Guid> CreatePromptAsync(HttpClient client, string name)
+    private static async Task<Guid> CreateOrgAsync(HttpClient client, string name = "Acme")
     {
-        var res = await client.PostAsJsonAsync("/api/prompts", new { name, description = (string?)null });
+        var res = await client.PostAsJsonAsync("/api/organizations", new { name });
+        return (await res.Content.ReadFromJsonAsync<IdName>())!.Id;
+    }
+
+    private static async Task<Guid> CreatePromptAsync(HttpClient client, Guid orgId, string name)
+    {
+        var res = await client.PostAsJsonAsync($"/api/organizations/{orgId}/prompts", new { name, description = (string?)null });
         return (await res.Content.ReadFromJsonAsync<PromptDto>())!.Id;
     }
 
-    private static async Task<FolderDto> CreateFolderAsync(HttpClient client, string name, Guid? parentId = null)
+    private static async Task<FolderDto> CreateFolderAsync(HttpClient client, Guid orgId, string name, Guid? parentId = null)
     {
-        var res = await client.PostAsJsonAsync("/api/folders", new { name, parentId });
+        var res = await client.PostAsJsonAsync($"/api/organizations/{orgId}/folders", new { name, parentId });
         Assert.Equal(HttpStatusCode.Created, res.StatusCode);
         return (await res.Content.ReadFromJsonAsync<FolderDto>())!;
     }
 
     [Fact]
-    public async Task Create_root_and_child_then_fetch_the_tree()
+    public async Task Create_root_and_child_then_fetch_the_org_tree()
     {
         var client = _factory.CreateClient();
+        var orgId = await CreateOrgAsync(client);
 
-        var root = await CreateFolderAsync(client, "Stormboard");
-        var child = await CreateFolderAsync(client, "Summarization", root.Id);
+        var root = await CreateFolderAsync(client, orgId, "Stormboard");
+        var child = await CreateFolderAsync(client, orgId, "Summarization", root.Id);
 
-        var tree = await client.GetFromJsonAsync<List<FolderDto>>("/api/folders");
+        var tree = await client.GetFromJsonAsync<List<FolderDto>>($"/api/organizations/{orgId}/folders");
 
         Assert.Equal(2, tree!.Count);
         Assert.Contains(tree, f => f.Id == root.Id && f.ParentId == null);
@@ -65,7 +73,16 @@ public sealed class FoldersEndpointTests : IAsyncLifetime
     public async Task Create_child_under_a_missing_parent_returns_404()
     {
         var client = _factory.CreateClient();
-        var res = await client.PostAsJsonAsync("/api/folders", new { name = "Orphan", parentId = Guid.NewGuid() });
+        var orgId = await CreateOrgAsync(client);
+        var res = await client.PostAsJsonAsync($"/api/organizations/{orgId}/folders", new { name = "Orphan", parentId = Guid.NewGuid() });
+        Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task Create_in_a_missing_organization_returns_404()
+    {
+        var client = _factory.CreateClient();
+        var res = await client.PostAsJsonAsync($"/api/organizations/{Guid.NewGuid()}/folders", new { name = "X", parentId = (Guid?)null });
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
     }
 
@@ -73,7 +90,8 @@ public sealed class FoldersEndpointTests : IAsyncLifetime
     public async Task Create_with_a_blank_name_returns_400()
     {
         var client = _factory.CreateClient();
-        var res = await client.PostAsJsonAsync("/api/folders", new { name = "   ", parentId = (Guid?)null });
+        var orgId = await CreateOrgAsync(client);
+        var res = await client.PostAsJsonAsync($"/api/organizations/{orgId}/folders", new { name = "   ", parentId = (Guid?)null });
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
     }
 
@@ -81,12 +99,13 @@ public sealed class FoldersEndpointTests : IAsyncLifetime
     public async Task Rename_a_folder()
     {
         var client = _factory.CreateClient();
-        var folder = await CreateFolderAsync(client, "Stormbaord");
+        var orgId = await CreateOrgAsync(client);
+        var folder = await CreateFolderAsync(client, orgId, "Stormbaord");
 
         var res = await client.PutAsJsonAsync($"/api/folders/{folder.Id}", new { name = "Stormboard" });
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);
 
-        var tree = await client.GetFromJsonAsync<List<FolderDto>>("/api/folders");
+        var tree = await client.GetFromJsonAsync<List<FolderDto>>($"/api/organizations/{orgId}/folders");
         Assert.Equal("Stormboard", Assert.Single(tree!).Name);
     }
 
@@ -94,9 +113,10 @@ public sealed class FoldersEndpointTests : IAsyncLifetime
     public async Task Move_a_folder_under_a_new_parent()
     {
         var client = _factory.CreateClient();
-        var a = await CreateFolderAsync(client, "A");
-        var b = await CreateFolderAsync(client, "B");
-        var child = await CreateFolderAsync(client, "Child", a.Id);
+        var orgId = await CreateOrgAsync(client);
+        var a = await CreateFolderAsync(client, orgId, "A");
+        var b = await CreateFolderAsync(client, orgId, "B");
+        var child = await CreateFolderAsync(client, orgId, "Child", a.Id);
 
         var res = await client.PostAsJsonAsync($"/api/folders/{child.Id}/move", new { parentId = b.Id });
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);
@@ -108,8 +128,9 @@ public sealed class FoldersEndpointTests : IAsyncLifetime
     public async Task Move_a_folder_under_its_own_descendant_returns_400()
     {
         var client = _factory.CreateClient();
-        var root = await CreateFolderAsync(client, "Root");
-        var child = await CreateFolderAsync(client, "Child", root.Id);
+        var orgId = await CreateOrgAsync(client);
+        var root = await CreateFolderAsync(client, orgId, "Root");
+        var child = await CreateFolderAsync(client, orgId, "Child", root.Id);
 
         var res = await client.PostAsJsonAsync($"/api/folders/{root.Id}/move", new { parentId = child.Id });
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
@@ -119,8 +140,9 @@ public sealed class FoldersEndpointTests : IAsyncLifetime
     public async Task Move_a_prompt_into_a_folder_then_list_it_by_folder()
     {
         var client = _factory.CreateClient();
-        var folder = await CreateFolderAsync(client, "Stormboard");
-        var promptId = await CreatePromptAsync(client, "Summarizer");
+        var orgId = await CreateOrgAsync(client);
+        var folder = await CreateFolderAsync(client, orgId, "Stormboard");
+        var promptId = await CreatePromptAsync(client, orgId, "Summarizer");
 
         var move = await client.PostAsJsonAsync($"/api/prompts/{promptId}/move", new { folderId = folder.Id });
         Assert.Equal(HttpStatusCode.OK, move.StatusCode);
@@ -132,27 +154,24 @@ public sealed class FoldersEndpointTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Move_a_prompt_to_the_root_unfiles_it()
+    public async Task Move_a_prompt_into_a_folder_in_a_different_organization_returns_400()
     {
         var client = _factory.CreateClient();
-        var folder = await CreateFolderAsync(client, "Stormboard");
-        var promptId = await CreatePromptAsync(client, "Summarizer");
-        await client.PostAsJsonAsync($"/api/prompts/{promptId}/move", new { folderId = folder.Id });
+        var orgA = await CreateOrgAsync(client, "A");
+        var orgB = await CreateOrgAsync(client, "B");
+        var promptId = await CreatePromptAsync(client, orgA, "Summarizer");
+        var foreignFolder = await CreateFolderAsync(client, orgB, "Elsewhere");
 
-        var unfile = await client.PostAsJsonAsync($"/api/prompts/{promptId}/move", new { folderId = (Guid?)null });
-        Assert.Equal(HttpStatusCode.OK, unfile.StatusCode);
-        var unfiled = await unfile.Content.ReadFromJsonAsync<PromptDto>();
-        Assert.Null(unfiled!.FolderId);
-
-        var root = await client.GetFromJsonAsync<List<PromptSummaryDto>>("/api/folders/root/prompts");
-        Assert.Contains(root!, p => p.Id == promptId);
+        var res = await client.PostAsJsonAsync($"/api/prompts/{promptId}/move", new { folderId = foreignFolder.Id });
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
     }
 
     [Fact]
     public async Task Move_a_prompt_into_a_missing_folder_returns_400()
     {
         var client = _factory.CreateClient();
-        var promptId = await CreatePromptAsync(client, "Summarizer");
+        var orgId = await CreateOrgAsync(client);
+        var promptId = await CreatePromptAsync(client, orgId, "Summarizer");
 
         var res = await client.PostAsJsonAsync($"/api/prompts/{promptId}/move", new { folderId = Guid.NewGuid() });
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);

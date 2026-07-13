@@ -10,16 +10,21 @@ namespace Domain;
 public sealed class Folder
 {
     public Guid Id { get; private set; }
+
+    /// <summary>The organization this folder belongs to (1.9) — the permission boundary for 4.1.</summary>
+    public Guid OrganizationId { get; private set; }
+
     public string Name { get; private set; }
 
-    /// <summary>The parent folder, or null for a top-level folder.</summary>
+    /// <summary>The parent folder, or null for a top-level folder (within the organization).</summary>
     public Guid? ParentId { get; private set; }
 
     public bool IsTopLevel => ParentId is null;
 
-    private Folder(Guid id, string name, Guid? parentId)
+    private Folder(Guid id, Guid organizationId, string name, Guid? parentId)
     {
         Id = id;
+        OrganizationId = organizationId;
         Name = name;
         ParentId = parentId;
     }
@@ -30,17 +35,20 @@ public sealed class Folder
         Name = string.Empty;
     }
 
-    /// <summary>Creates a top-level folder — its own permission boundary.</summary>
-    public static Folder CreateRoot(string name)
-        => new(Guid.NewGuid(), RequireName(name), parentId: null);
+    /// <summary>Creates a top-level folder within an organization.</summary>
+    public static Folder CreateRoot(Guid organizationId, string name)
+        => new(Guid.NewGuid(), RequireOrg(organizationId), RequireName(name), parentId: null);
 
-    /// <summary>Creates a subfolder under <paramref name="parentId"/>.</summary>
-    public static Folder CreateChild(string name, Guid parentId)
+    /// <summary>
+    /// Creates a subfolder under <paramref name="parentId"/>. The caller must pass the parent's
+    /// organization — the Application layer enforces that a subfolder shares its parent's org.
+    /// </summary>
+    public static Folder CreateChild(Guid organizationId, string name, Guid parentId)
     {
         if (parentId == Guid.Empty)
             throw new ArgumentException("A child folder must name its parent.", nameof(parentId));
 
-        return new Folder(Guid.NewGuid(), RequireName(name), parentId);
+        return new Folder(Guid.NewGuid(), RequireOrg(organizationId), RequireName(name), parentId);
     }
 
     public void Rename(string name) => Name = RequireName(name);
@@ -64,5 +72,12 @@ public sealed class Folder
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Folder name must not be blank.", nameof(name));
         return name;
+    }
+
+    private static Guid RequireOrg(Guid organizationId)
+    {
+        if (organizationId == Guid.Empty)
+            throw new ArgumentException("A folder must belong to an organization.", nameof(organizationId));
+        return organizationId;
     }
 }

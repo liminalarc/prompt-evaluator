@@ -17,6 +17,7 @@ public static class DependencyInjection
             options.UseNpgsql(postgresConnectionString));
 
         services.AddScoped<IEvalRunRepository, EvalRunRepository>();
+        services.AddScoped<IOrganizationRepository, OrganizationRepository>();
         services.AddScoped<IFolderRepository, FolderRepository>();
         services.AddScoped<IPromptRepository, PromptRepository>();
         services.AddScoped<IDatasetRepository, DatasetRepository>();

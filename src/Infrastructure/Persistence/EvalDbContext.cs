@@ -6,6 +6,7 @@ namespace Infrastructure.Persistence;
 public sealed class EvalDbContext(DbContextOptions<EvalDbContext> options) : DbContext(options)
 {
     public DbSet<EvalRun> EvalRuns => Set<EvalRun>();
+    public DbSet<Organization> Organizations => Set<Organization>();
     public DbSet<Folder> Folders => Set<Folder>();
     public DbSet<Prompt> Prompts => Set<Prompt>();
     public DbSet<Dataset> Datasets => Set<Dataset>();

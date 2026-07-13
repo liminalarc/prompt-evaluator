@@ -21,6 +21,9 @@ public sealed class MoveFolderHandler(IFolderRepository folders)
             var parent = await folders.GetByIdAsync(pid, ct);
             if (parent is null)
                 throw new ArgumentException("Target parent folder does not exist.", nameof(newParentId));
+            if (parent.OrganizationId != folder.OrganizationId)
+                throw new ArgumentException(
+                    "Target parent folder belongs to a different organization.", nameof(newParentId));
 
             var descendants = await folders.GetDescendantIdsAsync(id, ct);
             if (descendants.Contains(pid))

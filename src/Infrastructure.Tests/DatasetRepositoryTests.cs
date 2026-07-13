@@ -23,12 +23,14 @@ public sealed class DatasetRepositoryTests : IAsyncLifetime
         return new EvalDbContext(options);
     }
 
-    // A dataset belongs to a prompt (1.7) and the FK enforces it, so every dataset test seeds an
-    // owning prompt first.
+    // A dataset belongs to a prompt (1.7) which belongs to an organization (1.9); the FKs enforce
+    // both, so every dataset test seeds an org + an owning prompt first.
     private async Task<Guid> SeedPromptAsync()
     {
-        var prompt = Prompt.Create("Owner");
+        var org = Organization.Create("Acme");
+        var prompt = Prompt.Create(org.Id, "Owner");
         await using var ctx = NewContext();
+        await new OrganizationRepository(ctx).AddAsync(org);
         await new PromptRepository(ctx).AddAsync(prompt);
         return prompt.Id;
     }

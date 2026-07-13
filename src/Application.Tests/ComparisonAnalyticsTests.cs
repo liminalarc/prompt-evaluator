@@ -47,7 +47,7 @@ public class ComparisonAnalyticsTests
     [Fact]
     public async Task Comparison_reports_per_fixture_and_aggregate_deltas()
     {
-        var prompt = Prompt.Create("Summarizer");
+        var prompt = Prompt.Create(Guid.NewGuid(), "Summarizer");
         var v1 = prompt.AddVersion("v1", "claude-opus-4-8", When, label: "baseline");
         var v2 = prompt.AddVersion("v2", "claude-opus-4-8", When.AddDays(1), label: "tweaked");
         var datasetId = Guid.NewGuid();
@@ -87,7 +87,7 @@ public class ComparisonAnalyticsTests
     [Fact]
     public async Task Comparison_uses_the_latest_run_of_each_version()
     {
-        var prompt = Prompt.Create("Summarizer");
+        var prompt = Prompt.Create(Guid.NewGuid(), "Summarizer");
         var v1 = prompt.AddVersion("v1", "claude-opus-4-8", When);
         var v2 = prompt.AddVersion("v2", "claude-opus-4-8", When.AddDays(1));
         var datasetId = Guid.NewGuid();
@@ -112,7 +112,7 @@ public class ComparisonAnalyticsTests
     [Fact]
     public async Task A_fixture_scored_on_only_one_side_has_a_null_delta()
     {
-        var prompt = Prompt.Create("Summarizer");
+        var prompt = Prompt.Create(Guid.NewGuid(), "Summarizer");
         var v1 = prompt.AddVersion("v1", "claude-opus-4-8", When);
         var v2 = prompt.AddVersion("v2", "claude-opus-4-8", When.AddDays(1));
         var datasetId = Guid.NewGuid();
@@ -138,7 +138,7 @@ public class ComparisonAnalyticsTests
     [Fact]
     public async Task Returns_null_when_a_version_is_unknown()
     {
-        var prompt = Prompt.Create("Summarizer");
+        var prompt = Prompt.Create(Guid.NewGuid(), "Summarizer");
         var v1 = prompt.AddVersion("v1", "claude-opus-4-8", When);
         var promptRepo = new InMemoryPromptRepo();
         await promptRepo.AddAsync(prompt);

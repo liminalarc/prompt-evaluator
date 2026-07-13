@@ -50,7 +50,7 @@ public class TrendAnalyticsTests
 
     private static (Prompt prompt, PromptVersion v1, PromptVersion v2) TwoVersionPrompt()
     {
-        var prompt = Prompt.Create("Summarizer");
+        var prompt = Prompt.Create(Guid.NewGuid(), "Summarizer");
         var v1 = prompt.AddVersion("v1 content", "claude-opus-4-8", When, label: "baseline");
         var v2 = prompt.AddVersion("v2 content", "claude-opus-4-8", When.AddDays(1), label: "tweaked");
         return (prompt, v1, v2);

@@ -11,13 +11,19 @@ public sealed class Prompt
     private readonly List<PromptVersion> _versions = new();
 
     public Guid Id { get; private set; }
+
+    /// <summary>
+    /// The organization this prompt belongs to (1.9) — the <b>permission boundary</b> 4.1 grants
+    /// access on, resolved directly (no tree walk).
+    /// </summary>
+    public Guid OrganizationId { get; private set; }
+
     public string Name { get; private set; }
     public string? Description { get; private set; }
 
     /// <summary>
-    /// The folder this prompt is filed into (1.7), or null when unfiled — an unfiled prompt is
-    /// shown under the root folder. A prompt belongs to exactly one folder; the folder's top-level
-    /// ancestor is the permission boundary (4.1).
+    /// The folder this prompt is filed into (1.7), or null when unfiled (shown under the org root).
+    /// The folder, when set, must belong to the same organization — enforced in the Application layer.
     /// </summary>
     public Guid? FolderId { get; private set; }
 
@@ -25,9 +31,10 @@ public sealed class Prompt
     public IReadOnlyList<PromptVersion> Versions
         => _versions.OrderBy(v => v.VersionNumber).ToList().AsReadOnly();
 
-    private Prompt(Guid id, string name, string? description, Guid? folderId)
+    private Prompt(Guid id, Guid organizationId, string name, string? description, Guid? folderId)
     {
         Id = id;
+        OrganizationId = organizationId;
         Name = name;
         Description = description;
         FolderId = folderId;
@@ -39,12 +46,15 @@ public sealed class Prompt
         Name = string.Empty;
     }
 
-    public static Prompt Create(string name, string? description = null, Guid? folderId = null)
+    public static Prompt Create(
+        Guid organizationId, string name, string? description = null, Guid? folderId = null)
     {
+        if (organizationId == Guid.Empty)
+            throw new ArgumentException("A prompt must belong to an organization.", nameof(organizationId));
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Prompt name must not be blank.", nameof(name));
 
-        return new Prompt(Guid.NewGuid(), name, Normalize(description), folderId);
+        return new Prompt(Guid.NewGuid(), organizationId, name, Normalize(description), folderId);
     }
 
     /// <summary>Files (or re-files) this prompt into a folder.</summary>

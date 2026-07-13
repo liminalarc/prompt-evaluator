@@ -23,6 +23,9 @@ public sealed class PromptRepository(EvalDbContext db) : IPromptRepository
     public async Task<IReadOnlyList<Prompt>> ListByFolderAsync(Guid? folderId, CancellationToken ct = default)
         => await db.Prompts.Where(p => p.FolderId == folderId).ToListAsync(ct);
 
+    public async Task<IReadOnlyList<Prompt>> ListByOrganizationAsync(Guid organizationId, CancellationToken ct = default)
+        => await db.Prompts.Where(p => p.OrganizationId == organizationId).ToListAsync(ct);
+
     public Task SaveChangesAsync(CancellationToken ct = default)
         => db.SaveChangesAsync(ct);
 }

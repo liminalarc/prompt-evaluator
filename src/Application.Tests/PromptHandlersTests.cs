@@ -42,11 +42,14 @@ public class PromptHandlersTests
     [Fact]
     public async Task CreatePrompt_persists_and_returns_the_prompt()
     {
+        var org = Organization.Create("Acme");
         var repo = new InMemoryPromptRepo();
-        var handler = new CreatePromptHandler(repo);
+        var handler = new CreatePromptHandler(new InMemoryOrganizationRepo(org), repo);
 
-        var prompt = await handler.HandleAsync("Summarizer", "Summarizes captured output");
+        var prompt = await handler.HandleAsync(org.Id, "Summarizer", "Summarizes captured output");
 
+        Assert.NotNull(prompt);
+        Assert.Equal(org.Id, prompt!.OrganizationId);
         Assert.Equal("Summarizer", prompt.Name);
         Assert.Equal("Summarizes captured output", prompt.Description);
         Assert.Single(repo.Saved);
@@ -54,10 +57,22 @@ public class PromptHandlersTests
     }
 
     [Fact]
+    public async Task CreatePrompt_returns_null_when_the_organization_does_not_exist()
+    {
+        var repo = new InMemoryPromptRepo();
+        var handler = new CreatePromptHandler(new InMemoryOrganizationRepo(), repo);
+
+        var prompt = await handler.HandleAsync(Guid.NewGuid(), "Summarizer", null);
+
+        Assert.Null(prompt);
+        Assert.Empty(repo.Saved);
+    }
+
+    [Fact]
     public async Task AddPromptVersion_appends_with_the_clock_time_and_saves()
     {
         var repo = new InMemoryPromptRepo();
-        var existing = Prompt.Create("Summarizer");
+        var existing = Prompt.Create(Guid.NewGuid(), "Summarizer");
         await repo.AddAsync(existing);
         var handler = new AddPromptVersionHandler(repo, new FixedTime(When));
 

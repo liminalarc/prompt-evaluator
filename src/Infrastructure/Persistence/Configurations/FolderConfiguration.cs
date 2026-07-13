@@ -10,8 +10,17 @@ internal sealed class FolderConfiguration : IEntityTypeConfiguration<Folder>
     {
         builder.ToTable("folders");
         builder.HasKey(f => f.Id);
+        builder.Property(f => f.OrganizationId).IsRequired();
         builder.Property(f => f.Name).IsRequired();
         builder.Property(f => f.ParentId);
+
+        // A folder belongs to an organization (1.9). Deleting an org takes its folders with it.
+        builder.HasOne<Organization>()
+            .WithMany()
+            .HasForeignKey(f => f.OrganizationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasIndex(f => f.OrganizationId);
 
         // Self-referencing tree. Restrict on delete: a folder with children can't be removed out
         // from under them (folder deletion isn't in 1.7's scope anyway).

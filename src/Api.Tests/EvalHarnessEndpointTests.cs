@@ -67,7 +67,9 @@ public sealed class EvalHarnessEndpointTests : IAsyncLifetime
 
     private async Task<(Guid promptId, Guid versionId, Guid datasetId)> SeedAsync(HttpClient client)
     {
-        var promptCreate = await client.PostAsJsonAsync("/api/prompts", new { name = "Summarizer", description = (string?)null });
+        var orgRes = await client.PostAsJsonAsync("/api/organizations", new { name = "Acme" });
+        var orgId = (await orgRes.Content.ReadFromJsonAsync<IdName>())!.Id;
+        var promptCreate = await client.PostAsJsonAsync($"/api/organizations/{orgId}/prompts", new { name = "Summarizer", description = (string?)null });
         var prompt = (await promptCreate.Content.ReadFromJsonAsync<PromptDto>())!;
 
         var versionRes = await client.PostAsJsonAsync($"/api/prompts/{prompt.Id}/versions",

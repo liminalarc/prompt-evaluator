@@ -57,16 +57,23 @@ public class FolderHandlersTests
         public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
     }
 
+    private static readonly Organization Org = Organization.Create("Acme");
+    private static readonly Guid OrgId = Org.Id;
+
+    private static CreateFolderHandler NewCreateFolderHandler(InMemoryFolderRepo folders)
+        => new(new InMemoryOrganizationRepo(Org), folders);
+
     // ---- CreateFolderHandler ----
 
     [Fact]
     public async Task CreateFolder_creates_a_top_level_folder_when_no_parent()
     {
         var repo = new InMemoryFolderRepo();
-        var folder = await new CreateFolderHandler(repo).HandleAsync("Stormboard", parentId: null);
+        var folder = await NewCreateFolderHandler(repo).HandleAsync(OrgId, "Stormboard", parentId: null);
 
         Assert.NotNull(folder);
-        Assert.True(folder!.IsTopLevel);
+        Assert.Equal(OrgId, folder!.OrganizationId);
+        Assert.True(folder.IsTopLevel);
         Assert.Single(repo.Saved);
     }
 
@@ -74,13 +81,25 @@ public class FolderHandlersTests
     public async Task CreateFolder_creates_a_child_under_an_existing_parent()
     {
         var repo = new InMemoryFolderRepo();
-        var parent = Folder.CreateRoot("Stormboard");
+        var parent = Folder.CreateRoot(OrgId, "Stormboard");
         await repo.AddAsync(parent);
 
-        var child = await new CreateFolderHandler(repo).HandleAsync("Summarization", parent.Id);
+        var child = await NewCreateFolderHandler(repo).HandleAsync(OrgId, "Summarization", parent.Id);
 
         Assert.NotNull(child);
         Assert.Equal(parent.Id, child!.ParentId);
+    }
+
+    [Fact]
+    public async Task CreateFolder_returns_null_when_the_organization_does_not_exist()
+    {
+        var repo = new InMemoryFolderRepo();
+
+        var folder = await new CreateFolderHandler(new InMemoryOrganizationRepo(), repo)
+            .HandleAsync(Guid.NewGuid(), "Orphan", parentId: null);
+
+        Assert.Null(folder);
+        Assert.Empty(repo.Saved);
     }
 
     [Fact]
@@ -88,10 +107,21 @@ public class FolderHandlersTests
     {
         var repo = new InMemoryFolderRepo();
 
-        var folder = await new CreateFolderHandler(repo).HandleAsync("Orphan", Guid.NewGuid());
+        var folder = await NewCreateFolderHandler(repo).HandleAsync(OrgId, "Orphan", Guid.NewGuid());
 
         Assert.Null(folder);
         Assert.Empty(repo.Saved);
+    }
+
+    [Fact]
+    public async Task CreateFolder_rejects_a_parent_in_a_different_organization()
+    {
+        var repo = new InMemoryFolderRepo();
+        var otherOrgParent = Folder.CreateRoot(Guid.NewGuid(), "Elsewhere");
+        await repo.AddAsync(otherOrgParent);
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => NewCreateFolderHandler(repo).HandleAsync(OrgId, "Child", otherOrgParent.Id));
     }
 
     [Theory]
@@ -100,7 +130,8 @@ public class FolderHandlersTests
     public async Task CreateFolder_rejects_a_blank_name(string name)
     {
         var repo = new InMemoryFolderRepo();
-        await Assert.ThrowsAsync<ArgumentException>(() => new CreateFolderHandler(repo).HandleAsync(name, null));
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => NewCreateFolderHandler(repo).HandleAsync(OrgId, name, null));
     }
 
     // ---- RenameFolderHandler ----
@@ -109,7 +140,7 @@ public class FolderHandlersTests
     public async Task RenameFolder_changes_the_name()
     {
         var repo = new InMemoryFolderRepo();
-        var folder = Folder.CreateRoot("Stormbaord");
+        var folder = Folder.CreateRoot(OrgId, "Stormbaord");
         await repo.AddAsync(folder);
 
         var renamed = await new RenameFolderHandler(repo).HandleAsync(folder.Id, "Stormboard");
@@ -130,9 +161,9 @@ public class FolderHandlersTests
     public async Task MoveFolder_reparents_under_another_folder()
     {
         var repo = new InMemoryFolderRepo();
-        var a = Folder.CreateRoot("A");
-        var b = Folder.CreateRoot("B");
-        var child = Folder.CreateChild("Child", a.Id);
+        var a = Folder.CreateRoot(OrgId, "A");
+        var b = Folder.CreateRoot(OrgId, "B");
+        var child = Folder.CreateChild(OrgId, "Child", a.Id);
         await repo.AddAsync(a); await repo.AddAsync(b); await repo.AddAsync(child);
 
         var moved = await new MoveFolderHandler(repo).HandleAsync(child.Id, b.Id);
@@ -151,7 +182,7 @@ public class FolderHandlersTests
     public async Task MoveFolder_rejects_a_missing_target_parent()
     {
         var repo = new InMemoryFolderRepo();
-        var folder = Folder.CreateRoot("A");
+        var folder = Folder.CreateRoot(OrgId, "A");
         await repo.AddAsync(folder);
 
         await Assert.ThrowsAsync<ArgumentException>(
@@ -162,9 +193,9 @@ public class FolderHandlersTests
     public async Task MoveFolder_rejects_moving_a_folder_under_its_own_descendant()
     {
         var repo = new InMemoryFolderRepo();
-        var root = Folder.CreateRoot("Root");
-        var child = Folder.CreateChild("Child", root.Id);
-        var grandchild = Folder.CreateChild("Grandchild", child.Id);
+        var root = Folder.CreateRoot(OrgId, "Root");
+        var child = Folder.CreateChild(OrgId, "Child", root.Id);
+        var grandchild = Folder.CreateChild(OrgId, "Grandchild", child.Id);
         await repo.AddAsync(root); await repo.AddAsync(child); await repo.AddAsync(grandchild);
 
         // Moving root under its grandchild would form a cycle.
@@ -179,8 +210,8 @@ public class FolderHandlersTests
     {
         var folders = new InMemoryFolderRepo();
         var prompts = new InMemoryPromptRepo();
-        var folder = Folder.CreateRoot("Stormboard");
-        var prompt = Prompt.Create("Summarizer");
+        var folder = Folder.CreateRoot(OrgId, "Stormboard");
+        var prompt = Prompt.Create(OrgId, "Summarizer");
         await folders.AddAsync(folder);
         await prompts.AddAsync(prompt);
 
@@ -194,8 +225,8 @@ public class FolderHandlersTests
     {
         var folders = new InMemoryFolderRepo();
         var prompts = new InMemoryPromptRepo();
-        var folder = Folder.CreateRoot("Stormboard");
-        var prompt = Prompt.Create("Summarizer", folderId: folder.Id);
+        var folder = Folder.CreateRoot(OrgId, "Stormboard");
+        var prompt = Prompt.Create(OrgId, "Summarizer", folderId: folder.Id);
         await folders.AddAsync(folder);
         await prompts.AddAsync(prompt);
 
@@ -218,7 +249,7 @@ public class FolderHandlersTests
     {
         var folders = new InMemoryFolderRepo();
         var prompts = new InMemoryPromptRepo();
-        var prompt = Prompt.Create("Summarizer");
+        var prompt = Prompt.Create(OrgId, "Summarizer");
         await prompts.AddAsync(prompt);
 
         await Assert.ThrowsAsync<ArgumentException>(

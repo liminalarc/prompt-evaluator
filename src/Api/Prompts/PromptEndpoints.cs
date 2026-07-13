@@ -22,18 +22,29 @@ public static class PromptEndpoints
             return prompt is null ? Results.NotFound() : Results.Ok(PromptResponse.From(prompt));
         });
 
-        group.MapPost("/", async (CreatePromptRequest request, CreatePromptHandler handler, CancellationToken ct) =>
-        {
-            try
+        // Prompts belong to an organization (1.9): created and browsed under their org.
+        app.MapGet("/api/organizations/{orgId:guid}/prompts",
+            async (Guid orgId, IPromptRepository repository, CancellationToken ct) =>
             {
-                var prompt = await handler.HandleAsync(request.Name, request.Description, ct);
-                return Results.Created($"/api/prompts/{prompt.Id}", PromptResponse.From(prompt));
-            }
-            catch (ArgumentException ex)
+                var prompts = await repository.ListByOrganizationAsync(orgId, ct);
+                return Results.Ok(prompts.Select(PromptSummaryResponse.From));
+            });
+
+        app.MapPost("/api/organizations/{orgId:guid}/prompts",
+            async (Guid orgId, CreatePromptRequest request, CreatePromptHandler handler, CancellationToken ct) =>
             {
-                return Results.BadRequest(new { error = ex.Message });
-            }
-        });
+                try
+                {
+                    var prompt = await handler.HandleAsync(orgId, request.Name, request.Description, ct);
+                    return prompt is null
+                        ? Results.NotFound(new { error = "Organization not found." })
+                        : Results.Created($"/api/prompts/{prompt.Id}", PromptResponse.From(prompt));
+                }
+                catch (ArgumentException ex)
+                {
+                    return Results.BadRequest(new { error = ex.Message });
+                }
+            });
 
         // Move a prompt into a folder (1.7), or unfile it to the root when FolderId is null.
         group.MapPost("/{id:guid}/move",

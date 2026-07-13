@@ -156,7 +156,7 @@ public class RegressionDetectionTests
     [Fact]
     public async Task Handler_flags_a_significant_regression_between_versions()
     {
-        var prompt = Prompt.Create("Summarizer");
+        var prompt = Prompt.Create(Guid.NewGuid(), "Summarizer");
         var v1 = prompt.AddVersion("v1", "claude-opus-4-8", When);
         var v2 = prompt.AddVersion("v2", "claude-opus-4-8", When.AddDays(1));
         var datasetId = Guid.NewGuid();
@@ -184,7 +184,7 @@ public class RegressionDetectionTests
     [Fact]
     public async Task Handler_uses_the_latest_run_of_each_version()
     {
-        var prompt = Prompt.Create("Summarizer");
+        var prompt = Prompt.Create(Guid.NewGuid(), "Summarizer");
         var v1 = prompt.AddVersion("v1", "claude-opus-4-8", When);
         var v2 = prompt.AddVersion("v2", "claude-opus-4-8", When.AddDays(1));
         var datasetId = Guid.NewGuid();

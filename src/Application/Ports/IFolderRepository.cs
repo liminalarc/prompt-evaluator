@@ -18,6 +18,13 @@ public interface IFolderRepository
     Task<IReadOnlyList<Folder>> ListAsync(CancellationToken ct = default);
 
     /// <summary>
+    /// The folders in an organization (1.9) — the org's whole tree. The default filters
+    /// <see cref="ListAsync"/>; the EF adapter overrides it with a DB-side query.
+    /// </summary>
+    async Task<IReadOnlyList<Folder>> ListByOrganizationAsync(Guid organizationId, CancellationToken ct = default)
+        => (await ListAsync(ct)).Where(f => f.OrganizationId == organizationId).ToList();
+
+    /// <summary>
     /// The top-level ancestor of a folder — the permission boundary 4.1 grants access on. Returns
     /// the folder's own id when it is already top-level, or null if the folder does not exist.
     /// Resolved by walking parents, so moving a folder stays a single-row change with no cascade.

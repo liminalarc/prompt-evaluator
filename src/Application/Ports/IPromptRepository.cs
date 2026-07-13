@@ -30,6 +30,13 @@ public interface IPromptRepository
     /// </summary>
     Task<IReadOnlyList<Prompt>> ListByFolderAsync(Guid? folderId, CancellationToken ct = default);
 
+    /// <summary>
+    /// The prompts belonging to an organization (1.9). The default filters <see cref="ListAsync"/>;
+    /// the EF adapter overrides it with a DB-side query.
+    /// </summary>
+    async Task<IReadOnlyList<Prompt>> ListByOrganizationAsync(Guid organizationId, CancellationToken ct = default)
+        => (await ListAsync(ct)).Where(p => p.OrganizationId == organizationId).ToList();
+
     /// <summary>Persists changes made to a tracked aggregate (e.g. a newly appended version).</summary>
     Task SaveChangesAsync(CancellationToken ct = default);
 }

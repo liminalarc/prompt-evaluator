@@ -23,13 +23,23 @@ public sealed class PromptRepositoryTests : IAsyncLifetime
         return new EvalDbContext(options);
     }
 
+    // A prompt belongs to an organization (1.9) and the FK enforces it, so seed one first.
+    private async Task<Guid> SeedOrgAsync()
+    {
+        var org = Organization.Create("Acme");
+        await using var ctx = NewContext();
+        await new OrganizationRepository(ctx).AddAsync(org);
+        return org.Id;
+    }
+
     [Fact]
     public async Task Add_then_GetById_round_trips_the_full_ordered_version_history()
     {
         await using var migrateCtx = NewContext();
         await migrateCtx.Database.MigrateAsync();
 
-        var prompt = Prompt.Create("Summarizer", "Summarizes captured SLM output");
+        var orgId = await SeedOrgAsync();
+        var prompt = Prompt.Create(orgId, "Summarizer", "Summarizes captured SLM output");
         prompt.AddVersion("Summarize: {input}", "claude-sonnet-5", When, label: "baseline", sourceApp: "Stormboard");
         prompt.AddVersion("Summarize concisely: {input}", "claude-opus-4-8", When.AddMinutes(1));
 
@@ -64,7 +74,8 @@ public sealed class PromptRepositoryTests : IAsyncLifetime
         await using var migrateCtx = NewContext();
         await migrateCtx.Database.MigrateAsync();
 
-        var prompt = Prompt.Create("Classifier");
+        var orgId = await SeedOrgAsync();
+        var prompt = Prompt.Create(orgId, "Classifier");
         prompt.AddVersion("Classify: {input}", "claude-sonnet-5", When);
 
         await using (var writeCtx = NewContext())
@@ -93,9 +104,10 @@ public sealed class PromptRepositoryTests : IAsyncLifetime
         await using var migrateCtx = NewContext();
         await migrateCtx.Database.MigrateAsync();
 
-        var a = Prompt.Create("A");
+        var orgId = await SeedOrgAsync();
+        var a = Prompt.Create(orgId, "A");
         a.AddVersion("a1", "claude-sonnet-5", When);
-        var b = Prompt.Create("B");
+        var b = Prompt.Create(orgId, "B");
         b.AddVersion("b1", "claude-sonnet-5", When);
 
         await using (var writeCtx = NewContext())

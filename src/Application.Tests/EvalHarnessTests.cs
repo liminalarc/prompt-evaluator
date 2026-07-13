@@ -109,7 +109,7 @@ public class EvalHarnessTests
         var runRepo = new InMemoryEvalRunRepo();
         var runner = new ScriptedRunner();
 
-        var prompt = Prompt.Create("Summarizer");
+        var prompt = Prompt.Create(Guid.NewGuid(), "Summarizer");
         var version = prompt.AddVersion("You summarize text.", "claude-opus-4-8", When);
         await promptRepo.AddAsync(prompt);
 
@@ -226,7 +226,7 @@ public class EvalHarnessTests
         var runRepo = new InMemoryEvalRunRepo();
         var runner = new ScriptedRunner();
 
-        var prompt = Prompt.Create("Summarizer");
+        var prompt = Prompt.Create(Guid.NewGuid(), "Summarizer");
         var version = prompt.AddVersion("You summarize text.", "claude-opus-4-8", When);
         await promptRepo.AddAsync(prompt);
 

@@ -67,10 +67,13 @@ public sealed class DatasetsEndpointTests : IAsyncLifetime
         Guid Id, Guid PromptId, string Name, string? Description, int FixtureCount, int CapturedCount, int SyntheticCount);
     private sealed record PromptDto(Guid Id, string Name);
 
-    // Datasets are created under a prompt (1.7), so every dataset test seeds an owning prompt.
+    // Datasets are created under a prompt (1.7), which belongs to an organization (1.9), so every
+    // dataset test seeds an org + an owning prompt.
     private static async Task<Guid> CreatePromptAsync(HttpClient client, string name = "Owner")
     {
-        var res = await client.PostAsJsonAsync("/api/prompts", new { name, description = (string?)null });
+        var orgRes = await client.PostAsJsonAsync("/api/organizations", new { name = "Acme" });
+        var orgId = (await orgRes.Content.ReadFromJsonAsync<PromptDto>())!.Id;
+        var res = await client.PostAsJsonAsync($"/api/organizations/{orgId}/prompts", new { name, description = (string?)null });
         var prompt = await res.Content.ReadFromJsonAsync<PromptDto>();
         return prompt!.Id;
     }

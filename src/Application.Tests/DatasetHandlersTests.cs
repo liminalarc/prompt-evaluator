@@ -57,7 +57,7 @@ public class DatasetHandlersTests
     public async Task CreateDataset_persists_under_the_prompt_and_returns_the_dataset()
     {
         var prompts = new InMemoryPromptRepo();
-        var prompt = Prompt.Create("Summarizer");
+        var prompt = Prompt.Create(Guid.NewGuid(), "Summarizer");
         await prompts.AddAsync(prompt);
         var repo = new InMemoryDatasetRepo();
         var handler = new CreateDatasetHandler(prompts, repo);

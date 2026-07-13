@@ -29,17 +29,26 @@ public sealed class PromptsEndpointTests : IAsyncLifetime
         await _postgres.DisposeAsync();
     }
 
+    private sealed record IdName(Guid Id, string Name);
     private sealed record VersionDto(
         Guid Id, int VersionNumber, string Content, string TargetModel, string? Label, string? SourceApp, DateTimeOffset CreatedAt);
     private sealed record PromptDto(Guid Id, string Name, string? Description, List<VersionDto> Versions);
     private sealed record SummaryDto(Guid Id, string Name, string? Description, int VersionCount, string? LatestTargetModel);
 
+    // Prompts belong to an organization (1.9), so each test seeds one first.
+    private static async Task<Guid> CreateOrgAsync(HttpClient client)
+    {
+        var res = await client.PostAsJsonAsync("/api/organizations", new { name = "Acme" });
+        return (await res.Content.ReadFromJsonAsync<IdName>())!.Id;
+    }
+
     [Fact]
     public async Task Create_add_version_then_get_round_trips_full_history_with_target_model()
     {
         var client = _factory.CreateClient();
+        var orgId = await CreateOrgAsync(client);
 
-        var create = await client.PostAsJsonAsync("/api/prompts",
+        var create = await client.PostAsJsonAsync($"/api/organizations/{orgId}/prompts",
             new { name = "Summarizer", description = "Summarizes captured output" });
         Assert.Equal(HttpStatusCode.Created, create.StatusCode);
         var created = await create.Content.ReadFromJsonAsync<PromptDto>();
@@ -66,8 +75,9 @@ public sealed class PromptsEndpointTests : IAsyncLifetime
     public async Task List_returns_a_summary_including_the_created_prompt()
     {
         var client = _factory.CreateClient();
+        var orgId = await CreateOrgAsync(client);
 
-        var create = await client.PostAsJsonAsync("/api/prompts", new { name = "Classifier", description = (string?)null });
+        var create = await client.PostAsJsonAsync($"/api/organizations/{orgId}/prompts", new { name = "Classifier", description = (string?)null });
         var created = await create.Content.ReadFromJsonAsync<PromptDto>();
         await client.PostAsJsonAsync($"/api/prompts/{created!.Id}/versions",
             new { content = "Classify: {input}", targetModel = "claude-opus-4-8", label = (string?)null, sourceApp = (string?)null });
@@ -101,7 +111,8 @@ public sealed class PromptsEndpointTests : IAsyncLifetime
     public async Task Create_with_blank_name_returns_400()
     {
         var client = _factory.CreateClient();
-        var res = await client.PostAsJsonAsync("/api/prompts", new { name = "   ", description = (string?)null });
+        var orgId = await CreateOrgAsync(client);
+        var res = await client.PostAsJsonAsync($"/api/organizations/{orgId}/prompts", new { name = "   ", description = (string?)null });
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
     }
 }

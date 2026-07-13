@@ -27,12 +27,22 @@ public sealed class FolderRepositoryTests : IAsyncLifetime
         await ctx.Database.MigrateAsync();
     }
 
+    // Folders and prompts belong to an organization (1.9); the FK enforces it, so seed one first.
+    private async Task<Guid> SeedOrgAsync()
+    {
+        var org = Organization.Create("Acme");
+        await using var ctx = NewContext();
+        await new OrganizationRepository(ctx).AddAsync(org);
+        return org.Id;
+    }
+
     [Fact]
     public async Task Add_then_GetById_round_trips_a_folder_and_its_parent()
     {
         await MigrateAsync();
-        var root = Folder.CreateRoot("Stormboard");
-        var child = Folder.CreateChild("Summarization", root.Id);
+        var orgId = await SeedOrgAsync();
+        var root = Folder.CreateRoot(orgId, "Stormboard");
+        var child = Folder.CreateChild(orgId, "Summarization", root.Id);
 
         await using (var write = NewContext())
         {
@@ -54,9 +64,10 @@ public sealed class FolderRepositoryTests : IAsyncLifetime
     public async Task GetTopLevelAncestorId_resolves_the_permission_boundary_at_any_depth()
     {
         await MigrateAsync();
-        var root = Folder.CreateRoot("Stormboard");
-        var child = Folder.CreateChild("Summarization", root.Id);
-        var grandchild = Folder.CreateChild("Threads", child.Id);
+        var orgId = await SeedOrgAsync();
+        var root = Folder.CreateRoot(orgId, "Stormboard");
+        var child = Folder.CreateChild(orgId, "Summarization", root.Id);
+        var grandchild = Folder.CreateChild(orgId, "Threads", child.Id);
 
         await using (var write = NewContext())
         {
@@ -91,9 +102,10 @@ public sealed class FolderRepositoryTests : IAsyncLifetime
     public async Task Moving_a_subtree_changes_its_top_level_ancestor()
     {
         await MigrateAsync();
-        var oldRoot = Folder.CreateRoot("Old");
-        var newRoot = Folder.CreateRoot("New");
-        var child = Folder.CreateChild("Child", oldRoot.Id);
+        var orgId = await SeedOrgAsync();
+        var oldRoot = Folder.CreateRoot(orgId, "Old");
+        var newRoot = Folder.CreateRoot(orgId, "New");
+        var child = Folder.CreateChild(orgId, "Child", oldRoot.Id);
 
         await using (var write = NewContext())
         {
@@ -119,9 +131,10 @@ public sealed class FolderRepositoryTests : IAsyncLifetime
     public async Task Prompts_list_by_folder_and_unfiled_prompts_list_under_the_root()
     {
         await MigrateAsync();
-        var folder = Folder.CreateRoot("Stormboard");
-        var filed = Prompt.Create("Filed", folderId: folder.Id);
-        var unfiled = Prompt.Create("Unfiled");
+        var orgId = await SeedOrgAsync();
+        var folder = Folder.CreateRoot(orgId, "Stormboard");
+        var filed = Prompt.Create(orgId, "Filed", folderId: folder.Id);
+        var unfiled = Prompt.Create(orgId, "Unfiled");
 
         await using (var write = NewContext())
         {
@@ -145,8 +158,9 @@ public sealed class FolderRepositoryTests : IAsyncLifetime
     public async Task Datasets_list_by_their_owning_prompt()
     {
         await MigrateAsync();
-        var promptA = Prompt.Create("A");
-        var promptB = Prompt.Create("B");
+        var orgId = await SeedOrgAsync();
+        var promptA = Prompt.Create(orgId, "A");
+        var promptB = Prompt.Create(orgId, "B");
         var dsA = Dataset.Create(promptA.Id, "A-data");
         var dsB = Dataset.Create(promptB.Id, "B-data");
 

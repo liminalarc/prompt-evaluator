@@ -78,7 +78,9 @@ public sealed class AnalyticsEndpointTests : IAsyncLifetime
     private async Task<(Guid promptId, Guid v1, Guid v2, Guid datasetId)> SeedTwoVersionsAsync(
         HttpClient client, int fixtureCount = 4)
     {
-        var promptRes = await client.PostAsJsonAsync("/api/prompts", new { name = "Summarizer", description = (string?)null });
+        var orgRes = await client.PostAsJsonAsync("/api/organizations", new { name = "Acme" });
+        var orgId = (await orgRes.Content.ReadFromJsonAsync<IdName>())!.Id;
+        var promptRes = await client.PostAsJsonAsync($"/api/organizations/{orgId}/prompts", new { name = "Summarizer", description = (string?)null });
         var promptId = (await promptRes.Content.ReadFromJsonAsync<PromptDto>())!.Id;
 
         await client.PostAsJsonAsync($"/api/prompts/{promptId}/versions",

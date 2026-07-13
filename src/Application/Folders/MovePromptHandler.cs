@@ -21,6 +21,9 @@ public sealed class MovePromptHandler(IPromptRepository prompts, IFolderReposito
             var folder = await folders.GetByIdAsync(fid, ct);
             if (folder is null)
                 throw new ArgumentException("Target folder does not exist.", nameof(folderId));
+            if (folder.OrganizationId != prompt.OrganizationId)
+                throw new ArgumentException(
+                    "Target folder belongs to a different organization.", nameof(folderId));
             prompt.MoveToFolder(fid);
         }
         else
