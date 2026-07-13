@@ -137,6 +137,16 @@ public class PromptTests
     }
 
     [Fact]
+    public void Unfile_moves_the_prompt_back_to_the_root()
+    {
+        var prompt = Prompt.Create("Summarizer", folderId: Guid.NewGuid());
+
+        prompt.Unfile();
+
+        Assert.Null(prompt.FolderId);
+    }
+
+    [Fact]
     public void Versions_is_append_only_from_the_outside()
     {
         var prompt = Prompt.Create("Summarizer");

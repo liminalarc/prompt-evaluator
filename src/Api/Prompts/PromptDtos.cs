@@ -22,18 +22,21 @@ public sealed record PromptVersionResponse(
 
 public sealed record PromptResponse(
     Guid Id,
+    Guid? FolderId,
     string Name,
     string? Description,
     IReadOnlyList<PromptVersionResponse> Versions)
 {
     public static PromptResponse From(Prompt p) =>
-        new(p.Id, p.Name, p.Description, p.Versions.Select(PromptVersionResponse.From).ToList());
+        new(p.Id, p.FolderId, p.Name, p.Description, p.Versions.Select(PromptVersionResponse.From).ToList());
 }
 
 /// <summary>Lightweight projection for the browse/list view — no version bodies.</summary>
 public sealed record PromptSummaryResponse(
-    Guid Id, string Name, string? Description, int VersionCount, string? LatestTargetModel)
+    Guid Id, Guid? FolderId, string Name, string? Description, int VersionCount, string? LatestTargetModel)
 {
     public static PromptSummaryResponse From(Prompt p) =>
-        new(p.Id, p.Name, p.Description, p.Versions.Count, p.Versions.LastOrDefault()?.TargetModel);
+        new(p.Id, p.FolderId, p.Name, p.Description, p.Versions.Count, p.Versions.LastOrDefault()?.TargetModel);
 }
+
+public sealed record MovePromptRequest(Guid? FolderId);

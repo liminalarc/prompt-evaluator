@@ -52,6 +52,40 @@ public sealed class FolderRepository(EvalDbContext db) : IFolderRepository
         }
     }
 
+    public async Task<IReadOnlyList<Guid>> GetDescendantIdsAsync(Guid folderId, CancellationToken ct = default)
+    {
+        const string sql = """
+            WITH RECURSIVE descendants AS (
+                SELECT "Id" FROM folders WHERE "ParentId" = @id
+                UNION ALL
+                SELECT f."Id"
+                FROM folders f
+                JOIN descendants d ON f."ParentId" = d."Id"
+            )
+            SELECT "Id" FROM descendants
+            """;
+
+        var connection = (NpgsqlConnection)db.Database.GetDbConnection();
+        var opened = connection.State != System.Data.ConnectionState.Open;
+        if (opened)
+            await connection.OpenAsync(ct);
+        try
+        {
+            await using var cmd = new NpgsqlCommand(sql, connection);
+            cmd.Parameters.AddWithValue("id", folderId);
+            var ids = new List<Guid>();
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+                ids.Add(reader.GetGuid(0));
+            return ids;
+        }
+        finally
+        {
+            if (opened)
+                await connection.CloseAsync();
+        }
+    }
+
     public Task SaveChangesAsync(CancellationToken ct = default)
         => db.SaveChangesAsync(ct);
 }

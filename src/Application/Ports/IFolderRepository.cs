@@ -24,6 +24,12 @@ public interface IFolderRepository
     /// </summary>
     Task<Guid?> GetTopLevelAncestorIdAsync(Guid folderId, CancellationToken ct = default);
 
+    /// <summary>
+    /// The ids of every folder beneath this one (its whole subtree, excluding itself). Used to
+    /// reject moving a folder under one of its own descendants, which would form a cycle.
+    /// </summary>
+    Task<IReadOnlyList<Guid>> GetDescendantIdsAsync(Guid folderId, CancellationToken ct = default);
+
     /// <summary>Persists changes made to a tracked folder (e.g. a rename or move).</summary>
     Task SaveChangesAsync(CancellationToken ct = default);
 }

@@ -1,3 +1,4 @@
+using Application.Folders;
 using Application.Ports;
 using Application.Prompts;
 
@@ -33,6 +34,21 @@ public static class PromptEndpoints
                 return Results.BadRequest(new { error = ex.Message });
             }
         });
+
+        // Move a prompt into a folder (1.7), or unfile it to the root when FolderId is null.
+        group.MapPost("/{id:guid}/move",
+            async (Guid id, MovePromptRequest request, MovePromptHandler handler, CancellationToken ct) =>
+            {
+                try
+                {
+                    var prompt = await handler.HandleAsync(id, request.FolderId, ct);
+                    return prompt is null ? Results.NotFound() : Results.Ok(PromptResponse.From(prompt));
+                }
+                catch (ArgumentException ex)
+                {
+                    return Results.BadRequest(new { error = ex.Message });
+                }
+            });
 
         group.MapPost("/{id:guid}/versions",
             async (Guid id, AddPromptVersionRequest request, AddPromptVersionHandler handler, CancellationToken ct) =>

@@ -56,6 +56,9 @@ public sealed class Prompt
         FolderId = folderId;
     }
 
+    /// <summary>Removes this prompt from its folder — it becomes unfiled (shown under the root).</summary>
+    public void Unfile() => FolderId = null;
+
     /// <summary>
     /// Appends a new immutable version, assigning the next sequential <see cref="PromptVersion.VersionNumber"/>.
     /// Existing versions are never mutated or removed — the history only grows.
