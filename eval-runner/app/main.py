@@ -32,7 +32,7 @@ from app.judging import (
 )
 
 SERVICE_NAME = "eval-runner"
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 
 app = FastAPI(title="LitmusAI eval-runner", version=VERSION)
 

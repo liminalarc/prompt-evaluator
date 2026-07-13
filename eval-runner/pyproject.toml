@@ -1,6 +1,6 @@
 [project]
 name = "eval-runner"
-version = "0.2.0"
+version = "0.3.0"
 description = "LitmusAI eval-runner: LLM-judge scoring + synthetic fixture generation"
 requires-python = ">=3.12"
 
