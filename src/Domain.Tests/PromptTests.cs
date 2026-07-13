@@ -100,6 +100,43 @@ public class PromptTests
     }
 
     [Fact]
+    public void Create_leaves_a_prompt_unfiled_by_default()
+    {
+        var prompt = Prompt.Create("Summarizer");
+
+        Assert.Null(prompt.FolderId);
+    }
+
+    [Fact]
+    public void Create_can_file_a_prompt_into_a_folder()
+    {
+        var folderId = Guid.NewGuid();
+
+        var prompt = Prompt.Create("Summarizer", folderId: folderId);
+
+        Assert.Equal(folderId, prompt.FolderId);
+    }
+
+    [Fact]
+    public void MoveToFolder_files_the_prompt()
+    {
+        var prompt = Prompt.Create("Summarizer");
+        var folderId = Guid.NewGuid();
+
+        prompt.MoveToFolder(folderId);
+
+        Assert.Equal(folderId, prompt.FolderId);
+    }
+
+    [Fact]
+    public void MoveToFolder_rejects_an_empty_folder_id()
+    {
+        var prompt = Prompt.Create("Summarizer");
+
+        Assert.Throws<ArgumentException>(() => prompt.MoveToFolder(Guid.Empty));
+    }
+
+    [Fact]
     public void Versions_is_append_only_from_the_outside()
     {
         var prompt = Prompt.Create("Summarizer");
