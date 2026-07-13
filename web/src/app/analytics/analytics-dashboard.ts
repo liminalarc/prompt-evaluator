@@ -1,13 +1,19 @@
 import { Component, OnInit, effect, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RegressionFlag, TrendSeries, scorerLabel } from '../analytics';
+import {
+  RegressionFlag,
+  TrendSeries,
+  VersionComparison as VersionComparisonData,
+  scorerLabel,
+} from '../analytics';
 import { AnalyticsApiService } from './analytics-api.service';
 import { PromptsApiService } from '../prompts/prompts-api.service';
 import { DatasetsApiService } from '../datasets/datasets-api.service';
-import { PromptSummary } from '../prompt';
+import { PromptSummary, PromptVersion } from '../prompt';
 import { DatasetSummary } from '../dataset';
 import { TrendChart } from './trend-chart';
+import { VersionComparison } from './version-comparison';
 
 /**
  * Score-tracking dashboard: pick a prompt + dataset, then see the score trend across versions
@@ -15,7 +21,7 @@ import { TrendChart } from './trend-chart';
  */
 @Component({
   selector: 'app-analytics-dashboard',
-  imports: [FormsModule, DecimalPipe, TrendChart],
+  imports: [FormsModule, DecimalPipe, TrendChart, VersionComparison],
   template: `
     <section class="panel">
       <header class="panel__head">
@@ -33,7 +39,7 @@ import { TrendChart } from './trend-chart';
             name="prompt"
             data-testid="prompt-select"
             [ngModel]="promptId()"
-            (ngModelChange)="promptId.set($event)"
+            (ngModelChange)="selectPrompt($event)"
           >
             <option [ngValue]="null">Select a prompt…</option>
             @for (p of prompts(); track p.id) {
@@ -117,6 +123,47 @@ import { TrendChart } from './trend-chart';
             }
           }
         </div>
+
+        <div class="card">
+          <h2 class="section-title">Compare versions</h2>
+          @if (versions().length < 2) {
+            <p class="empty" data-testid="compare-need-versions">
+              Need at least two versions to compare.
+            </p>
+          } @else {
+            <form class="selectors">
+              <div class="sb-field">
+                <label for="from">From</label>
+                <select
+                  id="from"
+                  name="from"
+                  data-testid="from-version"
+                  [ngModel]="fromVersionId()"
+                  (ngModelChange)="fromVersionId.set($event)"
+                >
+                  @for (v of versions(); track v.id) {
+                    <option [ngValue]="v.id">{{ versionLabel(v) }}</option>
+                  }
+                </select>
+              </div>
+              <div class="sb-field">
+                <label for="to">To</label>
+                <select
+                  id="to"
+                  name="to"
+                  data-testid="to-version"
+                  [ngModel]="toVersionId()"
+                  (ngModelChange)="toVersionId.set($event)"
+                >
+                  @for (v of versions(); track v.id) {
+                    <option [ngValue]="v.id">{{ versionLabel(v) }}</option>
+                  }
+                </select>
+              </div>
+            </form>
+            <app-version-comparison [comparison]="comparison()" />
+          }
+        </div>
       } @else {
         <p class="empty" data-testid="prompt-choose">
           Choose a prompt and a dataset to see its score history.
@@ -140,14 +187,32 @@ export class AnalyticsDashboard implements OnInit {
   protected readonly regressions = signal<RegressionFlag[] | null>(null);
   protected readonly error = signal<string | null>(null);
 
+  protected readonly versions = signal<PromptVersion[]>([]);
+  protected readonly fromVersionId = signal<string | null>(null);
+  protected readonly toVersionId = signal<string | null>(null);
+  protected readonly comparison = signal<VersionComparisonData | null>(null);
+
   constructor() {
-    // Reload whenever the prompt, dataset, or threshold changes.
+    // Reload trends + regressions whenever the prompt, dataset, or threshold changes.
     effect(() => {
       const promptId = this.promptId();
       const datasetId = this.datasetId();
       const threshold = this.threshold();
       if (promptId && datasetId) {
         this.load(promptId, datasetId, threshold);
+      }
+    });
+
+    // Reload the comparison whenever the prompt, dataset, or either version selection changes.
+    effect(() => {
+      const promptId = this.promptId();
+      const datasetId = this.datasetId();
+      const from = this.fromVersionId();
+      const to = this.toVersionId();
+      if (promptId && datasetId && from && to && from !== to) {
+        this.loadComparison(promptId, datasetId, from, to);
+      } else {
+        this.comparison.set(null);
       }
     });
   }
@@ -167,6 +232,34 @@ export class AnalyticsDashboard implements OnInit {
     return scorerLabel(flag.scorer);
   }
 
+  protected versionLabel(version: PromptVersion): string {
+    return version.label
+      ? `v${version.versionNumber} · ${version.label}`
+      : `v${version.versionNumber}`;
+  }
+
+  // Selecting a prompt loads its versions and defaults the comparison to the two most recent.
+  protected selectPrompt(promptId: string | null): void {
+    this.promptId.set(promptId);
+    this.versions.set([]);
+    this.fromVersionId.set(null);
+    this.toVersionId.set(null);
+    if (!promptId) {
+      return;
+    }
+    this.promptsApi.getPrompt(promptId).subscribe({
+      next: (prompt) => {
+        this.versions.set(prompt.versions);
+        const n = prompt.versions.length;
+        if (n >= 2) {
+          this.fromVersionId.set(prompt.versions[n - 2].id);
+          this.toVersionId.set(prompt.versions[n - 1].id);
+        }
+      },
+      error: () => this.error.set('Could not load the prompt versions.'),
+    });
+  }
+
   private load(promptId: string, datasetId: string, threshold: number): void {
     this.error.set(null);
     this.api.getTrends(promptId, datasetId).subscribe({
@@ -176,6 +269,13 @@ export class AnalyticsDashboard implements OnInit {
     this.api.getRegressions(promptId, datasetId, threshold).subscribe({
       next: (flags) => this.regressions.set(flags),
       error: () => this.error.set('Could not load regressions.'),
+    });
+  }
+
+  private loadComparison(promptId: string, datasetId: string, from: string, to: string): void {
+    this.api.getComparison(promptId, datasetId, from, to).subscribe({
+      next: (cmp) => this.comparison.set(cmp),
+      error: () => this.error.set('Could not load the version comparison.'),
     });
   }
 }

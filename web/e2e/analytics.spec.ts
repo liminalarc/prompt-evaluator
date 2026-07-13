@@ -76,4 +76,10 @@ test('shows a score trend across versions and the regression section on the dash
   await expect(
     page.getByTestId('regressions').or(page.getByTestId('no-regressions')),
   ).toBeVisible();
+
+  // 6. Version comparison defaults to the two latest versions and shows per-fixture deltas.
+  await expect(page.getByTestId('from-version')).toBeVisible();
+  await expect(page.getByTestId('to-version')).toBeVisible();
+  await expect(page.getByTestId('scorer-comparison').first()).toBeVisible();
+  await expect(page.getByTestId('fixture-delta-row').first()).toBeVisible();
 });
