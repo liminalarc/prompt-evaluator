@@ -24,6 +24,12 @@ public interface IPromptRepository
     /// <summary>All prompts with their version history, for browsing.</summary>
     Task<IReadOnlyList<Prompt>> ListAsync(CancellationToken ct = default);
 
+    /// <summary>
+    /// The prompts filed directly in a folder (1.7). A null <paramref name="folderId"/> returns the
+    /// unfiled prompts — the contents of the root folder.
+    /// </summary>
+    Task<IReadOnlyList<Prompt>> ListByFolderAsync(Guid? folderId, CancellationToken ct = default);
+
     /// <summary>Persists changes made to a tracked aggregate (e.g. a newly appended version).</summary>
     Task SaveChangesAsync(CancellationToken ct = default);
 }

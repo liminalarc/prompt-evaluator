@@ -26,18 +26,29 @@ public static class DatasetEndpoints
             return dataset is null ? Results.NotFound() : Results.Ok(DatasetResponse.From(dataset));
         });
 
-        group.MapPost("/", async (CreateDatasetRequest request, CreateDatasetHandler handler, CancellationToken ct) =>
-        {
-            try
+        // Datasets live with a prompt (1.7): they are created and browsed under their owning prompt.
+        app.MapGet("/api/prompts/{promptId:guid}/datasets",
+            async (Guid promptId, IDatasetRepository repository, CancellationToken ct) =>
             {
-                var dataset = await handler.HandleAsync(request.Name, request.Description, ct);
-                return Results.Created($"/api/datasets/{dataset.Id}", DatasetResponse.From(dataset));
-            }
-            catch (ArgumentException ex)
+                var datasets = await repository.ListByPromptAsync(promptId, ct);
+                return Results.Ok(datasets.Select(DatasetSummaryResponse.From));
+            });
+
+        app.MapPost("/api/prompts/{promptId:guid}/datasets",
+            async (Guid promptId, CreateDatasetUnderPromptRequest request, CreateDatasetHandler handler, CancellationToken ct) =>
             {
-                return Results.BadRequest(new { error = ex.Message });
-            }
-        });
+                try
+                {
+                    var dataset = await handler.HandleAsync(promptId, request.Name, request.Description, ct);
+                    return dataset is null
+                        ? Results.NotFound(new { error = "Prompt not found." })
+                        : Results.Created($"/api/datasets/{dataset.Id}", DatasetResponse.From(dataset));
+                }
+                catch (ArgumentException ex)
+                {
+                    return Results.BadRequest(new { error = ex.Message });
+                }
+            });
 
         group.MapPost("/{id:guid}/fixtures/capture",
             async (Guid id, CaptureFixturesRequest request, CaptureFixturesHandler handler, CancellationToken ct) =>

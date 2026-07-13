@@ -5,16 +5,25 @@ namespace Domain.Tests;
 public class DatasetTests
 {
     private static readonly DateTimeOffset When = new(2026, 7, 12, 12, 0, 0, TimeSpan.Zero);
+    private static readonly Guid PromptId = Guid.NewGuid();
 
     [Fact]
     public void Create_sets_fields_generates_id_and_starts_empty()
     {
-        var dataset = Dataset.Create("Summaries", "Captured SLM summaries");
+        var dataset = Dataset.Create(PromptId, "Summaries", "Captured SLM summaries");
 
         Assert.NotEqual(Guid.Empty, dataset.Id);
+        Assert.Equal(PromptId, dataset.PromptId);
         Assert.Equal("Summaries", dataset.Name);
         Assert.Equal("Captured SLM summaries", dataset.Description);
         Assert.Empty(dataset.Fixtures);
+    }
+
+    [Fact]
+    public void Create_rejects_an_empty_prompt_id()
+    {
+        // A dataset lives with exactly one prompt (1.7) — it must always name its owner.
+        Assert.Throws<ArgumentException>(() => Dataset.Create(Guid.Empty, "Summaries"));
     }
 
     [Theory]
@@ -23,7 +32,7 @@ public class DatasetTests
     [InlineData("   ")]
     public void Create_rejects_blank_name(string? name)
     {
-        Assert.Throws<ArgumentException>(() => Dataset.Create(name!));
+        Assert.Throws<ArgumentException>(() => Dataset.Create(PromptId, name!));
     }
 
     [Theory]
@@ -32,7 +41,7 @@ public class DatasetTests
     [InlineData("   ")]
     public void Create_normalizes_blank_description_to_null(string? description)
     {
-        var dataset = Dataset.Create("Summaries", description);
+        var dataset = Dataset.Create(PromptId, "Summaries", description);
 
         Assert.Null(dataset.Description);
     }
@@ -40,7 +49,7 @@ public class DatasetTests
     [Fact]
     public void AddCapturedFixture_tags_origin_and_records_context_with_no_seed()
     {
-        var dataset = Dataset.Create("Summaries");
+        var dataset = Dataset.Create(PromptId, "Summaries");
 
         var fixture = dataset.AddCapturedFixture(
             "Summarize this thread", When, upstreamContext: "raw SLM output", expectedOutput: "a summary");
@@ -58,7 +67,7 @@ public class DatasetTests
     [Fact]
     public void AddSyntheticFixture_tags_origin_and_links_the_seed()
     {
-        var dataset = Dataset.Create("Summaries");
+        var dataset = Dataset.Create(PromptId, "Summaries");
         var seed = dataset.AddCapturedFixture("captured input", When);
 
         var synthetic = dataset.AddSyntheticFixture(
@@ -73,7 +82,7 @@ public class DatasetTests
     [Fact]
     public void AddSyntheticFixture_rejects_an_empty_seed()
     {
-        var dataset = Dataset.Create("Summaries");
+        var dataset = Dataset.Create(PromptId, "Summaries");
 
         Assert.Throws<ArgumentException>(
             () => dataset.AddSyntheticFixture("generated variant", Guid.Empty, When));
@@ -85,7 +94,7 @@ public class DatasetTests
     [InlineData("   ")]
     public void AddCapturedFixture_rejects_blank_input(string? input)
     {
-        var dataset = Dataset.Create("Summaries");
+        var dataset = Dataset.Create(PromptId, "Summaries");
 
         Assert.Throws<ArgumentException>(() => dataset.AddCapturedFixture(input!, When));
     }
@@ -96,7 +105,7 @@ public class DatasetTests
     [InlineData("   ")]
     public void AddSyntheticFixture_rejects_blank_input(string? input)
     {
-        var dataset = Dataset.Create("Summaries");
+        var dataset = Dataset.Create(PromptId, "Summaries");
         var seed = dataset.AddCapturedFixture("captured input", When);
 
         Assert.Throws<ArgumentException>(() => dataset.AddSyntheticFixture(input!, seed.Id, When));
@@ -105,7 +114,7 @@ public class DatasetTests
     [Fact]
     public void AddCapturedFixture_normalizes_blank_context_and_expected_to_null()
     {
-        var dataset = Dataset.Create("Summaries");
+        var dataset = Dataset.Create(PromptId, "Summaries");
 
         var fixture = dataset.AddCapturedFixture("input", When, upstreamContext: "   ", expectedOutput: "");
 
@@ -116,7 +125,7 @@ public class DatasetTests
     [Fact]
     public void Fixtures_is_append_only_from_the_outside()
     {
-        var dataset = Dataset.Create("Summaries");
+        var dataset = Dataset.Create(PromptId, "Summaries");
         dataset.AddCapturedFixture("input", When);
 
         Assert.True(dataset.Fixtures is System.Collections.ObjectModel.ReadOnlyCollection<Fixture>

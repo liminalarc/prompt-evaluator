@@ -16,6 +16,8 @@ public class TrendAnalyticsTests
             => Task.FromResult(_saved.SingleOrDefault(p => p.Id == id));
         public Task<IReadOnlyList<Prompt>> ListAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Prompt>>(_saved);
+        public Task<IReadOnlyList<Prompt>> ListByFolderAsync(Guid? folderId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Prompt>>(_saved.Where(p => p.FolderId == folderId).ToList());
         public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
     }
 

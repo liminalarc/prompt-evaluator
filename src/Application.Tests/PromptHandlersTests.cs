@@ -22,6 +22,8 @@ public class PromptHandlersTests
 
         public Task<IReadOnlyList<Prompt>> ListAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Prompt>>(Saved);
+        public Task<IReadOnlyList<Prompt>> ListByFolderAsync(Guid? folderId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Prompt>>(Saved.Where(p => p.FolderId == folderId).ToList());
 
         public Task SaveChangesAsync(CancellationToken ct = default)
         {

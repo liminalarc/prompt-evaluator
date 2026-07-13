@@ -10,15 +10,24 @@ public sealed class Dataset
     private readonly List<Fixture> _fixtures = new();
 
     public Guid Id { get; private set; }
+
+    /// <summary>
+    /// The prompt this dataset belongs to (1.7). A dataset lives with exactly one prompt — its
+    /// fixtures are inputs shaped to that prompt's contract — so it always names its owner. A run
+    /// against a dataset owned by a different prompt is rejected in the Application layer.
+    /// </summary>
+    public Guid PromptId { get; private set; }
+
     public string Name { get; private set; }
     public string? Description { get; private set; }
 
     /// <summary>All fixtures in the dataset. Append-only from the outside.</summary>
     public IReadOnlyList<Fixture> Fixtures => _fixtures.AsReadOnly();
 
-    private Dataset(Guid id, string name, string? description)
+    private Dataset(Guid id, Guid promptId, string name, string? description)
     {
         Id = id;
+        PromptId = promptId;
         Name = name;
         Description = description;
     }
@@ -29,12 +38,14 @@ public sealed class Dataset
         Name = string.Empty;
     }
 
-    public static Dataset Create(string name, string? description = null)
+    public static Dataset Create(Guid promptId, string name, string? description = null)
     {
+        if (promptId == Guid.Empty)
+            throw new ArgumentException("A dataset must belong to a prompt.", nameof(promptId));
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Dataset name must not be blank.", nameof(name));
 
-        return new Dataset(Guid.NewGuid(), name, Normalize(description));
+        return new Dataset(Guid.NewGuid(), promptId, name, Normalize(description));
     }
 
     /// <summary>Appends a captured (ground-truth) fixture.</summary>

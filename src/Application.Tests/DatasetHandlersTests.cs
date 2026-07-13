@@ -23,11 +23,27 @@ public class DatasetHandlersTests
         public Task<IReadOnlyList<Dataset>> ListAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Dataset>>(Saved);
 
+        public Task<IReadOnlyList<Dataset>> ListByPromptAsync(Guid promptId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Dataset>>(Saved.Where(d => d.PromptId == promptId).ToList());
+
         public Task SaveChangesAsync(CancellationToken ct = default)
         {
             SaveChangesCalls++;
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class InMemoryPromptRepo : IPromptRepository
+    {
+        private readonly List<Prompt> _saved = [];
+        public Task AddAsync(Prompt prompt, CancellationToken ct = default) { _saved.Add(prompt); return Task.CompletedTask; }
+        public Task<Prompt?> GetByIdAsync(Guid id, CancellationToken ct = default)
+            => Task.FromResult(_saved.SingleOrDefault(p => p.Id == id));
+        public Task<IReadOnlyList<Prompt>> ListAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Prompt>>(_saved);
+        public Task<IReadOnlyList<Prompt>> ListByFolderAsync(Guid? folderId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Prompt>>(_saved.Where(p => p.FolderId == folderId).ToList());
+        public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private sealed class FixedTime(DateTimeOffset now) : TimeProvider
@@ -38,23 +54,40 @@ public class DatasetHandlersTests
     private static readonly DateTimeOffset When = new(2026, 7, 12, 12, 0, 0, TimeSpan.Zero);
 
     [Fact]
-    public async Task CreateDataset_persists_and_returns_the_dataset()
+    public async Task CreateDataset_persists_under_the_prompt_and_returns_the_dataset()
     {
+        var prompts = new InMemoryPromptRepo();
+        var prompt = Prompt.Create("Summarizer");
+        await prompts.AddAsync(prompt);
         var repo = new InMemoryDatasetRepo();
-        var handler = new CreateDatasetHandler(repo);
+        var handler = new CreateDatasetHandler(prompts, repo);
 
-        var dataset = await handler.HandleAsync("Summaries", "captured summaries");
+        var dataset = await handler.HandleAsync(prompt.Id, "Summaries", "captured summaries");
 
-        Assert.Equal("Summaries", dataset.Name);
+        Assert.NotNull(dataset);
+        Assert.Equal("Summaries", dataset!.Name);
+        Assert.Equal(prompt.Id, dataset.PromptId);
         Assert.Single(repo.Saved);
         Assert.Equal(dataset.Id, repo.Saved[0].Id);
+    }
+
+    [Fact]
+    public async Task CreateDataset_returns_null_when_the_prompt_does_not_exist()
+    {
+        var repo = new InMemoryDatasetRepo();
+        var handler = new CreateDatasetHandler(new InMemoryPromptRepo(), repo);
+
+        var dataset = await handler.HandleAsync(Guid.NewGuid(), "Summaries", "captured summaries");
+
+        Assert.Null(dataset);
+        Assert.Empty(repo.Saved);
     }
 
     [Fact]
     public async Task CaptureFixtures_lands_captured_tuples_mapped_and_saved()
     {
         var repo = new InMemoryDatasetRepo();
-        var existing = Dataset.Create("Summaries");
+        var existing = Dataset.Create(Guid.NewGuid(), "Summaries");
         await repo.AddAsync(existing);
         var handler = new CaptureFixturesHandler(repo, new FixtureRedactor(), new FixedTime(When));
 
@@ -80,7 +113,7 @@ public class DatasetHandlersTests
     public async Task CaptureFixtures_redacts_pii_before_persisting()
     {
         var repo = new InMemoryDatasetRepo();
-        var existing = Dataset.Create("Summaries");
+        var existing = Dataset.Create(Guid.NewGuid(), "Summaries");
         await repo.AddAsync(existing);
         var handler = new CaptureFixturesHandler(repo, new FixtureRedactor(), new FixedTime(When));
 
@@ -154,7 +187,7 @@ public class DatasetHandlersTests
     public async Task GenerateSynthetic_seeds_from_captured_links_the_seed_and_saves()
     {
         var repo = new InMemoryDatasetRepo();
-        var dataset = Dataset.Create("Summaries");
+        var dataset = Dataset.Create(Guid.NewGuid(), "Summaries");
         dataset.AddCapturedFixture("captured 0", When);
         var seed1 = dataset.AddCapturedFixture("captured 1", When);
         await repo.AddAsync(dataset);
@@ -184,7 +217,7 @@ public class DatasetHandlersTests
     public async Task GenerateSynthetic_falls_back_to_first_seed_when_index_is_null_or_out_of_range()
     {
         var repo = new InMemoryDatasetRepo();
-        var dataset = Dataset.Create("Summaries");
+        var dataset = Dataset.Create(Guid.NewGuid(), "Summaries");
         var seed0 = dataset.AddCapturedFixture("captured 0", When);
         await repo.AddAsync(dataset);
 
@@ -206,7 +239,7 @@ public class DatasetHandlersTests
     public async Task GenerateSynthetic_skips_blank_input_variants_and_persists_the_rest()
     {
         var repo = new InMemoryDatasetRepo();
-        var dataset = Dataset.Create("Summaries");
+        var dataset = Dataset.Create(Guid.NewGuid(), "Summaries");
         dataset.AddCapturedFixture("captured 0", When);
         await repo.AddAsync(dataset);
 
@@ -227,7 +260,7 @@ public class DatasetHandlersTests
     public async Task GenerateSynthetic_throws_when_no_captured_fixtures_to_seed_from()
     {
         var repo = new InMemoryDatasetRepo();
-        var dataset = Dataset.Create("Empty");
+        var dataset = Dataset.Create(Guid.NewGuid(), "Empty");
         await repo.AddAsync(dataset);
         var runner = new RecordingRunner([]);
         var handler = new GenerateSyntheticFixturesHandler(repo, runner, new FixedTime(When));

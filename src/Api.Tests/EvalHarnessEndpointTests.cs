@@ -75,7 +75,7 @@ public sealed class EvalHarnessEndpointTests : IAsyncLifetime
         var withVersion = (await versionRes.Content.ReadFromJsonAsync<PromptDto>())!;
         var versionId = withVersion.Versions[0].Id;
 
-        var datasetCreate = await client.PostAsJsonAsync("/api/datasets", new { name = "Summaries", description = (string?)null });
+        var datasetCreate = await client.PostAsJsonAsync($"/api/prompts/{prompt.Id}/datasets", new { name = "Summaries", description = (string?)null });
         var dataset = (await datasetCreate.Content.ReadFromJsonAsync<IdName>())!;
 
         await client.PostAsJsonAsync($"/api/datasets/{dataset.Id}/fixtures/capture", new

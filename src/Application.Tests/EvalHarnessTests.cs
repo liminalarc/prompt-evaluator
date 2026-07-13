@@ -53,6 +53,8 @@ public class EvalHarnessTests
             => Task.FromResult(_saved.SingleOrDefault(p => p.Id == id));
         public Task<IReadOnlyList<Prompt>> ListAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Prompt>>(_saved);
+        public Task<IReadOnlyList<Prompt>> ListByFolderAsync(Guid? folderId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Prompt>>(_saved.Where(p => p.FolderId == folderId).ToList());
         public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
     }
 
@@ -64,6 +66,8 @@ public class EvalHarnessTests
             => Task.FromResult(_saved.SingleOrDefault(d => d.Id == id));
         public Task<IReadOnlyList<Dataset>> ListAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Dataset>>(_saved);
+        public Task<IReadOnlyList<Dataset>> ListByPromptAsync(Guid promptId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Dataset>>(_saved.Where(d => d.PromptId == promptId).ToList());
         public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
     }
 
@@ -109,7 +113,7 @@ public class EvalHarnessTests
         var version = prompt.AddVersion("You summarize text.", "claude-opus-4-8", When);
         await promptRepo.AddAsync(prompt);
 
-        var dataset = Dataset.Create("Summaries");
+        var dataset = Dataset.Create(prompt.Id, "Summaries");
         dataset.AddCapturedFixture("hello world", When, upstreamContext: "raw slm output");
         dataset.AddCapturedFixture("foo bar", When);
         await datasetRepo.AddAsync(dataset);
@@ -212,6 +216,35 @@ public class EvalHarnessTests
         Assert.Contains("claude-opus-4-8", runner.JudgeModels);
     }
 
+    [Fact]
+    public async Task Run_rejects_a_dataset_owned_by_a_different_prompt()
+    {
+        // Datasets live with exactly one prompt (1.7): running prompt A against prompt B's dataset
+        // must be refused (Api → 404), never silently scored against the wrong owner.
+        var promptRepo = new InMemoryPromptRepo();
+        var datasetRepo = new InMemoryDatasetRepo();
+        var runRepo = new InMemoryEvalRunRepo();
+        var runner = new ScriptedRunner();
+
+        var prompt = Prompt.Create("Summarizer");
+        var version = prompt.AddVersion("You summarize text.", "claude-opus-4-8", When);
+        await promptRepo.AddAsync(prompt);
+
+        var otherPromptsDataset = Dataset.Create(Guid.NewGuid(), "Someone else's data");
+        otherPromptsDataset.AddCapturedFixture("hello", When);
+        await datasetRepo.AddAsync(otherPromptsDataset);
+
+        var handler = new RunEvaluationHandler(
+            promptRepo, datasetRepo, new InMemoryScorerConfigRepo(), runner,
+            new ScorerFactory(runner), runRepo, new FixedTime(When));
+
+        var run = await handler.HandleAsync(prompt.Id, version.Id, otherPromptsDataset.Id);
+
+        Assert.Null(run);
+        Assert.Empty(runRepo.Saved);
+        Assert.Empty(runner.ExecutedInputs);
+    }
+
     // ---- ConfigureDatasetScorersHandler ----
 
     [Fact]
@@ -219,7 +252,7 @@ public class EvalHarnessTests
     {
         var datasetRepo = new InMemoryDatasetRepo();
         var scorerRepo = new InMemoryScorerConfigRepo();
-        var dataset = Dataset.Create("DS");
+        var dataset = Dataset.Create(Guid.NewGuid(), "DS");
         await datasetRepo.AddAsync(dataset);
         var handler = new ConfigureDatasetScorersHandler(datasetRepo, scorerRepo, new FixedTime(When));
 

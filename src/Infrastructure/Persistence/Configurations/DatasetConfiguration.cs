@@ -10,8 +10,18 @@ internal sealed class DatasetConfiguration : IEntityTypeConfiguration<Dataset>
     {
         builder.ToTable("datasets");
         builder.HasKey(d => d.Id);
+        builder.Property(d => d.PromptId).IsRequired();
         builder.Property(d => d.Name).IsRequired();
         builder.Property(d => d.Description);
+
+        // A dataset lives with exactly one prompt (1.7); deleting the prompt takes its datasets
+        // with it (they belong together).
+        builder.HasOne<Prompt>()
+            .WithMany()
+            .HasForeignKey(d => d.PromptId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasIndex(d => d.PromptId);
 
         // Fixtures are part of the aggregate — an owned collection, never queried on its own.
         // EF loads it eagerly with the dataset, so the repository needs no explicit Include.

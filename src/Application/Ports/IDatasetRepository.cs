@@ -18,6 +18,9 @@ public interface IDatasetRepository
     /// <summary>All datasets with their fixtures, for browsing.</summary>
     Task<IReadOnlyList<Dataset>> ListAsync(CancellationToken ct = default);
 
+    /// <summary>The datasets belonging to a prompt (1.7) — the prompt's own test sets.</summary>
+    Task<IReadOnlyList<Dataset>> ListByPromptAsync(Guid promptId, CancellationToken ct = default);
+
     /// <summary>Persists changes made to a tracked aggregate (e.g. newly appended fixtures).</summary>
     Task SaveChangesAsync(CancellationToken ct = default);
 }

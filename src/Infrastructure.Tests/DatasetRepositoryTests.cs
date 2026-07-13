@@ -23,13 +23,24 @@ public sealed class DatasetRepositoryTests : IAsyncLifetime
         return new EvalDbContext(options);
     }
 
+    // A dataset belongs to a prompt (1.7) and the FK enforces it, so every dataset test seeds an
+    // owning prompt first.
+    private async Task<Guid> SeedPromptAsync()
+    {
+        var prompt = Prompt.Create("Owner");
+        await using var ctx = NewContext();
+        await new PromptRepository(ctx).AddAsync(prompt);
+        return prompt.Id;
+    }
+
     [Fact]
     public async Task Add_then_GetById_round_trips_fixtures_with_origin_and_seed_link()
     {
         await using var migrateCtx = NewContext();
         await migrateCtx.Database.MigrateAsync();
 
-        var dataset = Dataset.Create("Summaries", "captured SLM output");
+        var promptId = await SeedPromptAsync();
+        var dataset = Dataset.Create(promptId, "Summaries", "captured SLM output");
         var seed = dataset.AddCapturedFixture(
             "summarize this", When, upstreamContext: "raw slm output", expectedOutput: "the summary");
         dataset.AddSyntheticFixture(
@@ -63,7 +74,8 @@ public sealed class DatasetRepositoryTests : IAsyncLifetime
         await using var migrateCtx = NewContext();
         await migrateCtx.Database.MigrateAsync();
 
-        var dataset = Dataset.Create("Classifications");
+        var promptId = await SeedPromptAsync();
+        var dataset = Dataset.Create(promptId, "Classifications");
         dataset.AddCapturedFixture("classify a", When);
 
         await using (var writeCtx = NewContext())
@@ -91,9 +103,10 @@ public sealed class DatasetRepositoryTests : IAsyncLifetime
         await using var migrateCtx = NewContext();
         await migrateCtx.Database.MigrateAsync();
 
-        var a = Dataset.Create("A");
+        var promptId = await SeedPromptAsync();
+        var a = Dataset.Create(promptId, "A");
         a.AddCapturedFixture("a1", When);
-        var b = Dataset.Create("B");
+        var b = Dataset.Create(promptId, "B");
         b.AddCapturedFixture("b1", When);
 
         await using (var writeCtx = NewContext())

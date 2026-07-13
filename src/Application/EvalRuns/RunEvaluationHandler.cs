@@ -32,6 +32,10 @@ public sealed class RunEvaluationHandler(
         if (dataset is null)
             return null;
 
+        // A dataset lives with exactly one prompt (1.7) — refuse to run it against another prompt.
+        if (dataset.PromptId != promptId)
+            return null;
+
         var configs = await scorerConfigs.ListByDatasetAsync(datasetId, ct);
         var scorers = configs.Select(c => scorerFactory.Create(c.Scorer)).ToList();
 

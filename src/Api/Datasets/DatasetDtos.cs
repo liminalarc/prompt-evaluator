@@ -2,7 +2,8 @@ using Domain;
 
 namespace Api.Datasets;
 
-public sealed record CreateDatasetRequest(string Name, string? Description);
+/// <summary>Body for creating a dataset under a prompt — the owning prompt comes from the route.</summary>
+public sealed record CreateDatasetUnderPromptRequest(string Name, string? Description);
 
 /// <summary>
 /// One captured tuple in the documented capture-ingestion schema, in provenance order:
@@ -41,21 +42,23 @@ public sealed record FixtureResponse(
 
 public sealed record DatasetResponse(
     Guid Id,
+    Guid PromptId,
     string Name,
     string? Description,
     IReadOnlyList<FixtureResponse> Fixtures)
 {
     public static DatasetResponse From(Dataset d) =>
-        new(d.Id, d.Name, d.Description, d.Fixtures.Select(FixtureResponse.From).ToList());
+        new(d.Id, d.PromptId, d.Name, d.Description, d.Fixtures.Select(FixtureResponse.From).ToList());
 }
 
 /// <summary>Lightweight projection for the browse/list view — fixture counts by origin, no bodies.</summary>
 public sealed record DatasetSummaryResponse(
-    Guid Id, string Name, string? Description, int FixtureCount, int CapturedCount, int SyntheticCount)
+    Guid Id, Guid PromptId, string Name, string? Description, int FixtureCount, int CapturedCount, int SyntheticCount)
 {
     public static DatasetSummaryResponse From(Dataset d) =>
         new(
             d.Id,
+            d.PromptId,
             d.Name,
             d.Description,
             d.Fixtures.Count,

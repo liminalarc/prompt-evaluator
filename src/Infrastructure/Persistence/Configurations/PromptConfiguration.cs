@@ -12,6 +12,16 @@ internal sealed class PromptConfiguration : IEntityTypeConfiguration<Prompt>
         builder.HasKey(p => p.Id);
         builder.Property(p => p.Name).IsRequired();
         builder.Property(p => p.Description);
+        builder.Property(p => p.FolderId);
+
+        // A prompt is filed into a folder (1.7); null = unfiled. Deleting a folder unfiles its
+        // prompts (SET NULL) rather than deleting them.
+        builder.HasOne<Folder>()
+            .WithMany()
+            .HasForeignKey(p => p.FolderId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasIndex(p => p.FolderId);
 
         // Version history is part of the aggregate — an owned collection, never queried on its
         // own. EF loads it eagerly with the prompt, so the repository needs no explicit Include.

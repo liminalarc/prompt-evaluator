@@ -20,6 +20,9 @@ public sealed class DatasetRepository(EvalDbContext db) : IDatasetRepository
     public async Task<IReadOnlyList<Dataset>> ListAsync(CancellationToken ct = default)
         => await db.Datasets.ToListAsync(ct);
 
+    public async Task<IReadOnlyList<Dataset>> ListByPromptAsync(Guid promptId, CancellationToken ct = default)
+        => await db.Datasets.Where(d => d.PromptId == promptId).ToListAsync(ct);
+
     public Task SaveChangesAsync(CancellationToken ct = default)
         => db.SaveChangesAsync(ct);
 }

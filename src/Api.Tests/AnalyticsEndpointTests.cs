@@ -89,7 +89,7 @@ public sealed class AnalyticsEndpointTests : IAsyncLifetime
         var v1 = afterV2.Versions.Single(v => v.VersionNumber == 1).Id;
         var v2 = afterV2.Versions.Single(v => v.VersionNumber == 2).Id;
 
-        var datasetRes = await client.PostAsJsonAsync("/api/datasets", new { name = "Summaries", description = (string?)null });
+        var datasetRes = await client.PostAsJsonAsync($"/api/prompts/{promptId}/datasets", new { name = "Summaries", description = (string?)null });
         var datasetId = (await datasetRes.Content.ReadFromJsonAsync<IdName>())!.Id;
         var tuples = Enumerable.Range(0, fixtureCount)
             .Select(i => new { promptInput = $"fixture {i}", input = (string?)null, slmOutput = (string?)null, downstreamResult = (string?)null });
