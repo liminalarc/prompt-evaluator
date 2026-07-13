@@ -97,7 +97,7 @@ public sealed class SeamEndpointTests : IAsyncLifetime
 
         Assert.NotNull(res);
         Assert.Equal("litmus-ai-api", res!.Service);
-        Assert.Equal("0.2.0", res.Version);
+        Assert.Equal("0.3.0", res.Version);
         Assert.Equal("eval-runner", res.Dependencies.EvalRunner!.Service);
         Assert.Equal("faketest", res.Dependencies.EvalRunner.Commit);
         Assert.StartsWith("PostgreSQL", res.Dependencies.Db!.Version);
