@@ -66,6 +66,14 @@ public sealed record ScorerDescriptor
     }
 
     /// <summary>
+    /// Returns an equivalent descriptor as a distinct instance. Each persisted <see cref="Score"/>
+    /// owns its scorer identity as a value object, and EF Core owned types cannot share one CLR
+    /// instance across multiple owners — so a run scoring many fixtures with the same scorer gives
+    /// each <see cref="Score"/> its own copy.
+    /// </summary>
+    internal ScorerDescriptor Copy() => new(Kind, Config, JudgeModel);
+
+    /// <summary>
     /// A stable, deterministic identity string for this scorer, used to group scores into a series
     /// across runs. Two descriptors differing in any identity component (kind, config, judge model)
     /// hash to different values; identical descriptors always hash to the same value.

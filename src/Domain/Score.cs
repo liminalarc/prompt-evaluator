@@ -25,7 +25,9 @@ public sealed class Score
     internal Score(ScorerDescriptor scorer, double value, bool? passed, string? detail)
     {
         Id = Guid.NewGuid();
-        Scorer = scorer;
+        // Own a distinct value-object instance — EF owned types can't be shared across owners
+        // (a run scoring many fixtures reuses one scorer instance otherwise).
+        Scorer = scorer.Copy();
         Value = value;
         Passed = passed;
         Detail = detail;

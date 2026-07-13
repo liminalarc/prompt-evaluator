@@ -25,6 +25,21 @@ public class EvalRunTests
     }
 
     [Fact]
+    public void Each_score_owns_a_distinct_scorer_instance_even_when_the_same_scorer_scores_many_fixtures()
+    {
+        // Persistence (EF owned types) can't share one scorer CLR instance across owners, so a run
+        // scoring several fixtures with the same scorer must give each Score its own copy.
+        var run = NewRun();
+        var scorer = ScorerDescriptor.Deterministic(ScorerKind.Regex, "^x");
+
+        var s1 = run.RecordFixture(Guid.NewGuid(), "x1", 10, null).AddScore(scorer, 1.0, true, null);
+        var s2 = run.RecordFixture(Guid.NewGuid(), "x2", 10, null).AddScore(scorer, 0.5, false, null);
+
+        Assert.NotSame(s1.Scorer, s2.Scorer);              // distinct instances
+        Assert.Equal(s1.Scorer.Identity, s2.Scorer.Identity); // same value/identity
+    }
+
+    [Fact]
     public void Create_rejects_empty_identity_guids()
     {
         Assert.Throws<ArgumentException>(() => EvalRun.Create(Guid.Empty, VersionId, DatasetId, When));
