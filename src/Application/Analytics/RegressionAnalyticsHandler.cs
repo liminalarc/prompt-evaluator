@@ -20,10 +20,7 @@ public sealed class RegressionAnalyticsHandler(
 
         var versions = prompt.Versions.ToDictionary(v => v.Id);
         var allRuns = await runs.ListByPromptAndDatasetAsync(promptId, datasetId, ct);
-        var latestPerVersion = allRuns
-            .Where(r => versions.ContainsKey(r.PromptVersionId))
-            .GroupBy(r => r.PromptVersionId)
-            .Select(g => g.OrderByDescending(r => r.CreatedAt).First());
+        var latestPerVersion = AnalyticsProjection.LatestRunPerVersion(allRuns, versions.Keys.ToHashSet());
 
         // scorer identity -> its ScorerRef + a VersionScoreSet per version.
         var byScorer = new Dictionary<string, (ScorerRef Scorer, List<VersionScoreSet> Sets)>();
@@ -31,20 +28,16 @@ public sealed class RegressionAnalyticsHandler(
         foreach (var run in latestPerVersion)
         {
             var version = versions[run.PromptVersionId];
-            var scoresByScorer = run.Results
-                .SelectMany(fr => fr.Scores.Select(s => (fr.FixtureId, Score: s)))
-                .GroupBy(x => x.Score.Scorer.Identity);
 
-            foreach (var group in scoresByScorer)
+            foreach (var (scorer, scores) in AnalyticsProjection.ByScorer(run))
             {
-                var items = group.ToList();
                 var map = new Dictionary<Guid, double>();
-                foreach (var (fixtureId, score) in items)
-                    map[fixtureId] = score.Value; // one score per fixture per scorer
+                foreach (var score in scores)
+                    map[score.FixtureId] = score.Value; // one score per fixture per scorer
 
                 var set = new VersionScoreSet(version.Id, version.VersionNumber, version.Label, run.Id, map);
-                if (!byScorer.TryGetValue(group.Key, out var entry))
-                    byScorer[group.Key] = entry = (ScorerRef.From(items[0].Score.Scorer), []);
+                if (!byScorer.TryGetValue(scorer.Identity, out var entry))
+                    byScorer[scorer.Identity] = entry = (scorer, []);
                 entry.Sets.Add(set);
             }
         }

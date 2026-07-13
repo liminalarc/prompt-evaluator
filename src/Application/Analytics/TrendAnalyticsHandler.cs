@@ -22,13 +22,7 @@ public sealed class TrendAnalyticsHandler(IEvalRunRepository runs, IPromptReposi
 
         var versions = prompt.Versions.ToDictionary(v => v.Id);
         var allRuns = await runs.ListByPromptAndDatasetAsync(promptId, datasetId, ct);
-
-        // Latest run per version — the point a version contributes to every one of its series.
-        var latestPerVersion = allRuns
-            .Where(r => versions.ContainsKey(r.PromptVersionId))
-            .GroupBy(r => r.PromptVersionId)
-            .Select(g => g.OrderByDescending(r => r.CreatedAt).First())
-            .ToList();
+        var latestPerVersion = AnalyticsProjection.LatestRunPerVersion(allRuns, versions.Keys.ToHashSet());
 
         // (scorer identity) -> its descriptor + the points it accumulates across versions.
         var byScorer = new Dictionary<string, (ScorerRef Scorer, List<TrendPoint> Points)>();
@@ -37,9 +31,8 @@ public sealed class TrendAnalyticsHandler(IEvalRunRepository runs, IPromptReposi
         {
             var version = versions[run.PromptVersionId];
 
-            foreach (var group in run.Results.SelectMany(fr => fr.Scores).GroupBy(s => s.Scorer.Identity))
+            foreach (var (scorer, scores) in AnalyticsProjection.ByScorer(run))
             {
-                var scores = group.ToList();
                 var verdicts = scores.Where(s => s.Passed.HasValue).ToList();
 
                 var point = new TrendPoint(
@@ -52,8 +45,8 @@ public sealed class TrendAnalyticsHandler(IEvalRunRepository runs, IPromptReposi
                     PassRate: verdicts.Count == 0 ? null : verdicts.Count(s => s.Passed!.Value) / (double)verdicts.Count,
                     FixtureCount: scores.Count);
 
-                if (!byScorer.TryGetValue(group.Key, out var entry))
-                    byScorer[group.Key] = entry = (ScorerRef.From(scores[0].Scorer), []);
+                if (!byScorer.TryGetValue(scorer.Identity, out var entry))
+                    byScorer[scorer.Identity] = entry = (scorer, []);
                 entry.Points.Add(point);
             }
         }

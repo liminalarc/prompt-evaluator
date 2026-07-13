@@ -1,8 +1,10 @@
+using Api.Analytics;
 using Api.Datasets;
 using Api.EvalRuns;
 using Api.Prompts;
 using Api.Seam;
 using Api.Version;
+using Application.Analytics;
 using Application.Datasets;
 using Application.EvalRuns;
 using Application.Prompts;
@@ -23,6 +25,10 @@ builder.Services.AddScoped<CaptureFixturesHandler>();
 builder.Services.AddScoped<GenerateSyntheticFixturesHandler>();
 builder.Services.AddScoped<ConfigureDatasetScorersHandler>();
 builder.Services.AddScoped<RunEvaluationHandler>();
+builder.Services.AddScoped<TrendAnalyticsHandler>();
+builder.Services.AddScoped<RegressionAnalyticsHandler>();
+builder.Services.AddScoped<ComparisonAnalyticsHandler>();
+builder.Services.AddSingleton<RegressionDetector>();
 builder.Services.AddSingleton<FixtureRedactor>();
 
 // Allow the Angular dev server to reach the API during per-process development.
@@ -40,6 +46,7 @@ app.MapEchoEndpoints();
 app.MapPromptEndpoints();
 app.MapDatasetEndpoints();
 app.MapEvalHarnessEndpoints();
+app.MapAnalyticsEndpoints();
 
 // Apply migrations on startup once a database is configured (skipped when none is,
 // e.g. the bare /health integration test).
