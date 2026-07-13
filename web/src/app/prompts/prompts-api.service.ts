@@ -34,4 +34,9 @@ export class PromptsApiService {
   addVersion(id: string, body: AddVersionBody): Observable<Prompt> {
     return this.http.post<Prompt>(`/api/prompts/${id}/versions`, body);
   }
+
+  /** Moves a prompt into a folder (1.7), or unfiles it to the root when folderId is null. */
+  movePrompt(id: string, folderId: string | null): Observable<Prompt> {
+    return this.http.post<Prompt>(`/api/prompts/${id}/move`, { folderId });
+  }
 }

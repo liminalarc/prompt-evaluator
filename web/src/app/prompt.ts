@@ -12,6 +12,7 @@ export interface PromptVersion {
 /** Mirrors the .NET PromptResponse DTO. */
 export interface Prompt {
   id: string;
+  folderId: string | null;
   name: string;
   description: string | null;
   versions: PromptVersion[];
@@ -20,6 +21,7 @@ export interface Prompt {
 /** Mirrors the .NET PromptSummaryResponse DTO (list/browse projection). */
 export interface PromptSummary {
   id: string;
+  folderId: string | null;
   name: string;
   description: string | null;
   versionCount: number;

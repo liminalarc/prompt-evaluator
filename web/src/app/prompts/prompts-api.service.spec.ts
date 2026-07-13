@@ -39,6 +39,21 @@ describe('PromptsApiService', () => {
     req.flush({ id: 'abc', name: 'Summarizer', description: 'desc', versions: [] });
   });
 
+  it('moves a prompt into a folder', () => {
+    service.movePrompt('abc', 'folder-1').subscribe();
+    const req = httpMock.expectOne('/api/prompts/abc/move');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ folderId: 'folder-1' });
+    req.flush({ id: 'abc', folderId: 'folder-1', name: 'x', description: null, versions: [] });
+  });
+
+  it('unfiles a prompt to the root', () => {
+    service.movePrompt('abc', null).subscribe();
+    const req = httpMock.expectOne('/api/prompts/abc/move');
+    expect(req.request.body).toEqual({ folderId: null });
+    req.flush({ id: 'abc', folderId: null, name: 'x', description: null, versions: [] });
+  });
+
   it('adds a version', () => {
     const body = {
       content: 'Summarize: {input}',
