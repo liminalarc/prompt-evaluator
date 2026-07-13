@@ -7,7 +7,7 @@
 - _All specs archived._
 
 ## Phase 1 — Core Evaluation Loop
-- **1.4** Score Tracking & Analytics — `NOT STARTED` — [detail](specs/1.4.md)
+- **1.4** Score Tracking & Analytics — `IN PROGRESS` — [detail](specs/1.4.md)
 - **1.5** Multi-Provider Model Support — `NOT STARTED` — [detail](specs/1.5.md)
 - **1.6** Prompt Import (file / bulk) — `NOT STARTED` — [detail](specs/1.6.md)
 - **1.7** Prompt Grouping (folders) — `NOT STARTED` — [detail](specs/1.7.md)
