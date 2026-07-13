@@ -42,6 +42,8 @@ test('shows a score trend across versions and the regression section on the dash
   const datasetUrl = page.url();
   await page.fill('#promptInput', 'summarize thread one');
   await page.getByTestId('capture').click();
+  // Wait for the first capture to land (it clears the input) before capturing the second.
+  await expect(page.getByTestId('fixtures').locator('tr[data-origin="Captured"]')).toHaveCount(1);
   await page.fill('#promptInput', 'summarize thread two');
   await page.getByTestId('capture').click();
   await expect(page.getByTestId('fixtures').locator('tr[data-origin="Captured"]')).toHaveCount(2);

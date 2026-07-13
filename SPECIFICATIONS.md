@@ -7,7 +7,6 @@
 - _All specs archived._
 
 ## Phase 1 — Core Evaluation Loop
-- **1.4** Score Tracking & Analytics — `IN PROGRESS` — [detail](specs/1.4.md)
 - **1.5** Multi-Provider Model Support — `NOT STARTED` — [detail](specs/1.5.md)
 - **1.6** Prompt Import (file / bulk) — `NOT STARTED` — [detail](specs/1.6.md)
 - **1.7** Prompt Grouping (folders) — `NOT STARTED` — [detail](specs/1.7.md)
@@ -25,6 +24,7 @@
 - **4.1** Authentication & Multi-User Access — `NOT STARTED` — [detail](specs/4.1.md)
 
 ## Archive
+- **1.4** Score Tracking & Analytics — `DONE` — [detail](specs/archive/1.4.md)
 - **0.2** Rename → LitmusAI — `DONE` — [detail](specs/archive/0.2.md)
 - **1.3** Eval Harness — `DONE` — [detail](specs/archive/1.3.md)
 - **1.2** Datasets & Fixtures — `DONE` — [detail](specs/archive/1.2.md)

@@ -144,6 +144,23 @@ like-for-like:
 In the UI, the dataset page configures scorers and triggers a run; `/eval-runs/:id` shows the
 per-fixture scores.
 
+### Score tracking & analytics (spec 1.4)
+
+Read-only analytics over the append-only run history, keyed `Prompt × Version × Dataset × Scorer`.
+Each version contributes a point from its **latest** run (a re-run supersedes earlier ones).
+
+- `GET /api/analytics/trends?promptId=&datasetId=` — one score-trend series per scorer, a point per
+  version (mean score, pass-rate, fixture count), ordered by version number.
+- `GET /api/analytics/regressions?promptId=&datasetId=&threshold=` — flags a version whose mean
+  dropped beyond the threshold (default `0.05`, overridable) vs. the prior version **and** where a
+  paired t-test over matched per-fixture deltas finds the drop significant (`p < 0.05`). Noisy
+  series therefore don't false-flag; a single matched fixture can't establish significance.
+- `GET /api/analytics/comparison?promptId=&datasetId=&fromVersionId=&toVersionId=` — per-scorer
+  aggregate and per-fixture deltas between two versions (matched by fixture id).
+
+In the UI, `/analytics` picks a prompt + dataset and shows the score-trend chart, the regression
+list, and a version-vs-version comparison (defaulting to the two latest versions).
+
 ### Ops endpoints
 
 - `GET /health` — liveness (API and eval-runner).

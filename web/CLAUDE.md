@@ -60,6 +60,19 @@ The operator-facing UI:
 - The 0.1 skeleton round-trip now posts to `/api/echo` (`ApiService.echo` + `echo.ts`), not an
   eval-run — `EvalRun` is the real evaluation aggregate.
 
+## Routing (from 1.4)
+
+- `/analytics` — the score-tracking dashboard: prompt + dataset selectors, a trend chart, a
+  regression list, and a version-vs-version comparison. Feature components + client in `analytics/`
+  (`AnalyticsApiService`, DTO mirrors in `analytics.ts`). Presentational `TrendChart` /
+  `VersionComparison` are dumb (data in); the dashboard container fetches.
+- **Charts use `@swimlane/ngx-charts`** (SVG, added with `@angular/cdk` + `@angular/animations` +
+  `@angular/platform-browser-dynamic` pinned to Angular 20; `provideAnimations()` is wired in
+  `app.config.ts`). Per the `dataviz` skill: **source series colors from the `--sb-*` brand tokens at
+  runtime** (never hardcode hex) so light/dark tracks `data-theme`; the categorical order is
+  primary → accent → ai → info (status tokens are reserved, never a series color); one y-axis only.
+  Validate any categorical palette with the skill's `validate_palette.js` before shipping.
+
 ## E2e that needs a model (from 1.2)
 
 - An e2e that would trigger a live model call (synthetic generation) runs against a **stubbed
