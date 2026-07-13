@@ -16,12 +16,18 @@ export class DatasetsApiService {
     return this.http.get<DatasetSummary[]>('/api/datasets');
   }
 
+  /** The datasets belonging to a prompt (1.7) — its own test sets. */
+  listDatasetsByPrompt(promptId: string): Observable<DatasetSummary[]> {
+    return this.http.get<DatasetSummary[]>(`/api/prompts/${promptId}/datasets`);
+  }
+
   getDataset(id: string): Observable<Dataset> {
     return this.http.get<Dataset>(`/api/datasets/${id}`);
   }
 
-  createDataset(name: string, description: string | null): Observable<Dataset> {
-    return this.http.post<Dataset>('/api/datasets', { name, description });
+  /** Creates a dataset under its owning prompt (1.7). */
+  createDataset(promptId: string, name: string, description: string | null): Observable<Dataset> {
+    return this.http.post<Dataset>(`/api/prompts/${promptId}/datasets`, { name, description });
   }
 
   captureFixtures(id: string, tuples: CaptureTuple[]): Observable<Dataset> {

@@ -1,39 +1,20 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { DatasetSummary } from '../dataset';
 import { DatasetsApiService } from './datasets-api.service';
 
 @Component({
   selector: 'app-dataset-list',
-  imports: [FormsModule, RouterLink],
+  imports: [RouterLink],
   template: `
     <section class="panel">
       <header class="panel__head">
         <h1 class="title">Datasets</h1>
         <p class="subtitle">
-          Capture-first fixtures — ground truth from the apps, synthetic to fill the gaps.
+          Every dataset lives with a prompt — create and manage them from the prompt's workspace.
+          This is the cross-prompt browse view.
         </p>
       </header>
-
-      <form class="create" (submit)="create($event)">
-        <div class="sb-field">
-          <label for="name">New dataset name</label>
-          <input id="name" name="name" [ngModel]="name()" (ngModelChange)="name.set($event)" />
-        </div>
-        <div class="sb-field">
-          <label for="description">Description (optional)</label>
-          <input
-            id="description"
-            name="description"
-            [ngModel]="description()"
-            (ngModelChange)="description.set($event)"
-          />
-        </div>
-        <button class="sb-btn sb-btn--primary" type="submit" data-testid="create">
-          Create dataset
-        </button>
-      </form>
 
       @if (error(); as message) {
         <div class="error-box" data-testid="error">{{ message }}</div>
@@ -41,7 +22,9 @@ import { DatasetsApiService } from './datasets-api.service';
 
       @if (datasets(); as list) {
         @if (list.length === 0) {
-          <p class="empty" data-testid="empty">No datasets yet — create one above.</p>
+          <p class="empty" data-testid="empty">
+            No datasets yet — open a prompt and add one in its workspace.
+          </p>
         } @else {
           <table class="sb-table" data-testid="datasets">
             <thead>
@@ -76,35 +59,11 @@ export class DatasetList implements OnInit {
 
   protected readonly datasets = signal<DatasetSummary[] | null>(null);
   protected readonly error = signal<string | null>(null);
-  protected readonly name = signal('');
-  protected readonly description = signal('');
 
   ngOnInit(): void {
-    this.load();
-  }
-
-  private load(): void {
     this.api.listDatasets().subscribe({
       next: (list) => this.datasets.set(list),
       error: () => this.error.set('Could not load datasets — is the stack running?'),
-    });
-  }
-
-  protected create(event: Event): void {
-    event.preventDefault();
-    const name = this.name().trim();
-    if (!name) {
-      return;
-    }
-    this.error.set(null);
-    const description = this.description().trim() || null;
-    this.api.createDataset(name, description).subscribe({
-      next: () => {
-        this.name.set('');
-        this.description.set('');
-        this.load();
-      },
-      error: () => this.error.set('Could not create the dataset.'),
     });
   }
 }

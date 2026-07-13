@@ -31,12 +31,19 @@ describe('DatasetsApiService', () => {
     req.flush({ id: 'abc', name: 'x', description: null, fixtures: [] });
   });
 
-  it('creates a dataset', () => {
-    service.createDataset('Summaries', 'desc').subscribe();
-    const req = httpMock.expectOne('/api/datasets');
+  it('lists the datasets belonging to a prompt', () => {
+    service.listDatasetsByPrompt('p1').subscribe();
+    const req = httpMock.expectOne('/api/prompts/p1/datasets');
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
+  });
+
+  it('creates a dataset under its owning prompt', () => {
+    service.createDataset('p1', 'Summaries', 'desc').subscribe();
+    const req = httpMock.expectOne('/api/prompts/p1/datasets');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ name: 'Summaries', description: 'desc' });
-    req.flush({ id: 'abc', name: 'Summaries', description: 'desc', fixtures: [] });
+    req.flush({ id: 'abc', promptId: 'p1', name: 'Summaries', description: 'desc', fixtures: [] });
   });
 
   it('captures fixtures with the capture-schema body', () => {

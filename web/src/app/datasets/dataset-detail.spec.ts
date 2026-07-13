@@ -9,6 +9,7 @@ import { PromptsApiService } from '../prompts/prompts-api.service';
 
 const dataset: Dataset = {
   id: 'abc',
+  promptId: 'p1',
   name: 'Summaries',
   description: null,
   fixtures: [

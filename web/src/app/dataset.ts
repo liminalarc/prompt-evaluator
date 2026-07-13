@@ -12,6 +12,7 @@ export interface Fixture {
 /** Mirrors the .NET DatasetResponse DTO. */
 export interface Dataset {
   id: string;
+  promptId: string;
   name: string;
   description: string | null;
   fixtures: Fixture[];
@@ -20,6 +21,7 @@ export interface Dataset {
 /** Mirrors the .NET DatasetSummaryResponse DTO (list/browse projection). */
 export interface DatasetSummary {
   id: string;
+  promptId: string;
   name: string;
   description: string | null;
   fixtureCount: number;

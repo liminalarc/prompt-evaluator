@@ -2,12 +2,17 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Prompt } from '../prompt';
+import { DatasetSummary } from '../dataset';
+import { TrendSeries } from '../analytics';
+import { DatasetsApiService } from '../datasets/datasets-api.service';
+import { AnalyticsApiService } from '../analytics/analytics-api.service';
+import { TrendChart } from '../analytics/trend-chart';
 import { PromptsApiService } from './prompts-api.service';
 import { VersionDiff } from './version-diff';
 
 @Component({
   selector: 'app-prompt-detail',
-  imports: [FormsModule, RouterLink, VersionDiff],
+  imports: [FormsModule, RouterLink, VersionDiff, TrendChart],
   template: `
     <section class="panel">
       <a class="back" routerLink="/prompts">← All prompts</a>
@@ -83,6 +88,67 @@ import { VersionDiff } from './version-diff';
           <app-version-diff [before]="fromContent()" [after]="toContent()" />
         }
 
+        <h2 class="section-title">Datasets</h2>
+        <p class="subtitle">This prompt's test sets — its fixtures and the runs scored against them.</p>
+        @if (datasets(); as ds) {
+          @if (ds.length === 0) {
+            <p class="empty" data-testid="no-datasets">No datasets yet — create one below.</p>
+          } @else {
+            <table class="sb-table" data-testid="datasets">
+              <thead>
+                <tr><th>Name</th><th>Fixtures</th><th>Captured</th><th>Synthetic</th></tr>
+              </thead>
+              <tbody>
+                @for (d of ds; track d.id) {
+                  <tr>
+                    <td><a [routerLink]="['/datasets', d.id]">{{ d.name }}</a></td>
+                    <td>{{ d.fixtureCount }}</td>
+                    <td>{{ d.capturedCount }}</td>
+                    <td>{{ d.syntheticCount }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        }
+        <form class="create" (submit)="createDataset($event)">
+          <div class="sb-field">
+            <label for="datasetName">New dataset name</label>
+            <input
+              id="datasetName"
+              name="datasetName"
+              [ngModel]="datasetName()"
+              (ngModelChange)="datasetName.set($event)"
+            />
+          </div>
+          <button class="sb-btn" type="submit" data-testid="create-dataset">Add dataset</button>
+        </form>
+
+        <h2 class="section-title">Analytics</h2>
+        @if (datasets()?.length) {
+          <div class="sb-field">
+            <label for="analyticsDataset">Dataset</label>
+            <select
+              id="analyticsDataset"
+              [ngModel]="selectedDatasetId()"
+              (ngModelChange)="selectDataset($event)"
+              data-testid="analytics-dataset"
+            >
+              <option value="">Select a dataset…</option>
+              @for (d of datasets(); track d.id) {
+                <option [value]="d.id">{{ d.name }}</option>
+              }
+            </select>
+          </div>
+          @if (selectedDatasetId()) {
+            <app-trend-chart [series]="trends()" />
+          }
+        } @else {
+          <p class="empty" data-testid="no-analytics">
+            Add a dataset and run this prompt to see analytics.
+          </p>
+        }
+
         <h2 class="section-title">Add a version</h2>
         <form class="add-version" (submit)="addVersion($event)">
           <div class="sb-field">
@@ -124,6 +190,8 @@ import { VersionDiff } from './version-diff';
 })
 export class PromptDetail implements OnInit {
   private readonly api = inject(PromptsApiService);
+  private readonly datasetsApi = inject(DatasetsApiService);
+  private readonly analyticsApi = inject(AnalyticsApiService);
   private readonly route = inject(ActivatedRoute);
 
   protected readonly prompt = signal<Prompt | null>(null);
@@ -136,6 +204,12 @@ export class PromptDetail implements OnInit {
   protected readonly targetModel = signal('claude-sonnet-5');
   protected readonly label = signal('');
 
+  // Datasets + analytics — this prompt's, shown together with it (1.7).
+  protected readonly datasets = signal<DatasetSummary[] | null>(null);
+  protected readonly datasetName = signal('');
+  protected readonly selectedDatasetId = signal('');
+  protected readonly trends = signal<TrendSeries[] | null>(null);
+
   private id = '';
 
   protected readonly fromContent = computed(() => this.contentOf(this.fromNumber()));
@@ -144,6 +218,7 @@ export class PromptDetail implements OnInit {
   ngOnInit(): void {
     this.id = this.route.snapshot.paramMap.get('id') ?? '';
     this.load();
+    this.loadDatasets();
   }
 
   private load(): void {
@@ -156,6 +231,37 @@ export class PromptDetail implements OnInit {
         }
       },
       error: () => this.error.set('Could not load the prompt.'),
+    });
+  }
+
+  private loadDatasets(): void {
+    this.datasetsApi.listDatasetsByPrompt(this.id).subscribe({
+      next: (list) => this.datasets.set(list),
+      error: () => this.error.set('Could not load the prompt’s datasets.'),
+    });
+  }
+
+  protected createDataset(event: Event): void {
+    event.preventDefault();
+    const name = this.datasetName().trim();
+    if (!name) return;
+    this.error.set(null);
+    this.datasetsApi.createDataset(this.id, name, null).subscribe({
+      next: () => {
+        this.datasetName.set('');
+        this.loadDatasets();
+      },
+      error: () => this.error.set('Could not create the dataset.'),
+    });
+  }
+
+  protected selectDataset(datasetId: string): void {
+    this.selectedDatasetId.set(datasetId);
+    this.trends.set(null);
+    if (!datasetId) return;
+    this.analyticsApi.getTrends(this.id, datasetId).subscribe({
+      next: (series) => this.trends.set(series),
+      error: () => this.error.set('Could not load analytics for the dataset.'),
     });
   }
 
