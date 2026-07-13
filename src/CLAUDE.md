@@ -7,7 +7,13 @@ Additive to root `CLAUDE.md`. Only layer-specific rules here.
 - **Domain** — aggregates, entities, value objects, domain events. References **nothing**
   (no EF, no ASP.NET, no HttpClient). Invariants live in the aggregate, not in services.
   Core aggregates: `Prompt` (with `PromptVersion` history), `Dataset` (of `Fixture`s),
-  `EvalRun` (a prompt version scored over a dataset), `Score`.
+  `EvalRun` (a prompt version scored over a dataset), `Score`, `Folder` (the prompt-organizing
+  tree — 1.7).
+- **Datasets belong to a prompt (1.7).** `Dataset.PromptId` is required; a dataset is created
+  under one prompt and a run rejects a dataset owned by a different prompt. Folders organize
+  prompts; the **top-level folder is the permission boundary** (4.1) — resolved by walking parents
+  (a recursive CTE in `FolderRepository`), not a denormalized root ref, so folder-move stays a
+  single-row update. Cross-prompt/shared datasets are deliberately out of scope — see spec 1.8.
 - **Application** — use cases (one class per command/query) and the **ports**:
   `IPromptRepository`, `IEvaluationRunner`, `IScorer`, `IEvalRunRepository`. Depends on
   Domain only. No adapter code.

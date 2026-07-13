@@ -73,6 +73,17 @@ The operator-facing UI:
   primary → accent → ai → info (status tokens are reserved, never a series color); one y-axis only.
   Validate any categorical palette with the skill's `validate_palette.js` before shipping.
 
+## Routing (from 1.7)
+
+- `/prompts` is a **folder browse**: a folder-tree sidebar (a synthetic `Root` = unfiled prompts)
+  filters the list, with a breadcrumb, create-folder, and a per-row move-prompt select. Folder tree
+  model + `buildFolderTree` in `folder.ts`; `FoldersApiService` in `folders/`.
+- `/prompts/:id` is the **unified prompt workspace** — the prompt's versions, **its datasets**
+  (list + create, via `/api/prompts/:id/datasets`), and **its analytics** (dataset picker →
+  `TrendChart`) all on one page. Datasets belong to a prompt (1.7), so `DatasetsApiService.createDataset`
+  takes a `promptId` and posts to the nested route.
+- `/datasets` is now **browse-only** (cross-prompt list); datasets are created in the workspace.
+
 ## E2e that needs a model (from 1.2)
 
 - An e2e that would trigger a live model call (synthetic generation) runs against a **stubbed
