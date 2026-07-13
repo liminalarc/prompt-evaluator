@@ -97,7 +97,9 @@ public sealed class SeamEndpointTests : IAsyncLifetime
 
         Assert.NotNull(res);
         Assert.Equal("litmus-ai-api", res!.Service);
-        Assert.Equal("0.3.0", res.Version);
+        // Version is git-tag-derived and stamped at build; tests assert its shape, never a literal,
+        // so a release bump never breaks this. ("0.0.0-dev" for the test build.)
+        Assert.Matches(@"^\d+\.\d+\.\d+", res.Version);
         Assert.Equal("eval-runner", res.Dependencies.EvalRunner!.Service);
         Assert.Equal("faketest", res.Dependencies.EvalRunner.Commit);
         Assert.StartsWith("PostgreSQL", res.Dependencies.Db!.Version);

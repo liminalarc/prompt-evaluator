@@ -1,6 +1,8 @@
 [project]
 name = "eval-runner"
-version = "0.3.0"
+# Placeholder only — the service is not packaged/published. The runtime app version is
+# git-tag-derived and surfaced by GET /version (APP_VERSION env). Do not treat this as the source.
+version = "0.0.0"
 description = "LitmusAI eval-runner: LLM-judge scoring + synthetic fixture generation"
 requires-python = ">=3.12"
 

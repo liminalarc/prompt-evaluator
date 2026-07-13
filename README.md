@@ -170,6 +170,13 @@ list, and a version-vs-version comparison (defaulting to the two latest versions
   (api) and `http://localhost:4242/version` (eval-runner). The build `commit` comes from the
   `GIT_COMMIT` build-arg (`dev` when unset).
 
+  **Versioning is git-tag-derived — the git tag is the single source of the app version.**
+  There is no version string to bump in the tree. CI computes the version from
+  `git describe --tags` and passes it as the `APP_VERSION` build-arg, which the build stamps
+  into the API assembly (`-p:Version`) and the eval-runner image (env var). On a `vX.Y.Z` tag
+  `/version` reports `X.Y.Z`; on `main` it reports pre-release lineage (e.g. `0.3.0-2`); local
+  builds report `0.0.0-dev`. Releases are cut with `/flow-ship` (see `CLAUDE.md`).
+
 ## Running Tests
 
 ```bash

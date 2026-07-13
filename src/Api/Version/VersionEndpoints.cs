@@ -1,3 +1,4 @@
+using System.Reflection;
 using Application;
 using Application.Ports;
 
@@ -6,7 +7,15 @@ namespace Api.Version;
 public static class VersionEndpoints
 {
     private const string ServiceName = "litmus-ai-api";
-    private const string ServiceVersionNumber = "0.3.0";
+
+    // The version is the git tag, stamped into the assembly at build (-p:Version=$APP_VERSION);
+    // "0.0.0-dev" for local/dev builds. The SDK may append "+<sha>" (SourceRevisionId) — trim it,
+    // since the commit is reported separately below.
+    private static readonly string ServiceVersionNumber =
+        (typeof(VersionEndpoints).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            ?? "0.0.0-dev")
+        .Split('+')[0];
 
     public static IEndpointRouteBuilder MapVersionEndpoints(this IEndpointRouteBuilder app)
     {

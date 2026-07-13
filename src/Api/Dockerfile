@@ -2,8 +2,10 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY . .
+# Version is stamped from the git tag (git describe → APP_VERSION); "0.0.0-dev" locally.
+ARG APP_VERSION=0.0.0-dev
 RUN dotnet restore Api/Api.csproj
-RUN dotnet publish Api/Api.csproj -c Release -o /app --no-restore
+RUN dotnet publish Api/Api.csproj -c Release -o /app --no-restore -p:Version=$APP_VERSION
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 # curl is used by the compose healthcheck.

@@ -1,3 +1,5 @@
+import re
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -27,5 +29,7 @@ def test_version_reports_service_and_commit() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["service"] == "eval-runner"
-    assert body["version"] == "0.3.0"
+    # Version is git-tag-derived (APP_VERSION at build); assert its shape, never a literal, so a
+    # release bump never breaks this. ("0.0.0-dev" for the local test run.)
+    assert re.match(r"^\d+\.\d+\.\d+", body["version"])
     assert body["commit"]  # "dev" locally, real SHA in a built image

@@ -32,7 +32,9 @@ from app.judging import (
 )
 
 SERVICE_NAME = "eval-runner"
-VERSION = "0.3.0"
+# Version is stamped at image build from the git tag (APP_VERSION build-arg → ENV, like GIT_COMMIT);
+# "0.0.0-dev" for local/per-process runs. The git tag is the single source of the app version.
+VERSION = os.environ.get("APP_VERSION", "0.0.0-dev")
 
 app = FastAPI(title="LitmusAI eval-runner", version=VERSION)
 

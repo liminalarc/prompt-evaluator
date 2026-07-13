@@ -82,16 +82,21 @@ When a spec is done:
 the **compose stack** (local + CI only — there is no hosted environment yet; **production
 deployment is spec 3.2**). A release here is a **tagged, verified build**, not a deploy.
 
-**Version — one unified product SemVer** (pre-1.0 `0.x`), bumped together in all three places
-so `/version` and the git tag agree:
+**Version — git-tag-derived, single source of truth is the git tag.** There is **no version
+string to bump** anywhere in the tree (matching our other apps, e.g. Stormboard). The build
+stamps the version from `git describe --tags` into each service; `/version` reads it back:
 
-- API — `ServiceVersionNumber` in `src/Api/Version/VersionEndpoints.cs`
-- web — `version` in `web/package.json`
-- eval-runner — its version string under `eval-runner/`
+- **API** — `Api/Dockerfile` passes `-p:Version=$APP_VERSION`; `VersionEndpoints.cs` reads the
+  assembly's `InformationalVersion` (trimming any `+<sha>`).
+- **eval-runner** — `Dockerfile` bakes `APP_VERSION` as an env var (like `GIT_COMMIT`);
+  `app/main.py` reads `os.environ["APP_VERSION"]`.
+- **web** — surfaces no version; `web/package.json` `version` is an unused `0.0.0` placeholder.
+- CI (`compose-smoke`) computes `APP_VERSION` from `git describe` and passes it as the
+  `APP_VERSION` build-arg. Local/non-CI builds are `0.0.0-dev`. **Tests assert the version's
+  shape, never a literal** — so a release never breaks a test.
 
 The bump is commit-derived (`feat:` → minor, `fix:` → patch, breaking → major) and confirmed
-with the user before tagging. (The strings currently drift — api `0.1.0`, web `0.0.0` — so the
-first release aligns all three.)
+with the user before tagging — it decides the **tag name**, nothing else.
 
 **Pre-ship validation (all must hold):**
 
@@ -105,10 +110,11 @@ first release aligns all three.)
 
 **Cut the release:**
 
-1. Bump the three version strings to `X.Y.Z`; commit `chore: release vX.Y.Z`.
-2. Update `CHANGELOG.md` from the commits since the last tag (link `[#id]` → `specs/archive/<id>.md`).
-3. Annotated tag: `git tag -a vX.Y.Z -m "…"` listing the specs shipped; push `main` + the tag.
-4. CI runs on the pushed commit. **Stop here** — no deploy step until spec 3.2 lands.
+1. Update `CHANGELOG.md` from the commits since the last tag (link `[#id]` → `specs/archive/<id>.md`);
+   commit `chore: release vX.Y.Z`. (No version strings to bump — the tag is the version.)
+2. Annotated tag: `git tag -a vX.Y.Z -m "…"` listing the specs shipped; push `main` + the tag.
+3. CI runs on the pushed commit and stamps `X.Y.Z` into the built images from the tag. **Stop
+   here** — no deploy step until spec 3.2 lands.
 
 `--dry-run` prints the computed version, changelog, and tag without writing or pushing.
 

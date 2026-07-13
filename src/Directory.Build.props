@@ -7,6 +7,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!-- Single source of the version is the git tag. Local/dev builds are "0.0.0-dev";
+         the Docker build overrides this with -p:Version=$APP_VERSION (git describe). -->
+    <Version>0.0.0-dev</Version>
   </PropertyGroup>
 
 </Project>
