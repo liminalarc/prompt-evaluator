@@ -21,7 +21,8 @@
 - **3.2** Production Deployment — `NOT STARTED` — [detail](specs/3.2.md)
 
 ## Phase 4 — Accounts & Access
-- **4.1** Authentication & Multi-User Access — `NOT STARTED` — [detail](specs/4.1.md)
+- **4.1** Authentication & Multi-User Access — `IN PROGRESS` — [detail](specs/4.1.md)
+- **4.2** SSO / OAuth Sign-In — `NOT STARTED` — [detail](specs/4.2.md)
 
 ## Archive
 - **2.4** UX Overhaul — App Shell, Navigation & Design-System Foundation — `DONE` — [detail](specs/archive/2.4.md)
