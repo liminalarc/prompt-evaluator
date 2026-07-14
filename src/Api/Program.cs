@@ -12,6 +12,7 @@ using Application.EvalRuns;
 using Application.Folders;
 using Application.Prompts;
 using Infrastructure;
+using Infrastructure.Identity;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -64,6 +65,10 @@ if (!string.IsNullOrWhiteSpace(postgres))
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<EvalDbContext>();
     db.Database.Migrate();
+
+    // The Identity bounded context (4.1) is a separate context/history on the same database.
+    var identityDb = scope.ServiceProvider.GetRequiredService<AppIdentityDbContext>();
+    identityDb.Database.Migrate();
 }
 
 app.Run();

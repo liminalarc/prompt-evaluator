@@ -1,6 +1,8 @@
 using Application.Ports;
 using Infrastructure.Http;
+using Infrastructure.Identity;
 using Infrastructure.Persistence;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -15,6 +17,21 @@ public static class DependencyInjection
     {
         services.AddDbContext<EvalDbContext>(options =>
             options.UseNpgsql(postgresConnectionString));
+
+        // Identity bounded context (4.1): a separate store on the same Postgres. UserManager owns
+        // credential hashing; the organization is the permission boundary (grants live here too).
+        services.AddDbContext<AppIdentityDbContext>(options =>
+            options.UseNpgsql(postgresConnectionString, npgsql =>
+                // Separate migration history so the two contexts on one database don't collide.
+                npgsql.MigrationsHistoryTable("__ef_migrations_history_identity")));
+        services.AddIdentityCore<AppUser>(options =>
+            {
+                options.User.RequireUniqueEmail = true;
+                options.Password.RequiredLength = 8;
+                options.Password.RequireNonAlphanumeric = false;
+            })
+            .AddEntityFrameworkStores<AppIdentityDbContext>();
+        services.AddScoped<IUserDirectory, UserDirectory>();
 
         services.AddScoped<IEvalRunRepository, EvalRunRepository>();
         services.AddScoped<IOrganizationRepository, OrganizationRepository>();

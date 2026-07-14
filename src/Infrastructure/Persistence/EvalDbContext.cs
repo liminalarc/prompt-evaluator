@@ -14,6 +14,10 @@ public sealed class EvalDbContext(DbContextOptions<EvalDbContext> options) : DbC
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(EvalDbContext).Assembly);
+        // Only the domain configurations — scoped by namespace so the Identity bounded context's
+        // configurations (a separate DbContext, same assembly) don't leak into this model.
+        modelBuilder.ApplyConfigurationsFromAssembly(
+            typeof(EvalDbContext).Assembly,
+            t => t.Namespace == "Infrastructure.Persistence.Configurations");
     }
 }
