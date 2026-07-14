@@ -10,7 +10,6 @@
 - **1.5** Multi-Provider Model Support — `NOT STARTED` — [detail](specs/1.5.md)
 - **1.6** Prompt Import (file / bulk) — `NOT STARTED` — [detail](specs/1.6.md)
 - **1.8** Shared / Cross-Prompt Datasets (cloning) — `NOT STARTED` — [detail](specs/1.8.md)
-- **1.9** Organizations (top-level + permission boundary) + Prompts UX overhaul — `IN PROGRESS` — [detail](specs/1.9.md)
 
 ## Phase 2 — Review & Advisory
 - **2.1** Human Review UI — `NOT STARTED` — [detail](specs/2.1.md)
@@ -25,6 +24,7 @@
 - **4.1** Authentication & Multi-User Access — `NOT STARTED` — [detail](specs/4.1.md)
 
 ## Archive
+- **1.9** Organizations (top-level + permission boundary) + Prompts UX overhaul — `DONE` — [detail](specs/archive/1.9.md)
 - **1.7** Prompt Grouping (folders) + Unified Prompt Workspace — `DONE` — [detail](specs/archive/1.7.md)
 - **1.4** Score Tracking & Analytics — `DONE` — [detail](specs/archive/1.4.md)
 - **0.2** Rename → LitmusAI — `DONE` — [detail](specs/archive/0.2.md)

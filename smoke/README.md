@@ -23,14 +23,14 @@ BASE_URL=http://localhost:4240 ./smoke/seed-smoke.sh
 ## What it creates
 
 ```
-Smoke Test/                 top-level folder (the 4.1 permission boundary)
-  Summarization/            subfolder
+Smoke Test (organization)   top-level container / permission boundary (1.9)
+  Summarization/            a folder in the org
     Smoke Summarizer        prompt (filed here) with a v1
       Smoke Summaries       dataset owned by the prompt, 1 captured fixture
 ```
 
-Open **Smoke Summarizer** to see the unified workspace — its versions, its datasets, and its
-analytics on one page.
+Pick the **Smoke Test** org in the switcher, then open **Smoke Summarizer** to see the unified
+workspace — its versions, its datasets, and its analytics on one page.
 
 ## Notes
 

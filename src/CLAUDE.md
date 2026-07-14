@@ -6,14 +6,18 @@ Additive to root `CLAUDE.md`. Only layer-specific rules here.
 
 - **Domain** — aggregates, entities, value objects, domain events. References **nothing**
   (no EF, no ASP.NET, no HttpClient). Invariants live in the aggregate, not in services.
-  Core aggregates: `Prompt` (with `PromptVersion` history), `Dataset` (of `Fixture`s),
-  `EvalRun` (a prompt version scored over a dataset), `Score`, `Folder` (the prompt-organizing
-  tree — 1.7).
+  Core aggregates: `Organization` (top-level container — 1.9), `Prompt` (with `PromptVersion`
+  history), `Dataset` (of `Fixture`s), `EvalRun` (a prompt version scored over a dataset), `Score`,
+  `Folder` (the prompt-organizing tree — 1.7).
+- **Hierarchy: `Organization › Folder tree › Prompt › {versions, datasets, analytics}` (1.9).**
+  `Folder.OrganizationId` and `Prompt.OrganizationId` are required; the **organization is the
+  permission boundary** (4.1) — resolved directly from `Prompt.OrganizationId` (O(1), no tree walk).
+  This **superseded 1.7's "top-level folder is the boundary"**; `FolderRepository.GetTopLevelAncestorId`
+  (recursive CTE) is retained but no longer the boundary. A prompt may only be filed into a folder
+  in its own org; a subfolder shares its parent's org (enforced in Application).
 - **Datasets belong to a prompt (1.7).** `Dataset.PromptId` is required; a dataset is created
-  under one prompt and a run rejects a dataset owned by a different prompt. Folders organize
-  prompts; the **top-level folder is the permission boundary** (4.1) — resolved by walking parents
-  (a recursive CTE in `FolderRepository`), not a denormalized root ref, so folder-move stays a
-  single-row update. Cross-prompt/shared datasets are deliberately out of scope — see spec 1.8.
+  under one prompt and a run rejects a dataset owned by a different prompt. Cross-prompt/shared
+  datasets are deliberately out of scope — see spec 1.8.
 - **Application** — use cases (one class per command/query) and the **ports**:
   `IPromptRepository`, `IEvaluationRunner`, `IScorer`, `IEvalRunRepository`. Depends on
   Domain only. No adapter code.

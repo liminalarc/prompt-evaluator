@@ -73,11 +73,15 @@ The operator-facing UI:
   primary → accent → ai → info (status tokens are reserved, never a series color); one y-axis only.
   Validate any categorical palette with the skill's `validate_palette.js` before shipping.
 
-## Routing (from 1.7)
+## Routing (from 1.7, reworked by 1.9)
 
-- `/prompts` is a **folder browse**: a folder-tree sidebar (a synthetic `Root` = unfiled prompts)
-  filters the list, with a breadcrumb, create-folder, and a per-row move-prompt select. Folder tree
-  model + `buildFolderTree` in `folder.ts`; `FoldersApiService` in `folders/`.
+- `/prompts` is an **org + folder browse** (1.9): an **organization dropdown** (`OrganizationsApiService`)
+  selects the org; the main area is a **file-explorer** — a breadcrumb (`Org › … › folder`), the current
+  folder's **subfolders** (click to descend), and the **prompts in the current folder**. Create-org /
+  create-folder / create-prompt are **collapsible** actions; move-prompt is a per-row select scoped to the
+  org. No left sidebar tree. Folders + prompts are fetched **per org** and bucketed client-side by
+  `parentId` / `folderId`. `folder.ts` / `organization.ts` models; `FoldersApiService` (org-scoped),
+  `OrganizationsApiService`.
 - `/prompts/:id` is the **unified prompt workspace** — the prompt's versions, **its datasets**
   (list + create, via `/api/prompts/:id/datasets`), and **its analytics** (dataset picker →
   `TrendChart`) all on one page. Datasets belong to a prompt (1.7), so `DatasetsApiService.createDataset`
