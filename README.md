@@ -28,6 +28,10 @@ See `CLAUDE.md` for architecture and conventions, `SPECIFICATIONS.md` for the ba
 | `ConnectionStrings__Postgres` | `src/Api` | Postgres connection string |
 | `EvalRunner__BaseUrl` | `src/Api` | Base URL of the Python eval-runner (e.g. `http://localhost:8000`) |
 | `ANTHROPIC_API_KEY` | `eval-runner` | Claude API key for judge + synthetic generation |
+| `Auth__BootstrapAdmin__Email` / `__Password` | `src/Api` | Optional. When both are set, a bootstrap admin is seeded on startup and granted the Default org (first-run access). `__DisplayName` optional (defaults `Administrator`). No-op when unset. |
+| `Auth__WebBaseUrl` | `src/Api` | Base URL used to build password-reset links (default `http://localhost:4200`). |
+| `EvalRunner__ServiceToken` | `src/Api` | Optional shared secret attached as `X-Service-Token` on eval-runner calls. |
+| `EVAL_RUNNER_SERVICE_TOKEN` | `eval-runner` | When set, eval-runner requires a matching `X-Service-Token` on its work endpoints (must equal `EvalRunner__ServiceToken`). Unset = open (dev/CI). |
 
 For local .NET development, prefer user-secrets over environment variables for the
 connection string and any keys:
@@ -160,6 +164,26 @@ Each version contributes a point from its **latest** run (a re-run supersedes ea
 
 In the UI, `/analytics` picks a prompt + dataset and shows the score-trend chart, the regression
 list, and a version-vs-version comparison (defaulting to the two latest versions).
+
+### Authentication & multi-user access (spec 4.1)
+
+LitmusAI is multi-user: people sign in and their access is scoped to the **organizations**
+they're a member of (the organization is the permission boundary — resolved from
+`Prompt.OrganizationId`). Identity is an in-process bounded context in the API (cookie session
+over ASP.NET Core Identity); the eval-runner is an internal trusted service, not a user-auth
+boundary.
+
+- `POST /api/auth/register` — self-service registration `{ email, displayName, password }`
+  (auto-signs-in). `POST /api/auth/login` `{ email, password }`, `POST /api/auth/logout`,
+  `GET /api/auth/me` (the SPA's session probe; 401 when signed out).
+- `POST /api/auth/forgot-password` `{ email }` (always 200 — no account enumeration) emails a
+  reset link; `POST /api/auth/reset-password` `{ email, token, newPassword }`. Email delivery is a
+  seam: dev/CI only logs the message (a real provider is wired at deployment — spec 3.2).
+- All data endpoints require the auth cookie and enforce org membership (403 for a non-member,
+  404 for a resource that doesn't exist). Creating an organization grants the creator ownership;
+  the org switcher lists only accessible orgs.
+- **First run:** set `Auth__BootstrapAdmin__Email`/`__Password` to seed an admin with access to
+  the seeded Default org; otherwise register the first user via the SPA.
 
 ### Ops endpoints
 

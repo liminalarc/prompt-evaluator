@@ -19,11 +19,16 @@ Additive to root `CLAUDE.md`. Only layer-specific rules here.
   under one prompt and a run rejects a dataset owned by a different prompt. Cross-prompt/shared
   datasets are deliberately out of scope — see spec 1.8.
 - **Application** — use cases (one class per command/query) and the **ports**:
-  `IPromptRepository`, `IEvaluationRunner`, `IScorer`, `IEvalRunRepository`. Depends on
-  Domain only. No adapter code.
+  `IPromptRepository`, `IEvaluationRunner`, `IScorer`, `IEvalRunRepository`, and the identity
+  seams `IUserDirectory` / `ICurrentUser` / `IEmailSender` (4.1). Depends on Domain only. No
+  adapter code.
 - **Infrastructure** — port implementations: EF Core (Npgsql) repositories, the HTTP
   client to `eval-runner`, the (future) Zatomic adapter. All EF mapping via
-  `IEntityTypeConfiguration<T>` classes — keep the DbContext thin.
+  `IEntityTypeConfiguration<T>` classes — keep the DbContext thin. The **Identity bounded
+  context** (4.1) lives in `Infrastructure/Identity/`: ASP.NET Core Identity over a separate
+  `AppIdentityDbContext` (its own migration history + `MigrationsHistoryTable`, so it never
+  collides with `EvalDbContext`), `AppUser`, `OrganizationMembership`, and the `IUserDirectory`
+  adapter. Cookie sign-in/out is an **Api** concern (never in Application/Infrastructure).
 - **Api** — ASP.NET Core minimal APIs or controllers, DI wiring (composition root),
   request/response DTOs. Maps DTO ↔ domain at the edge; domain types never serialize directly.
 

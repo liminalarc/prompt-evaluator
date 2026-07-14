@@ -20,6 +20,14 @@ improvements. An advisory layer (prompt-engineering advice) comes later.
     not a domain authority.
   - `IScorer` — one abstraction, three implementations: deterministic (in-process),
     LLM-judge (→ eval-runner), human (→ Angular review queue). Scorers compose per dataset.
+- **Identity is a bounded context inside the `Api` (4.1).** Cookie-session auth over ASP.NET Core
+  Identity lives in Infrastructure behind two ports — `IUserDirectory` (credentials, reset tokens,
+  org-membership grants) and `ICurrentUser` — so `Domain` stays framework-free and the identity
+  store is a separate `AppIdentityDbContext` (its own migration history) on the same Postgres. The
+  **organization is the permission boundary**: access is a user↔org membership resolved from
+  `Prompt.OrganizationId`, enforced on every data endpoint. The eval-runner authenticates as an
+  **internal trusted service** (shared `X-Service-Token`), never with user credentials. Password-
+  reset email is an `IEmailSender` seam (dev logs; real provider at deploy — spec 3.2).
 - **Capture-first fixtures.** For prompts whose input is an upstream SLM's output, real
   test data is *captured* from the apps (the ground-truth corpus) and *synthetic* data
   only fills coverage gaps — seeded from captured examples so the distribution matches.
