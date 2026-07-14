@@ -88,6 +88,32 @@ The operator-facing UI:
   takes a `promptId` and posts to the nested route.
 - `/datasets` is now **browse-only** (cross-prompt list); datasets are created in the workspace.
 
+## App shell, shared kit & org context (from 2.4)
+
+- **Shared UI kit** lives in `web/src/app/shared/` (barrel `index.ts`): `PageHeader`,
+  `Breadcrumb`, `LoadingState`, `EmptyState`, `ErrorState`, `StatusBadge`, `Chip`, plus pure
+  status mappers in `status.ts` (`passBadge`, `originBadge`). **Use these for page chrome and
+  status** instead of hand-rolling `.panel__head`/`.title`/`.empty`/`.error-box`. `ErrorState`
+  renders the brand `.sb-field--error` and keeps `data-testid="error"` (existing selectors still
+  work). Every page shows a `LoadingState` before data arrives — no more blank-until-loaded.
+- **Status is a brand primitive, never a raw glyph.** Pass/fail, fixture origin, regression
+  severity → `StatusBadge` (`.sb-badge--*`); scorer kind, target/judge model → `Chip` (`.sb-chip`).
+  No emoji for status. Colors come only from `--sb-*` tokens (CI-adjacent hex-scan stays clean).
+- **Organization is a global context**, not a per-page picker. `OrgContextStore`
+  (`shared/org-context.store.ts`, root signals) owns `organizations` / `currentOrgId` /
+  `currentOrg`; the topbar switcher writes it via `select()`. Selection persists to **localStorage
+  and a `?org=` query param** (resolved `?org=` → localStorage → first org). Pages read
+  `orgStore.currentOrgId()` and rescope in an `effect()` on switch; datasets/analytics with no
+  org-scoped endpoint intersect the cross-prompt list by the org's prompt ids (no API change).
+- **Topbar nav is `Dashboard · Prompts · Analytics`.** `/datasets` is demoted (route kept for
+  deep-links, reached from the workspace/dashboard). `/` is the product `Dashboard`
+  (`dashboard/`), assembled by `DashboardFacade` from existing read APIs (bounded per-dataset
+  fan-out). The 0.1 echo skeleton lives at `/_skeleton` as a wiring smoke test only.
+- **Progressive disclosure:** on the long workspace pages, data tables + the primary CTA stay
+  visible; creation forms reveal behind `+` toggles (`toggle-capture`, `toggle-generate`,
+  `toggle-add-scorer`, `toggle-add-version`, `toggle-create-dataset`) that stay open after submit.
+  e2e opens a form once before driving it.
+
 ## E2e that needs a model (from 1.2)
 
 - An e2e that would trigger a live model call (synthetic generation) runs against a **stubbed
