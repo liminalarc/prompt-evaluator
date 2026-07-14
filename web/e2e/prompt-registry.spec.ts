@@ -31,6 +31,7 @@ test('registers a prompt, records versions, and diffs them', async ({ page, requ
   await expect(page.getByRole('heading', { name })).toBeVisible();
 
   // Add first version.
+  await page.getByTestId('toggle-add-version').click();
   await page.fill('#content', 'Summarize: {input}');
   await page.fill('#targetModel', 'claude-sonnet-5');
   await page.getByTestId('add-version').click();
