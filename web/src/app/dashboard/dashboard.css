@@ -1,0 +1,38 @@
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--sb-space-md);
+  margin-bottom: var(--sb-space-2xl);
+}
+
+.dash-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sb-space-sm);
+  padding: var(--sb-space-lg);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.dash-prompt:hover {
+  border-color: var(--sb-primary);
+}
+
+.dash-prompt__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sb-space-sm);
+}
+
+.dash-prompt__name {
+  font-weight: var(--sb-type-h4-weight);
+  color: var(--sb-text);
+}
+
+.dash-prompt__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sb-space-xs);
+}

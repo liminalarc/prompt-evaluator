@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 test('round-trips a prompt through every layer', async ({ page }) => {
-  await page.goto('/');
+  // The echo skeleton is no longer the landing page (2.4) — it lives at /_skeleton purely as a
+  // wiring smoke test proving the Angular → API → eval-runner seam.
+  await page.goto('/_skeleton');
 
   const prompt = `e2e ${Date.now()}`;
   await page.fill('#prompt', prompt);
