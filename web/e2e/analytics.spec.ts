@@ -1,13 +1,24 @@
 import { test, expect } from '@playwright/test';
+import { createOrg, deleteOrg, orgName } from './support';
 
 // Exercises the score-analytics dashboard end to end against a live stack: create a prompt with
-// two versions, a dataset with fixtures and a scorer, run both versions, then open /analytics and
-// confirm the trend chart and regression section render for that prompt × dataset. Runs make model
-// calls, so this uses the stubbed eval-runner and is skipped by default (same gate as eval-run):
+// two versions and, in its workspace, a dataset with fixtures + a scorer; run both versions, then
+// open /analytics and confirm the trend chart, regression section, and version comparison render
+// for that prompt × dataset. Runs make model calls, so this uses the stubbed eval-runner and is
+// skipped by default (same gate as eval-run):
 //   docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d --build
 //   E2E_EVAL_RUNNER_STUB=1 npx playwright test e2e/analytics.spec.ts
+// Runs in a disposable org, deleted on teardown.
+let orgId = '';
+
+test.afterEach(async ({ request }) => {
+  await deleteOrg(request, orgId);
+  orgId = '';
+});
+
 test('shows a score trend across versions and the regression section on the dashboard', async ({
   page,
+  request,
 }) => {
   test.skip(
     !process.env['E2E_EVAL_RUNNER_STUB'],
@@ -17,12 +28,15 @@ test('shows a score trend across versions and the regression section on the dash
   const stamp = Date.now();
   const promptName = `e2e analytics prompt ${stamp}`;
   const datasetName = `e2e analytics dataset ${stamp}`;
+  orgId = await createOrg(request, orgName('analytics'));
 
-  // 1. Prompt with two versions.
+  // 1. Prompt with two versions (in the disposable org).
   await page.goto('/prompts');
+  await page.getByTestId('org-select').selectOption(orgId);
+  await page.getByTestId('toggle-new-prompt').click();
   await page.fill('#name', promptName);
-  await page.getByTestId('create').click();
-  await page.getByTestId('prompts').getByText(promptName).click();
+  await page.getByTestId('create-prompt').click();
+  await page.getByTestId('prompts').getByRole('link', { name: promptName }).click();
   await expect(page.getByRole('heading', { name: promptName })).toBeVisible();
   await page.fill('#content', 'good summarizer');
   await page.fill('#targetModel', 'claude-opus-4-8');
@@ -33,16 +47,14 @@ test('shows a score trend across versions and the regression section on the dash
   await page.getByTestId('add-version').click();
   await expect(page.getByTestId('versions').locator('tbody tr')).toHaveCount(2);
 
-  // 2. Dataset with two captured fixtures.
-  await page.goto('/datasets');
-  await page.fill('#name', datasetName);
-  await page.getByTestId('create').click();
-  await page.getByTestId('datasets').getByText(datasetName).click();
+  // 2. A dataset under the prompt with two captured fixtures.
+  await page.fill('#datasetName', datasetName);
+  await page.getByTestId('create-dataset').click();
+  await page.getByTestId('datasets').getByRole('link', { name: datasetName }).click();
   await expect(page.getByRole('heading', { name: datasetName })).toBeVisible();
   const datasetUrl = page.url();
   await page.fill('#promptInput', 'summarize thread one');
   await page.getByTestId('capture').click();
-  // Wait for the first capture to land (it clears the input) before capturing the second.
   await expect(page.getByTestId('fixtures').locator('tr[data-origin="Captured"]')).toHaveCount(1);
   await page.fill('#promptInput', 'summarize thread two');
   await page.getByTestId('capture').click();
@@ -72,9 +84,7 @@ test('shows a score trend across versions and the regression section on the dash
   await page.getByTestId('dataset-select').selectOption({ label: datasetName });
 
   await expect(page.getByTestId('trend-chart')).toBeVisible();
-  // Two versions → the line chart plots two points; ngx-charts renders circle markers.
   await expect(page.locator('[data-testid="trend-chart"] .line-chart')).toBeVisible();
-  // The regressions section resolves to either a flagged row or the clean state.
   await expect(
     page.getByTestId('regressions').or(page.getByTestId('no-regressions')),
   ).toBeVisible();
