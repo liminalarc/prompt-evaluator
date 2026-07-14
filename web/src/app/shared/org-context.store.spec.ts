@@ -77,4 +77,23 @@ describe('OrgContextStore', () => {
     expect(store.organizations().map((o) => o.id)).toContain('o3');
     expect(store.currentOrgId()).toBe('o3');
   });
+
+  it('handles an empty org list gracefully (new user with no orgs)', () => {
+    configure([]);
+    expect(() => store.load()).not.toThrow();
+    expect(store.organizations().length).toBe(0);
+    expect(store.currentOrgId()).toBeNull();
+    expect(store.currentOrg()).toBeNull();
+  });
+
+  it('reset clears the context and lets load() re-fetch (sign-out)', () => {
+    configure();
+    store.load();
+    expect(store.currentOrgId()).toBe('o1');
+    store.reset();
+    expect(store.organizations().length).toBe(0);
+    expect(store.currentOrgId()).toBeNull();
+    store.load(); // re-fetches after reset
+    expect(store.currentOrgId()).toBe('o1');
+  });
 });

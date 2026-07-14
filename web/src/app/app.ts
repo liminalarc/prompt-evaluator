@@ -1,6 +1,7 @@
-import { Component, inject } from '@angular/core';
+import { Component, effect, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { AuthService } from './auth/auth.service';
 import { OrgContextStore } from './shared/org-context.store';
 
 @Component({
@@ -11,9 +12,29 @@ import { OrgContextStore } from './shared/org-context.store';
 })
 export class App {
   protected readonly org = inject(OrgContextStore);
+  protected readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
 
   constructor() {
-    // Resolve the global org context once, at the shell — every page reads from it thereafter.
-    this.org.load();
+    // The org context (and its access-filtered switcher) only makes sense once signed in — load
+    // it when authentication resolves, and drop it on sign-out so a new session starts clean.
+    effect(() => {
+      if (this.auth.isAuthenticated()) {
+        this.org.load();
+      } else {
+        this.org.reset();
+      }
+    });
+  }
+
+  protected logout(): void {
+    this.auth.logout().subscribe({
+      next: () => void this.router.navigateByUrl('/login'),
+      error: () => {
+        // Even if the network call fails, drop the local session and send them to login.
+        this.auth.clearSession();
+        void this.router.navigateByUrl('/login');
+      },
+    });
   }
 }

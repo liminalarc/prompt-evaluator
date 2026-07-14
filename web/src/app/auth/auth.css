@@ -1,0 +1,59 @@
+/* Auth pages (4.1): a single centered card, brand tokens only. */
+.auth {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  padding: var(--sb-space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sb-space-lg);
+  background: var(--sb-surface);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--sb-radius-md);
+}
+
+.auth__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sb-space-xs);
+}
+
+.auth__title {
+  margin: 0;
+  font-size: var(--sb-type-h2-size);
+  font-weight: var(--sb-type-h2-weight);
+  color: var(--sb-text);
+}
+
+.auth__subtitle {
+  margin: 0;
+  color: var(--sb-text-secondary);
+  font-size: var(--sb-type-small-size);
+}
+
+.auth__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sb-space-md);
+}
+
+.auth__form .sb-btn {
+  align-self: stretch;
+}
+
+.auth__links {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sb-space-md);
+  font-size: var(--sb-type-small-size);
+}
+
+.auth__links a {
+  color: var(--sb-primary);
+  text-decoration: none;
+}
+
+.auth__note {
+  color: var(--sb-text-secondary);
+  font-size: var(--sb-type-small-size);
+}

@@ -1,31 +1,49 @@
 <header class="topbar">
   <span class="brand">LitmusAI</span>
-  <nav class="nav">
-    <a
-      routerLink="/"
-      routerLinkActive="nav__link--active"
-      [routerLinkActiveOptions]="{ exact: true }"
-      class="nav__link"
-      >Dashboard</a
-    >
-    <a routerLink="/prompts" routerLinkActive="nav__link--active" class="nav__link">Prompts</a>
-    <a routerLink="/analytics" routerLinkActive="nav__link--active" class="nav__link">Analytics</a>
-  </nav>
-
-  @if (org.organizations().length > 0) {
-    <div class="topbar__org">
-      <label class="topbar__org-label" for="org-switcher">Org</label>
-      <select
-        id="org-switcher"
-        class="topbar__org-select"
-        data-testid="org-select"
-        [ngModel]="org.currentOrgId()"
-        (ngModelChange)="org.select($event)"
+  @if (auth.isAuthenticated()) {
+    <nav class="nav">
+      <a
+        routerLink="/"
+        routerLinkActive="nav__link--active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="nav__link"
+        >Dashboard</a
       >
-        @for (o of org.organizations(); track o.id) {
-          <option [value]="o.id">{{ o.name }}</option>
-        }
-      </select>
+      <a routerLink="/prompts" routerLinkActive="nav__link--active" class="nav__link">Prompts</a>
+      <a routerLink="/analytics" routerLinkActive="nav__link--active" class="nav__link">Analytics</a>
+    </nav>
+
+    <div class="topbar__right">
+      @if (org.organizations().length > 0) {
+        <div class="topbar__org">
+          <label class="topbar__org-label" for="org-switcher">Org</label>
+          <select
+            id="org-switcher"
+            class="topbar__org-select"
+            data-testid="org-select"
+            [ngModel]="org.currentOrgId()"
+            (ngModelChange)="org.select($event)"
+          >
+            @for (o of org.organizations(); track o.id) {
+              <option [value]="o.id">{{ o.name }}</option>
+            }
+          </select>
+        </div>
+      }
+
+      <div class="topbar__user">
+        <span class="topbar__user-name" data-testid="current-user">{{
+          auth.currentUser()?.displayName || auth.currentUser()?.email
+        }}</span>
+        <button
+          class="sb-btn sb-btn--sm sb-btn--secondary"
+          type="button"
+          data-testid="logout"
+          (click)="logout()"
+        >
+          Logout
+        </button>
+      </div>
     </div>
   }
 </header>

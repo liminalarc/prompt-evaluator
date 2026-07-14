@@ -68,6 +68,13 @@ export class OrgContextStore {
     this.select(org.id);
   }
 
+  /** Clear the context so the next `load()` re-fetches — used on sign-out (4.1). */
+  reset(): void {
+    this.loaded = false;
+    this._orgs.set([]);
+    this._currentId.set(null);
+  }
+
   private urlOrg(): string | null {
     return this.router.parseUrl(this.router.url).queryParams['org'] ?? null;
   }
