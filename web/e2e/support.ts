@@ -1,8 +1,13 @@
 import { APIRequestContext } from '@playwright/test';
+import path from 'node:path';
 
 // Shared e2e helpers: each spec does its work inside a disposable organization and deletes it on
 // teardown (deleting an org cascades to its folders, prompts, and datasets), so e2e runs never
 // leave data behind in the local app.
+
+// Where the shared authenticated session is persisted. `auth.setup.ts` writes it; the `chromium`
+// project loads it as `storageState` (see playwright.config.ts), so specs start signed in (4.1).
+export const authFile = path.join(__dirname, '.auth', 'user.json');
 
 /** A unique org name for a spec run. */
 export function orgName(prefix: string): string {

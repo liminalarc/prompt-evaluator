@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
 
+// This spec owns its session end-to-end (register → logout), so it must start signed OUT — override
+// the run-wide shared `storageState` (see playwright.config.ts) with an empty one.
+test.use({ storageState: { cookies: [], origins: [] } });
+
 // Auth happy-path (4.1): register a brand-new user → land in the app authenticated → logout →
 // bounced to /login. Registration self-provisions an account with no org access, so a fresh user
 // simply has no organizations (the switcher stays hidden) — that's the state we assert.
