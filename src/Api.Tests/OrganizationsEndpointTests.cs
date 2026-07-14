@@ -32,17 +32,26 @@ public sealed class OrganizationsEndpointTests : IAsyncLifetime
     private sealed record OrgDto(Guid Id, string Name);
 
     [Fact]
-    public async Task Seeded_Default_org_is_listed()
+    public async Task Switcher_lists_only_orgs_the_user_belongs_to()
     {
-        var client = _factory.CreateClient();
-        var orgs = await client.GetFromJsonAsync<List<OrgDto>>("/api/organizations");
-        Assert.Contains(orgs!, o => o.Name == "Default");
+        // A freshly registered user is a member of nothing — not even the seeded "Default" org (4.1).
+        var client = await _factory.CreateAuthenticatedClientAsync();
+        var before = await client.GetFromJsonAsync<List<OrgDto>>("/api/organizations");
+        Assert.Empty(before!);
+        Assert.DoesNotContain(before!, o => o.Name == "Default");
+
+        // Creating an org grants the creator membership, so it appears in their switcher.
+        var created = await (await client.PostAsJsonAsync("/api/organizations", new { name = "Acme" }))
+            .Content.ReadFromJsonAsync<OrgDto>();
+        var after = await client.GetFromJsonAsync<List<OrgDto>>("/api/organizations");
+        Assert.Contains(after!, o => o.Id == created!.Id && o.Name == "Acme");
+        Assert.DoesNotContain(after!, o => o.Name == "Default");
     }
 
     [Fact]
     public async Task Create_then_list_includes_the_new_org()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
 
         var create = await client.PostAsJsonAsync("/api/organizations", new { name = "Acme" });
         Assert.Equal(HttpStatusCode.Created, create.StatusCode);
@@ -55,7 +64,7 @@ public sealed class OrganizationsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Rename_an_org()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var created = await (await client.PostAsJsonAsync("/api/organizations", new { name = "Acme" }))
             .Content.ReadFromJsonAsync<OrgDto>();
 
@@ -68,7 +77,7 @@ public sealed class OrganizationsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Create_with_a_blank_name_returns_400()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var res = await client.PostAsJsonAsync("/api/organizations", new { name = "   " });
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
     }
@@ -76,7 +85,7 @@ public sealed class OrganizationsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Rename_a_missing_org_returns_404()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var res = await client.PutAsJsonAsync($"/api/organizations/{Guid.NewGuid()}", new { name = "X" });
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
     }
@@ -86,7 +95,7 @@ public sealed class OrganizationsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Delete_removes_the_org_and_cascades_to_its_prompts()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var org = await (await client.PostAsJsonAsync("/api/organizations", new { name = "Acme" }))
             .Content.ReadFromJsonAsync<OrgDto>();
         var prompt = await (await client.PostAsJsonAsync($"/api/organizations/{org!.Id}/prompts",
@@ -106,8 +115,31 @@ public sealed class OrganizationsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Delete_a_missing_org_is_a_no_op_204()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var res = await client.DeleteAsync($"/api/organizations/{Guid.NewGuid()}");
         Assert.Equal(HttpStatusCode.NoContent, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_non_member_cannot_see_or_reach_another_users_org()
+    {
+        // User A creates org X and a prompt in it.
+        var alice = await _factory.CreateAuthenticatedClientAsync("alice@test.local");
+        var orgX = await (await alice.PostAsJsonAsync("/api/organizations", new { name = "X" }))
+            .Content.ReadFromJsonAsync<OrgDto>();
+        var prompt = await (await alice.PostAsJsonAsync($"/api/organizations/{orgX!.Id}/prompts",
+            new { name = "Summarizer", description = (string?)null }))
+            .Content.ReadFromJsonAsync<PromptDto>();
+
+        // User B is a separate account with no membership of org X.
+        var bob = await _factory.CreateAuthenticatedClientAsync("bob@test.local");
+
+        // B can't browse X's prompts, nor read A's prompt by id.
+        Assert.Equal(HttpStatusCode.Forbidden, (await bob.GetAsync($"/api/organizations/{orgX.Id}/prompts")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await bob.GetAsync($"/api/prompts/{prompt!.Id}")).StatusCode);
+
+        // And X does not appear in B's switcher.
+        var bobsOrgs = await bob.GetFromJsonAsync<List<OrgDto>>("/api/organizations");
+        Assert.DoesNotContain(bobsOrgs!, o => o.Id == orgX.Id);
     }
 }

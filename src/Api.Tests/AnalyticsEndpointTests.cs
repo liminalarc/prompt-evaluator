@@ -109,7 +109,7 @@ public sealed class AnalyticsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Trends_returns_one_point_per_version_ordered_by_version_number()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var (promptId, _, _, datasetId) = await SeedTwoVersionsAsync(client);
 
         var series = await client.GetFromJsonAsync<List<TrendSeriesDto>>(
@@ -126,7 +126,7 @@ public sealed class AnalyticsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Regressions_flags_the_significant_drop_and_respects_the_threshold_override()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var (promptId, _, _, datasetId) = await SeedTwoVersionsAsync(client);
 
         var flags = await client.GetFromJsonAsync<List<RegressionFlagDto>>(
@@ -147,7 +147,7 @@ public sealed class AnalyticsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Comparison_returns_per_fixture_and_aggregate_deltas()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var (promptId, v1, v2, datasetId) = await SeedTwoVersionsAsync(client);
 
         var cmp = await client.GetFromJsonAsync<ComparisonDto>(
@@ -166,7 +166,7 @@ public sealed class AnalyticsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Trends_for_an_unknown_prompt_is_404()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var res = await client.GetAsync($"/api/analytics/trends?promptId={Guid.NewGuid()}&datasetId={Guid.NewGuid()}");
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
     }
@@ -174,7 +174,7 @@ public sealed class AnalyticsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Comparison_with_an_unknown_version_is_404()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var (promptId, v1, _, datasetId) = await SeedTwoVersionsAsync(client);
         var res = await client.GetAsync(
             $"/api/analytics/comparison?promptId={promptId}&datasetId={datasetId}&fromVersionId={v1}&toVersionId={Guid.NewGuid()}");

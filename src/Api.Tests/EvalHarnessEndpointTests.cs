@@ -91,7 +91,7 @@ public sealed class EvalHarnessEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Configure_scorers_run_over_a_dataset_and_fetch_the_scored_result()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var (promptId, versionId, datasetId) = await SeedAsync(client);
 
         // Configure a deterministic scorer and an LLM-judge scorer.
@@ -129,7 +129,7 @@ public sealed class EvalHarnessEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Reruns_are_append_only_and_listed_for_the_dataset()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var (promptId, versionId, datasetId) = await SeedAsync(client);
         await client.PostAsJsonAsync($"/api/datasets/{datasetId}/scorers",
             new { kind = "Regex", config = "^OUT:", judgeModel = (string?)null });
@@ -147,7 +147,7 @@ public sealed class EvalHarnessEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Configuring_a_scorer_on_an_unknown_dataset_is_404()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var res = await client.PostAsJsonAsync($"/api/datasets/{Guid.NewGuid()}/scorers",
             new { kind = "Regex", config = "^x$", judgeModel = (string?)null });
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
@@ -156,7 +156,7 @@ public sealed class EvalHarnessEndpointTests : IAsyncLifetime
     [Fact]
     public async Task An_invalid_scorer_kind_is_400()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var (_, _, datasetId) = await SeedAsync(client);
         var res = await client.PostAsJsonAsync($"/api/datasets/{datasetId}/scorers",
             new { kind = "nonsense", config = "x", judgeModel = (string?)null });
@@ -166,7 +166,7 @@ public sealed class EvalHarnessEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Running_against_an_unknown_dataset_is_404()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var (promptId, versionId, _) = await SeedAsync(client);
         var res = await client.PostAsJsonAsync($"/api/datasets/{Guid.NewGuid()}/eval-runs",
             new { promptId, promptVersionId = versionId });

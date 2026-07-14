@@ -50,6 +50,7 @@ builder.Services.AddSingleton<FixtureRedactor>();
 // are overridden to answer 401/403 so the cookie stack behaves like an API, not an HTML site.
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
+builder.Services.AddScoped<OrgAccess>();
 builder.Services
     .AddAuthentication(AuthEndpoints.Scheme)
     .AddCookie(AuthEndpoints.Scheme, options =>
@@ -99,6 +100,18 @@ if (!string.IsNullOrWhiteSpace(postgres))
     // The Identity bounded context (4.1) is a separate context/history on the same database.
     var identityDb = scope.ServiceProvider.GetRequiredService<AppIdentityDbContext>();
     identityDb.Database.Migrate();
+
+    // First-run escape hatch (4.1): seed a bootstrap admin (and grant it the Default org) when
+    // configured, so a freshly deployed app has a user able to reach the seeded data. No-op when
+    // unconfigured; idempotent, so it's safe on every startup. Tests don't rely on this.
+    var bootstrapEmail = builder.Configuration["Auth:BootstrapAdmin:Email"];
+    var bootstrapPassword = builder.Configuration["Auth:BootstrapAdmin:Password"];
+    if (!string.IsNullOrWhiteSpace(bootstrapEmail) && !string.IsNullOrWhiteSpace(bootstrapPassword))
+    {
+        var users = scope.ServiceProvider.GetRequiredService<IUserDirectory>();
+        var displayName = builder.Configuration["Auth:BootstrapAdmin:DisplayName"] ?? "Administrator";
+        await IdentitySeeder.SeedBootstrapAdminAsync(users, bootstrapEmail, displayName, bootstrapPassword);
+    }
 }
 
 app.Run();

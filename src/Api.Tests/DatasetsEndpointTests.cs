@@ -81,7 +81,7 @@ public sealed class DatasetsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Create_then_capture_then_get_lands_fixtures_and_maps_the_capture_schema()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
 
         var promptId = await CreatePromptAsync(client);
         var create = await client.PostAsJsonAsync($"/api/prompts/{promptId}/datasets",
@@ -112,7 +112,7 @@ public sealed class DatasetsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Capture_redacts_pii_at_ingest()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
 
         var promptId = await CreatePromptAsync(client);
         var create = await client.PostAsJsonAsync($"/api/prompts/{promptId}/datasets", new { name = "Support", description = (string?)null });
@@ -135,7 +135,7 @@ public sealed class DatasetsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task List_returns_a_summary_with_origin_counts()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
 
         var promptId = await CreatePromptAsync(client);
         var create = await client.PostAsJsonAsync($"/api/prompts/{promptId}/datasets", new { name = "Counts", description = (string?)null });
@@ -161,7 +161,7 @@ public sealed class DatasetsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Generate_adds_synthetic_fixtures_linked_to_a_captured_seed()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
 
         var promptId = await CreatePromptAsync(client);
         var create = await client.PostAsJsonAsync($"/api/prompts/{promptId}/datasets", new { name = "Gen", description = (string?)null });
@@ -188,7 +188,7 @@ public sealed class DatasetsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Generate_with_no_captured_fixtures_returns_400()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var promptId = await CreatePromptAsync(client);
         var create = await client.PostAsJsonAsync($"/api/prompts/{promptId}/datasets", new { name = "Bare", description = (string?)null });
         var created = await create.Content.ReadFromJsonAsync<DatasetDto>();
@@ -202,7 +202,7 @@ public sealed class DatasetsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Generate_into_unknown_dataset_returns_404()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var res = await client.PostAsJsonAsync($"/api/datasets/{Guid.NewGuid()}/fixtures/generate",
             new { guidance = (object?)null, count = 1 });
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
@@ -211,7 +211,7 @@ public sealed class DatasetsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Get_unknown_dataset_returns_404()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var get = await client.GetAsync($"/api/datasets/{Guid.NewGuid()}");
         Assert.Equal(HttpStatusCode.NotFound, get.StatusCode);
     }
@@ -219,7 +219,7 @@ public sealed class DatasetsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Capture_into_unknown_dataset_returns_404()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var res = await client.PostAsJsonAsync($"/api/datasets/{Guid.NewGuid()}/fixtures/capture", new
         {
             tuples = new[] { new { promptInput = "x", input = (string?)null, slmOutput = (string?)null, downstreamResult = (string?)null } },
@@ -230,7 +230,7 @@ public sealed class DatasetsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Create_with_blank_name_returns_400()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var promptId = await CreatePromptAsync(client);
         var res = await client.PostAsJsonAsync($"/api/prompts/{promptId}/datasets", new { name = "   ", description = (string?)null });
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);

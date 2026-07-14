@@ -56,7 +56,7 @@ public sealed class FoldersEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Create_root_and_child_then_fetch_the_org_tree()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var orgId = await CreateOrgAsync(client);
 
         var root = await CreateFolderAsync(client, orgId, "Stormboard");
@@ -72,24 +72,26 @@ public sealed class FoldersEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Create_child_under_a_missing_parent_returns_404()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var orgId = await CreateOrgAsync(client);
         var res = await client.PostAsJsonAsync($"/api/organizations/{orgId}/folders", new { name = "Orphan", parentId = Guid.NewGuid() });
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
     }
 
     [Fact]
-    public async Task Create_in_a_missing_organization_returns_404()
+    public async Task Create_in_an_organization_the_user_cannot_access_returns_403()
     {
-        var client = _factory.CreateClient();
+        // The org membership gate runs before any work (4.1), so a caller who isn't a member of the
+        // target org is forbidden — and a non-member can't distinguish a missing org from a foreign one.
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var res = await client.PostAsJsonAsync($"/api/organizations/{Guid.NewGuid()}/folders", new { name = "X", parentId = (Guid?)null });
-        Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, res.StatusCode);
     }
 
     [Fact]
     public async Task Create_with_a_blank_name_returns_400()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var orgId = await CreateOrgAsync(client);
         var res = await client.PostAsJsonAsync($"/api/organizations/{orgId}/folders", new { name = "   ", parentId = (Guid?)null });
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
@@ -98,7 +100,7 @@ public sealed class FoldersEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Rename_a_folder()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var orgId = await CreateOrgAsync(client);
         var folder = await CreateFolderAsync(client, orgId, "Stormbaord");
 
@@ -112,7 +114,7 @@ public sealed class FoldersEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Move_a_folder_under_a_new_parent()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var orgId = await CreateOrgAsync(client);
         var a = await CreateFolderAsync(client, orgId, "A");
         var b = await CreateFolderAsync(client, orgId, "B");
@@ -127,7 +129,7 @@ public sealed class FoldersEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Move_a_folder_under_its_own_descendant_returns_400()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var orgId = await CreateOrgAsync(client);
         var root = await CreateFolderAsync(client, orgId, "Root");
         var child = await CreateFolderAsync(client, orgId, "Child", root.Id);
@@ -139,7 +141,7 @@ public sealed class FoldersEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Move_a_prompt_into_a_folder_then_list_it_by_folder()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var orgId = await CreateOrgAsync(client);
         var folder = await CreateFolderAsync(client, orgId, "Stormboard");
         var promptId = await CreatePromptAsync(client, orgId, "Summarizer");
@@ -156,7 +158,7 @@ public sealed class FoldersEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Move_a_prompt_into_a_folder_in_a_different_organization_returns_400()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var orgA = await CreateOrgAsync(client, "A");
         var orgB = await CreateOrgAsync(client, "B");
         var promptId = await CreatePromptAsync(client, orgA, "Summarizer");
@@ -169,7 +171,7 @@ public sealed class FoldersEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Move_a_prompt_into_a_missing_folder_returns_400()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var orgId = await CreateOrgAsync(client);
         var promptId = await CreatePromptAsync(client, orgId, "Summarizer");
 

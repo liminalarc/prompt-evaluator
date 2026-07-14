@@ -45,7 +45,7 @@ public sealed class PromptsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Create_add_version_then_get_round_trips_full_history_with_target_model()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var orgId = await CreateOrgAsync(client);
 
         var create = await client.PostAsJsonAsync($"/api/organizations/{orgId}/prompts",
@@ -74,7 +74,7 @@ public sealed class PromptsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task List_returns_a_summary_including_the_created_prompt()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var orgId = await CreateOrgAsync(client);
 
         var create = await client.PostAsJsonAsync($"/api/organizations/{orgId}/prompts", new { name = "Classifier", description = (string?)null });
@@ -93,7 +93,7 @@ public sealed class PromptsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Get_unknown_prompt_returns_404()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var get = await client.GetAsync($"/api/prompts/{Guid.NewGuid()}");
         Assert.Equal(HttpStatusCode.NotFound, get.StatusCode);
     }
@@ -101,7 +101,7 @@ public sealed class PromptsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Add_version_to_unknown_prompt_returns_404()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var res = await client.PostAsJsonAsync($"/api/prompts/{Guid.NewGuid()}/versions",
             new { content = "x", targetModel = "claude-sonnet-5", label = (string?)null, sourceApp = (string?)null });
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
@@ -110,7 +110,7 @@ public sealed class PromptsEndpointTests : IAsyncLifetime
     [Fact]
     public async Task Create_with_blank_name_returns_400()
     {
-        var client = _factory.CreateClient();
+        var client = await _factory.CreateAuthenticatedClientAsync();
         var orgId = await CreateOrgAsync(client);
         var res = await client.PostAsJsonAsync($"/api/organizations/{orgId}/prompts", new { name = "   ", description = (string?)null });
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);

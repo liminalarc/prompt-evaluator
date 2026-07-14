@@ -1,3 +1,4 @@
+using Api.Auth;
 using Application.Datasets;
 using Application.Ports;
 
@@ -12,31 +13,43 @@ public static class DatasetEndpoints
 {
     public static IEndpointRouteBuilder MapDatasetEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/datasets");
+        var group = app.MapGroup("/api/datasets").RequireAuthorization();
 
-        group.MapGet("/", async (IDatasetRepository repository, CancellationToken ct) =>
+        // Filtered to datasets under a prompt in one of the caller's accessible orgs (4.1).
+        group.MapGet("/", async (IDatasetRepository repository, IPromptRepository prompts, OrgAccess access, CancellationToken ct) =>
         {
+            var accessible = await access.AccessibleOrgIdsAsync(ct);
+            var accessiblePromptIds = (await prompts.ListAsync(ct))
+                .Where(p => accessible.Contains(p.OrganizationId))
+                .Select(p => p.Id)
+                .ToHashSet();
             var datasets = await repository.ListAsync(ct);
-            return Results.Ok(datasets.Select(DatasetSummaryResponse.From));
+            return Results.Ok(datasets.Where(d => accessiblePromptIds.Contains(d.PromptId)).Select(DatasetSummaryResponse.From));
         });
 
-        group.MapGet("/{id:guid}", async (Guid id, IDatasetRepository repository, CancellationToken ct) =>
+        group.MapGet("/{id:guid}", async (Guid id, IDatasetRepository repository, OrgAccess access, CancellationToken ct) =>
         {
+            if ((await access.CanAccessDatasetAsync(id, ct)).ToProblem() is { } problem)
+                return problem;
             var dataset = await repository.GetByIdAsync(id, ct);
             return dataset is null ? Results.NotFound() : Results.Ok(DatasetResponse.From(dataset));
         });
 
         // Datasets live with a prompt (1.7): they are created and browsed under their owning prompt.
         app.MapGet("/api/prompts/{promptId:guid}/datasets",
-            async (Guid promptId, IDatasetRepository repository, CancellationToken ct) =>
+            async (Guid promptId, IDatasetRepository repository, OrgAccess access, CancellationToken ct) =>
             {
+                if ((await access.CanAccessPromptAsync(promptId, ct)).ToProblem() is { } problem)
+                    return problem;
                 var datasets = await repository.ListByPromptAsync(promptId, ct);
                 return Results.Ok(datasets.Select(DatasetSummaryResponse.From));
-            });
+            }).RequireAuthorization();
 
         app.MapPost("/api/prompts/{promptId:guid}/datasets",
-            async (Guid promptId, CreateDatasetUnderPromptRequest request, CreateDatasetHandler handler, CancellationToken ct) =>
+            async (Guid promptId, CreateDatasetUnderPromptRequest request, CreateDatasetHandler handler, OrgAccess access, CancellationToken ct) =>
             {
+                if ((await access.CanAccessPromptAsync(promptId, ct)).ToProblem() is { } problem)
+                    return problem;
                 try
                 {
                     var dataset = await handler.HandleAsync(promptId, request.Name, request.Description, ct);
@@ -48,11 +61,13 @@ public static class DatasetEndpoints
                 {
                     return Results.BadRequest(new { error = ex.Message });
                 }
-            });
+            }).RequireAuthorization();
 
         group.MapPost("/{id:guid}/fixtures/capture",
-            async (Guid id, CaptureFixturesRequest request, CaptureFixturesHandler handler, CancellationToken ct) =>
+            async (Guid id, CaptureFixturesRequest request, CaptureFixturesHandler handler, OrgAccess access, CancellationToken ct) =>
             {
+                if ((await access.CanAccessDatasetAsync(id, ct)).ToProblem() is { } problem)
+                    return problem;
                 var tuples = (request.Tuples ?? new())
                     .Select(t => new CapturedTuple(t.PromptInput, t.SlmOutput, t.DownstreamResult))
                     .ToList();
@@ -68,8 +83,10 @@ public static class DatasetEndpoints
             });
 
         group.MapPost("/{id:guid}/fixtures/generate",
-            async (Guid id, GenerateFixturesRequest request, GenerateSyntheticFixturesHandler handler, CancellationToken ct) =>
+            async (Guid id, GenerateFixturesRequest request, GenerateSyntheticFixturesHandler handler, OrgAccess access, CancellationToken ct) =>
             {
+                if ((await access.CanAccessDatasetAsync(id, ct)).ToProblem() is { } problem)
+                    return problem;
                 var g = request.Guidance;
                 var guidance = new GenerationGuidanceData(g?.CoverageGoals, g?.EdgeCases, g?.Constraints);
                 var count = request.Count is int c && c > 0 ? c : GenerationDefaults.Count;
