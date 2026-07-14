@@ -4,6 +4,33 @@ All notable changes to this project are documented here. Versions follow one uni
 SemVer (pre-1.0 `0.x`) across the API, web, and eval-runner. A release is a tagged, verified
 **compose-stack build** — there is no hosted deployment yet (production deploy is spec 3.2).
 
+## [0.4.0] — 2026-07-14
+
+Organizes the registry: prompts group into folders under a top-level organization, with
+everything about a prompt in one workspace.
+
+### Added
+
+- **[#1.7] Prompt Grouping (folders) + Unified Prompt Workspace** ([detail](specs/archive/1.7.md))
+  — a `Folder` tree (top-level folders with optional subfolders); datasets now **belong to a
+  prompt** (`Dataset.PromptId`, created under a prompt; a run rejects a dataset owned by another
+  prompt); a **unified prompt workspace** showing a prompt's versions, its datasets, and its
+  analytics on one page; folder API (CRUD, cycle-safe move, move-prompt, tree + by-folder listing).
+- **[#1.9] Organizations (top-level container + permission boundary) + Prompts UX overhaul**
+  ([detail](specs/archive/1.9.md)) — an `Organization` aggregate as the top of the hierarchy
+  (`Organization › Folder tree › Prompt`) and the **permission boundary** spec 4.1 will grant
+  access on (`Prompt.OrganizationId`, resolved directly); org-scoped API
+  (list/create/rename/delete, org-nested folders + prompts; a seeded **Default** org with
+  migration backfill); the Prompts screen reworked into an **organization switcher + main-area
+  folder navigation** with collapsible create forms.
+
+### Changed
+
+- Datasets are created under a prompt (via the prompt's workspace); the global `/datasets` page is
+  now a browse-only cross-prompt list.
+- The permission boundary moved from the top-level folder (1.7) up to the **organization** (1.9);
+  spec 4.1's detail was updated to consume `Prompt.OrganizationId`.
+
 ## [0.3.0] — 2026-07-13
 
 Ships the rest of the core evaluation loop: the eval harness, the rename to LitmusAI, and score
