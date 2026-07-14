@@ -25,6 +25,44 @@ public class EvalRunnerClientTests
     }
 
     [Fact]
+    public async Task Attaches_service_token_header_when_configured()
+    {
+        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(new { output = "round trip" }),
+        });
+        // eval-runner is an internal trusted service (4.1): the DelegatingHandler stamps the shared
+        // token onto every outbound request. Compose it in front of the capturing stub.
+        var tokenHandler = new ServiceTokenHandler("s3cret-service-token") { InnerHandler = handler };
+        var http = new HttpClient(tokenHandler) { BaseAddress = new Uri("http://eval-runner:8000") };
+        var client = new EvalRunnerClient(http);
+
+        await client.EchoAsync("round trip");
+
+        Assert.True(handler.LastRequest!.Headers.TryGetValues("X-Service-Token", out var values));
+        Assert.Equal("s3cret-service-token", Assert.Single(values!));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Omits_service_token_header_when_not_configured(string? token)
+    {
+        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(new { output = "round trip" }),
+        });
+        var tokenHandler = new ServiceTokenHandler(token) { InnerHandler = handler };
+        var http = new HttpClient(tokenHandler) { BaseAddress = new Uri("http://eval-runner:8000") };
+        var client = new EvalRunnerClient(http);
+
+        await client.EchoAsync("round trip");
+
+        Assert.False(handler.LastRequest!.Headers.Contains("X-Service-Token"));
+    }
+
+    [Fact]
     public async Task EchoAsync_posts_prompt_to_echo_and_returns_output()
     {
         var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)

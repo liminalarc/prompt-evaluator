@@ -14,7 +14,8 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         string postgresConnectionString,
-        string evalRunnerBaseUrl)
+        string evalRunnerBaseUrl,
+        string? evalRunnerServiceToken = null)
     {
         services.AddDbContext<EvalDbContext>(options =>
             options.UseNpgsql(postgresConnectionString));
@@ -47,8 +48,12 @@ public static class DependencyInjection
         services.AddScoped<Application.Scoring.ScorerFactory>();
         services.AddSingleton(TimeProvider.System);
 
+        // eval-runner is an internal trusted service (4.1): authenticate to it with a shared
+        // service token attached by a DelegatingHandler. When the token is null/empty the handler
+        // is a no-op, so dev/CI/test defaults keep working against an open eval-runner.
         services.AddHttpClient<IEvaluationRunner, EvalRunnerClient>(client =>
-            client.BaseAddress = new Uri(evalRunnerBaseUrl));
+                client.BaseAddress = new Uri(evalRunnerBaseUrl))
+            .AddHttpMessageHandler(() => new ServiceTokenHandler(evalRunnerServiceToken));
 
         return services;
     }

@@ -23,8 +23,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 var postgres = builder.Configuration.GetConnectionString("Postgres") ?? "";
 var evalRunnerBaseUrl = builder.Configuration["EvalRunner:BaseUrl"] ?? "http://localhost:8000";
+// eval-runner is an internal trusted service (4.1): the shared service token authenticates the
+// backend to it. Unset in dev/CI/tests, where eval-runner stays open.
+var evalRunnerServiceToken = builder.Configuration["EvalRunner:ServiceToken"];
 
-builder.Services.AddInfrastructure(postgres, evalRunnerBaseUrl);
+builder.Services.AddInfrastructure(postgres, evalRunnerBaseUrl, evalRunnerServiceToken);
 
 // Identity token providers (for password-reset tokens) live in the ASP.NET Core shared framework,
 // so they're added here at the composition root rather than in the (framework-light) Infrastructure.
