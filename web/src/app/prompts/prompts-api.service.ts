@@ -33,8 +33,15 @@ export class PromptsApiService {
   }
 
   /** Creates a prompt under an organization (1.9). */
-  createPrompt(organizationId: string, name: string, description: string | null): Observable<Prompt> {
-    return this.http.post<Prompt>(`/api/organizations/${organizationId}/prompts`, { name, description });
+  createPrompt(
+    organizationId: string,
+    name: string,
+    description: string | null,
+  ): Observable<Prompt> {
+    return this.http.post<Prompt>(`/api/organizations/${organizationId}/prompts`, {
+      name,
+      description,
+    });
   }
 
   addVersion(id: string, body: AddVersionBody): Observable<Prompt> {

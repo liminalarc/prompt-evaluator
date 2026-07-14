@@ -13,9 +13,30 @@ describe('PromptList (org + folder navigation)', () => {
     { id: 'f2', parentId: 'f1', name: 'Blog' },
   ];
   const prompts = [
-    { id: 'p1', folderId: null, name: 'Root prompt', description: null, versionCount: 1, latestTargetModel: 'opus' },
-    { id: 'p2', folderId: 'f1', name: 'Marketing prompt', description: null, versionCount: 2, latestTargetModel: null },
-    { id: 'p3', folderId: 'f2', name: 'Blog prompt', description: null, versionCount: 0, latestTargetModel: null },
+    {
+      id: 'p1',
+      folderId: null,
+      name: 'Root prompt',
+      description: null,
+      versionCount: 1,
+      latestTargetModel: 'opus',
+    },
+    {
+      id: 'p2',
+      folderId: 'f1',
+      name: 'Marketing prompt',
+      description: null,
+      versionCount: 2,
+      latestTargetModel: null,
+    },
+    {
+      id: 'p3',
+      folderId: 'f2',
+      name: 'Blog prompt',
+      description: null,
+      versionCount: 0,
+      latestTargetModel: null,
+    },
   ];
 
   function flushOrgData() {
@@ -74,7 +95,8 @@ describe('PromptList (org + folder navigation)', () => {
 
   it('moves a prompt to a folder via its row select', () => {
     const fixture = setup();
-    const select: HTMLSelectElement = fixture.nativeElement.querySelector('[data-testid="move-p1"]');
+    const select: HTMLSelectElement =
+      fixture.nativeElement.querySelector('[data-testid="move-p1"]');
     select.value = 'f1';
     select.dispatchEvent(new Event('change'));
     fixture.detectChanges();

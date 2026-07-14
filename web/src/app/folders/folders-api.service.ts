@@ -19,7 +19,10 @@ export class FoldersApiService {
   }
 
   createFolder(organizationId: string, name: string, parentId: string | null): Observable<Folder> {
-    return this.http.post<Folder>(`/api/organizations/${organizationId}/folders`, { name, parentId });
+    return this.http.post<Folder>(`/api/organizations/${organizationId}/folders`, {
+      name,
+      parentId,
+    });
   }
 
   renameFolder(id: string, name: string): Observable<Folder> {

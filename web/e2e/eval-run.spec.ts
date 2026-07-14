@@ -15,7 +15,10 @@ test.afterEach(async ({ request }) => {
   orgId = '';
 });
 
-test('runs a prompt version over a dataset and shows per-fixture scores', async ({ page, request }) => {
+test('runs a prompt version over a dataset and shows per-fixture scores', async ({
+  page,
+  request,
+}) => {
   test.skip(
     !process.env['E2E_EVAL_RUNNER_STUB'],
     'requires the stubbed eval-runner stack (docker-compose.e2e.yml)',

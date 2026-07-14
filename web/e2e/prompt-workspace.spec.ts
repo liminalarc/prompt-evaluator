@@ -10,7 +10,10 @@ test.afterEach(async ({ request }) => {
   orgId = '';
 });
 
-test('a prompt workspace shows its versions, datasets, and analytics together', async ({ page, request }) => {
+test('a prompt workspace shows its versions, datasets, and analytics together', async ({
+  page,
+  request,
+}) => {
   const stamp = Date.now();
   const promptName = `e2e workspace ${stamp}`;
   const datasetName = `e2e ws-data ${stamp}`;

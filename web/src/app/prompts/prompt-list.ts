@@ -39,7 +39,12 @@ interface Crumb {
             <option [value]="o.id">{{ o.name }}</option>
           }
         </select>
-        <button class="sb-btn" type="button" data-testid="toggle-new-org" (click)="showNewOrg.set(!showNewOrg())">
+        <button
+          class="sb-btn"
+          type="button"
+          data-testid="toggle-new-org"
+          (click)="showNewOrg.set(!showNewOrg())"
+        >
           + New org
         </button>
       </div>
@@ -48,9 +53,16 @@ interface Crumb {
         <form class="reveal" (submit)="createOrg($event)">
           <div class="sb-field">
             <label for="orgName">New organization name</label>
-            <input id="orgName" name="orgName" [ngModel]="orgName()" (ngModelChange)="orgName.set($event)" />
+            <input
+              id="orgName"
+              name="orgName"
+              [ngModel]="orgName()"
+              (ngModelChange)="orgName.set($event)"
+            />
           </div>
-          <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-org">Create</button>
+          <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-org">
+            Create
+          </button>
         </form>
       }
 
@@ -71,10 +83,20 @@ interface Crumb {
         </nav>
 
         <div class="toolbar">
-          <button class="sb-btn" type="button" data-testid="toggle-new-folder" (click)="showNewFolder.set(!showNewFolder())">
+          <button
+            class="sb-btn"
+            type="button"
+            data-testid="toggle-new-folder"
+            (click)="showNewFolder.set(!showNewFolder())"
+          >
             + New folder
           </button>
-          <button class="sb-btn" type="button" data-testid="toggle-new-prompt" (click)="showNewPrompt.set(!showNewPrompt())">
+          <button
+            class="sb-btn"
+            type="button"
+            data-testid="toggle-new-prompt"
+            (click)="showNewPrompt.set(!showNewPrompt())"
+          >
             + New prompt
           </button>
         </div>
@@ -83,9 +105,16 @@ interface Crumb {
           <form class="reveal" (submit)="createFolder($event)">
             <div class="sb-field">
               <label for="folderName">New folder in {{ currentFolderName() }}</label>
-              <input id="folderName" name="folderName" [ngModel]="folderName()" (ngModelChange)="folderName.set($event)" />
+              <input
+                id="folderName"
+                name="folderName"
+                [ngModel]="folderName()"
+                (ngModelChange)="folderName.set($event)"
+              />
             </div>
-            <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-folder">Add folder</button>
+            <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-folder">
+              Add folder
+            </button>
           </form>
         }
 
@@ -97,9 +126,16 @@ interface Crumb {
             </div>
             <div class="sb-field">
               <label for="description">Description (optional)</label>
-              <input id="description" name="description" [ngModel]="description()" (ngModelChange)="description.set($event)" />
+              <input
+                id="description"
+                name="description"
+                [ngModel]="description()"
+                (ngModelChange)="description.set($event)"
+              />
             </div>
-            <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-prompt">Create prompt</button>
+            <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-prompt">
+              Create prompt
+            </button>
           </form>
         }
 
@@ -133,7 +169,9 @@ interface Crumb {
             <tbody>
               @for (p of currentPrompts(); track p.id) {
                 <tr>
-                  <td><a [routerLink]="['/prompts', p.id]">{{ p.name }}</a></td>
+                  <td>
+                    <a [routerLink]="['/prompts', p.id]">{{ p.name }}</a>
+                  </td>
                   <td>{{ p.versionCount }}</td>
                   <td>{{ p.latestTargetModel ?? '—' }}</td>
                   <td>
@@ -193,7 +231,9 @@ export class PromptList implements OnInit {
 
   protected readonly currentFolderName = computed(() => {
     const id = this.currentFolderId();
-    return id ? (this.folders().find((f) => f.id === id)?.name ?? 'this folder') : this.currentOrgName();
+    return id
+      ? (this.folders().find((f) => f.id === id)?.name ?? 'this folder')
+      : this.currentOrgName();
   });
 
   protected readonly breadcrumb = computed<Crumb[]>(() => {

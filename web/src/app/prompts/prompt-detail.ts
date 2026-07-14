@@ -89,19 +89,28 @@ import { VersionDiff } from './version-diff';
         }
 
         <h2 class="section-title">Datasets</h2>
-        <p class="subtitle">This prompt's test sets — its fixtures and the runs scored against them.</p>
+        <p class="subtitle">
+          This prompt's test sets — its fixtures and the runs scored against them.
+        </p>
         @if (datasets(); as ds) {
           @if (ds.length === 0) {
             <p class="empty" data-testid="no-datasets">No datasets yet — create one below.</p>
           } @else {
             <table class="sb-table" data-testid="datasets">
               <thead>
-                <tr><th>Name</th><th>Fixtures</th><th>Captured</th><th>Synthetic</th></tr>
+                <tr>
+                  <th>Name</th>
+                  <th>Fixtures</th>
+                  <th>Captured</th>
+                  <th>Synthetic</th>
+                </tr>
               </thead>
               <tbody>
                 @for (d of ds; track d.id) {
                   <tr>
-                    <td><a [routerLink]="['/datasets', d.id]">{{ d.name }}</a></td>
+                    <td>
+                      <a [routerLink]="['/datasets', d.id]">{{ d.name }}</a>
+                    </td>
                     <td>{{ d.fixtureCount }}</td>
                     <td>{{ d.capturedCount }}</td>
                     <td>{{ d.syntheticCount }}</td>

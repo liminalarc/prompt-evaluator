@@ -10,7 +10,15 @@ describe('PromptDetail (unified workspace)', () => {
 
   const prompt = { id: 'p1', folderId: null, name: 'Summarizer', description: null, versions: [] };
   const datasets = [
-    { id: 'd1', promptId: 'p1', name: 'Summaries', description: null, fixtureCount: 3, capturedCount: 3, syntheticCount: 0 },
+    {
+      id: 'd1',
+      promptId: 'p1',
+      name: 'Summaries',
+      description: null,
+      fixtureCount: 3,
+      capturedCount: 3,
+      syntheticCount: 0,
+    },
   ];
 
   function setup() {
@@ -60,7 +68,9 @@ describe('PromptDetail (unified workspace)', () => {
 
   it('loads analytics for a selected dataset', () => {
     const fixture = setup();
-    const select: HTMLSelectElement = fixture.nativeElement.querySelector('[data-testid="analytics-dataset"]');
+    const select: HTMLSelectElement = fixture.nativeElement.querySelector(
+      '[data-testid="analytics-dataset"]',
+    );
     select.value = 'd1';
     select.dispatchEvent(new Event('change'));
     fixture.detectChanges();

@@ -11,7 +11,9 @@ test.afterEach(async ({ request }) => {
   orgId = '';
 });
 
-test('creates an org and folder, files a prompt into it, and navigates by folder', async ({ page }) => {
+test('creates an org and folder, files a prompt into it, and navigates by folder', async ({
+  page,
+}) => {
   const stamp = Date.now();
   const org = `e2e org ${stamp}`;
   const folder = `e2e folder ${stamp}`;
