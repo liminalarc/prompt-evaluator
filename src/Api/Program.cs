@@ -1,4 +1,5 @@
 using Api.Analytics;
+using Api.Auth;
 using Api.Datasets;
 using Api.EvalRuns;
 using Api.Folders;
@@ -6,6 +7,7 @@ using Api.Organizations;
 using Api.Prompts;
 using Api.Seam;
 using Api.Version;
+using Application.Ports;
 using Application.Analytics;
 using Application.Datasets;
 using Application.EvalRuns;
@@ -39,17 +41,40 @@ builder.Services.AddScoped<ComparisonAnalyticsHandler>();
 builder.Services.AddSingleton<RegressionDetector>();
 builder.Services.AddSingleton<FixtureRedactor>();
 
-// Allow the Angular dev server to reach the API during per-process development.
+// Authentication (4.1): a cookie session over the Identity bounded context. The redirect events
+// are overridden to answer 401/403 so the cookie stack behaves like an API, not an HTML site.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
+builder.Services
+    .AddAuthentication(AuthEndpoints.Scheme)
+    .AddCookie(AuthEndpoints.Scheme, options =>
+    {
+        options.Cookie.Name = "litmus.auth";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.ExpireTimeSpan = TimeSpan.FromDays(7);
+        options.SlidingExpiration = true;
+        options.Events.OnRedirectToLogin = ctx => { ctx.Response.StatusCode = StatusCodes.Status401Unauthorized; return Task.CompletedTask; };
+        options.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = StatusCodes.Status403Forbidden; return Task.CompletedTask; };
+    });
+builder.Services.AddAuthorization();
+
+// Allow the Angular dev server to reach the API during per-process development. Credentials are
+// enabled for the auth cookie, so the origin is reflected rather than "*" (the two are exclusive).
 const string DevCors = "dev-cors";
 builder.Services.AddCors(options => options.AddPolicy(DevCors, policy =>
-    policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
+    policy.SetIsOriginAllowed(_ => true).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 
 var app = builder.Build();
 
 app.UseCors(DevCors);
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapVersionEndpoints();
+app.MapAuthEndpoints();
 app.MapEchoEndpoints();
 app.MapOrganizationEndpoints();
 app.MapPromptEndpoints();
