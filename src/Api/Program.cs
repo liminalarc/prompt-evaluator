@@ -16,6 +16,7 @@ using Application.Prompts;
 using Infrastructure;
 using Infrastructure.Identity;
 using Infrastructure.Persistence;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,6 +25,10 @@ var postgres = builder.Configuration.GetConnectionString("Postgres") ?? "";
 var evalRunnerBaseUrl = builder.Configuration["EvalRunner:BaseUrl"] ?? "http://localhost:8000";
 
 builder.Services.AddInfrastructure(postgres, evalRunnerBaseUrl);
+
+// Identity token providers (for password-reset tokens) live in the ASP.NET Core shared framework,
+// so they're added here at the composition root rather than in the (framework-light) Infrastructure.
+new IdentityBuilder(typeof(AppUser), builder.Services).AddDefaultTokenProviders();
 builder.Services.AddScoped<CreatePromptHandler>();
 builder.Services.AddScoped<AddPromptVersionHandler>();
 builder.Services.AddScoped<CreateFolderHandler>();

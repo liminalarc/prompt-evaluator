@@ -17,6 +17,15 @@ public interface IUserDirectory
     /// <summary>Returns the user id when the email+password are valid, otherwise null.</summary>
     Task<Guid?> ValidateCredentialsAsync(string email, string password, CancellationToken ct = default);
 
+    /// <summary>
+    /// A single-use password reset token for the user with this email, or null if no such user.
+    /// The caller decides how to deliver it (email) and must not reveal which case occurred.
+    /// </summary>
+    Task<string?> GeneratePasswordResetTokenAsync(string email, CancellationToken ct = default);
+
+    /// <summary>Consume a reset token and set a new password; also rotates the user's security stamp.</summary>
+    Task<PasswordResetResult> ResetPasswordAsync(string email, string token, string newPassword, CancellationToken ct = default);
+
     Task<UserAccount?> FindByEmailAsync(string email, CancellationToken ct = default);
 
     Task<UserAccount?> FindByIdAsync(Guid userId, CancellationToken ct = default);
@@ -37,4 +46,10 @@ public sealed record UserRegistrationResult(bool Succeeded, Guid UserId, IReadOn
 {
     public static UserRegistrationResult Success(Guid userId) => new(true, userId, []);
     public static UserRegistrationResult Failure(IReadOnlyList<string> errors) => new(false, Guid.Empty, errors);
+}
+
+public sealed record PasswordResetResult(bool Succeeded, IReadOnlyList<string> Errors)
+{
+    public static PasswordResetResult Success() => new(true, []);
+    public static PasswordResetResult Failure(IReadOnlyList<string> errors) => new(false, errors);
 }

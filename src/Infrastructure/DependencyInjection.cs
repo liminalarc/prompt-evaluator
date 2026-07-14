@@ -1,4 +1,5 @@
 using Application.Ports;
+using Infrastructure.Email;
 using Infrastructure.Http;
 using Infrastructure.Identity;
 using Infrastructure.Persistence;
@@ -32,6 +33,9 @@ public static class DependencyInjection
             })
             .AddEntityFrameworkStores<AppIdentityDbContext>();
         services.AddScoped<IUserDirectory, UserDirectory>();
+
+        // Email seam (4.1): dev/CI default only logs; a real provider is wired at deploy (3.2).
+        services.AddScoped<IEmailSender, LoggingEmailSender>();
 
         services.AddScoped<IEvalRunRepository, EvalRunRepository>();
         services.AddScoped<IOrganizationRepository, OrganizationRepository>();

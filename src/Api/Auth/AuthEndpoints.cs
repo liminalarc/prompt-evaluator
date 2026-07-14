@@ -1,7 +1,9 @@
 using System.Security.Claims;
+using System.Text;
 using Application.Ports;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace Api.Auth;
 
@@ -41,6 +43,42 @@ public static class AuthEndpoints
             return Results.Ok(new UserResponse(userId.Value, account.Email, account.DisplayName));
         });
 
+        // Always returns 200 with no hint whether the email exists (enumeration resistance). When it
+        // does, a reset link carrying a base64url-encoded token is emailed.
+        group.MapPost("/forgot-password", async (
+            ForgotPasswordRequest req, IUserDirectory users, IEmailSender email, IConfiguration config, CancellationToken ct) =>
+        {
+            var token = await users.GeneratePasswordResetTokenAsync(req.Email, ct);
+            if (token is not null)
+            {
+                var encoded = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+                var webBaseUrl = config["Auth:WebBaseUrl"] ?? "http://localhost:4200";
+                var link = $"{webBaseUrl}/reset-password?email={Uri.EscapeDataString(req.Email)}&token={encoded}";
+                await email.SendAsync(new EmailMessage(
+                    req.Email,
+                    "Reset your LitmusAI password",
+                    $"Reset your password using this link:\n{link}\n\nIf you didn't request this, ignore this email."), ct);
+            }
+
+            return Results.Ok(new { message = "If that account exists, a reset link has been sent." });
+        });
+
+        group.MapPost("/reset-password", async (ResetPasswordRequest req, IUserDirectory users, CancellationToken ct) =>
+        {
+            string token;
+            try
+            {
+                token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(req.Token));
+            }
+            catch (FormatException)
+            {
+                return Results.BadRequest(new { errors = new[] { "Invalid or expired reset token." } });
+            }
+
+            var result = await users.ResetPasswordAsync(req.Email, token, req.NewPassword, ct);
+            return result.Succeeded ? Results.Ok() : Results.BadRequest(new { errors = result.Errors });
+        });
+
         group.MapPost("/logout", async (HttpContext http) =>
         {
             await http.SignOutAsync(Scheme);
@@ -75,5 +113,9 @@ public static class AuthEndpoints
 public sealed record RegisterRequest(string Email, string DisplayName, string Password);
 
 public sealed record LoginRequest(string Email, string Password);
+
+public sealed record ForgotPasswordRequest(string Email);
+
+public sealed record ResetPasswordRequest(string Email, string Token, string NewPassword);
 
 public sealed record UserResponse(Guid Id, string Email, string DisplayName);

@@ -30,6 +30,26 @@ public sealed class UserDirectory(UserManager<AppUser> users, AppIdentityDbConte
         return await users.CheckPasswordAsync(user, password) ? user.Id : null;
     }
 
+    public async Task<string?> GeneratePasswordResetTokenAsync(string email, CancellationToken ct = default)
+    {
+        var user = await users.FindByEmailAsync(email);
+        return user is null ? null : await users.GeneratePasswordResetTokenAsync(user);
+    }
+
+    public async Task<PasswordResetResult> ResetPasswordAsync(
+        string email, string token, string newPassword, CancellationToken ct = default)
+    {
+        var user = await users.FindByEmailAsync(email);
+        if (user is null)
+            // Same generic failure as a bad token — never reveal whether the email exists.
+            return PasswordResetResult.Failure(["Invalid or expired reset token."]);
+
+        var result = await users.ResetPasswordAsync(user, token, newPassword);
+        return result.Succeeded
+            ? PasswordResetResult.Success()
+            : PasswordResetResult.Failure(result.Errors.Select(e => e.Description).ToList());
+    }
+
     public async Task<UserAccount?> FindByEmailAsync(string email, CancellationToken ct = default)
         => Project(await users.FindByEmailAsync(email));
 
