@@ -28,6 +28,27 @@
   font-weight: var(--sb-type-h3-weight);
 }
 
+.topbar__org {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--sb-space-sm);
+}
+
+.topbar__org-label {
+  color: var(--sb-text-secondary);
+  font-size: var(--sb-type-small-size);
+}
+
+.topbar__org-select {
+  padding: var(--sb-space-xs) var(--sb-space-sm);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--sb-radius-sm);
+  background: var(--sb-surface);
+  color: var(--sb-text);
+  font: inherit;
+}
+
 .page {
   padding: var(--sb-space-3xl) var(--sb-space-lg);
 }

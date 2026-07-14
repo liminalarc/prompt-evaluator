@@ -2,28 +2,46 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideRouter } from '@angular/router';
+import { of } from 'rxjs';
 import { AnalyticsDashboard } from './analytics-dashboard';
 import { RegressionFlag, TrendSeries } from '../analytics';
+import { OrganizationsApiService } from '../organizations/organizations-api.service';
+import { OrgContextStore } from '../shared/org-context.store';
 
 describe('AnalyticsDashboard', () => {
   let http: HttpTestingController;
 
   beforeEach(async () => {
+    localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [AnalyticsDashboard],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideNoopAnimations(),
+        provideRouter([]),
+        {
+          provide: OrganizationsApiService,
+          useValue: { listOrganizations: () => of([{ id: 'o1', name: 'Acme' }]) },
+        },
+      ],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
-  });
+    TestBed.inject(OrgContextStore).load(); // resolves global org context → o1
+  }, 10000);
 
   afterEach(() => http.verify());
 
+  // The dashboard scopes its lists to the active org: the org's prompts + the datasets that
+  // belong to them (intersected by prompt id).
   function createAndLoadLists() {
     const fixture = TestBed.createComponent(AnalyticsDashboard);
-    fixture.detectChanges(); // ngOnInit → loads prompts + datasets
-    http.expectOne('/api/prompts').flush([
+    fixture.detectChanges(); // org effect → loads the org's prompts + datasets
+    http.expectOne('/api/organizations/o1/prompts').flush([
       {
         id: 'p1',
+        folderId: null,
         name: 'Summarizer',
         description: null,
         versionCount: 2,
@@ -33,6 +51,7 @@ describe('AnalyticsDashboard', () => {
     http.expectOne('/api/datasets').flush([
       {
         id: 'd1',
+        promptId: 'p1',
         name: 'Summaries',
         description: null,
         fixtureCount: 4,

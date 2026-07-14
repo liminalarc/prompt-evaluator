@@ -6,12 +6,28 @@
       routerLinkActive="nav__link--active"
       [routerLinkActiveOptions]="{ exact: true }"
       class="nav__link"
-      >Home</a
+      >Dashboard</a
     >
     <a routerLink="/prompts" routerLinkActive="nav__link--active" class="nav__link">Prompts</a>
-    <a routerLink="/datasets" routerLinkActive="nav__link--active" class="nav__link">Datasets</a>
     <a routerLink="/analytics" routerLinkActive="nav__link--active" class="nav__link">Analytics</a>
   </nav>
+
+  @if (org.organizations().length > 0) {
+    <div class="topbar__org">
+      <label class="topbar__org-label" for="org-switcher">Org</label>
+      <select
+        id="org-switcher"
+        class="topbar__org-select"
+        data-testid="org-select"
+        [ngModel]="org.currentOrgId()"
+        (ngModelChange)="org.select($event)"
+      >
+        @for (o of org.organizations(); track o.id) {
+          <option [value]="o.id">{{ o.name }}</option>
+        }
+      </select>
+    </div>
+  }
 </header>
 
 <main class="page">

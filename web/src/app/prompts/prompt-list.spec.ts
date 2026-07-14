@@ -2,6 +2,9 @@ import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
+import { of } from 'rxjs';
+import { OrganizationsApiService } from '../organizations/organizations-api.service';
+import { OrgContextStore } from '../shared/org-context.store';
 import { PromptList } from './prompt-list';
 
 describe('PromptList (org + folder navigation)', () => {
@@ -45,26 +48,26 @@ describe('PromptList (org + folder navigation)', () => {
   }
 
   function setup() {
+    localStorage.clear();
     TestBed.configureTestingModule({
       imports: [PromptList],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: OrganizationsApiService, useValue: { listOrganizations: () => of(orgs) } },
+      ],
     });
-    const fixture = TestBed.createComponent(PromptList);
     httpMock = TestBed.inject(HttpTestingController);
-    fixture.detectChanges(); // ngOnInit → list orgs
-    httpMock.expectOne('/api/organizations').flush(orgs);
-    flushOrgData(); // selectOrg(first) → folders + prompts
+    TestBed.inject(OrgContextStore).load(); // resolves the global org context → o1
+    const fixture = TestBed.createComponent(PromptList);
+    fixture.detectChanges(); // org effect → loads folders + prompts for o1
+    flushOrgData();
     fixture.detectChanges();
     return fixture;
   }
 
   afterEach(() => httpMock.verify());
-
-  it('lists the organization in the switcher', () => {
-    const fixture = setup();
-    const options = fixture.nativeElement.querySelectorAll('[data-testid="org-select"] option');
-    expect(Array.from(options).some((o: any) => o.textContent.includes('Acme'))).toBeTrue();
-  });
 
   it('shows the current folder’s subfolders and prompts (org root by default)', () => {
     const fixture = setup();

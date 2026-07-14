@@ -1,12 +1,12 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { Folder } from '../folder';
-import { Organization } from '../organization';
 import { PromptSummary } from '../prompt';
 import { FoldersApiService } from '../folders/folders-api.service';
 import { OrganizationsApiService } from '../organizations/organizations-api.service';
+import { OrgContextStore } from '../shared/org-context.store';
 import { PromptsApiService } from './prompts-api.service';
 
 interface Crumb {
@@ -22,23 +22,12 @@ interface Crumb {
       <header class="panel__head">
         <h1 class="title">Prompts</h1>
         <p class="subtitle">
-          Pick an organization, then navigate its folders — each prompt keeps its versions,
-          datasets, and analytics together.
+          Navigate {{ currentOrgName() }}'s folders — each prompt keeps its versions, datasets, and
+          analytics together. Switch organizations from the top bar.
         </p>
       </header>
 
       <div class="orgbar">
-        <label for="org">Organization</label>
-        <select
-          id="org"
-          data-testid="org-select"
-          [ngModel]="selectedOrgId()"
-          (ngModelChange)="selectOrg($event)"
-        >
-          @for (o of organizations(); track o.id) {
-            <option [value]="o.id">{{ o.name }}</option>
-          }
-        </select>
         <button
           class="sb-btn"
           type="button"
@@ -70,7 +59,7 @@ interface Crumb {
         <div class="error-box" data-testid="error">{{ message }}</div>
       }
 
-      @if (selectedOrgId()) {
+      @if (currentOrgId()) {
         <nav class="breadcrumb" data-testid="breadcrumb">
           @for (c of breadcrumb(); track c.id; let last = $last) {
             <button class="crumb" type="button" [disabled]="last" (click)="navigateTo(c.id)">
@@ -197,13 +186,12 @@ interface Crumb {
   `,
   styleUrl: './prompts.css',
 })
-export class PromptList implements OnInit {
+export class PromptList {
   private readonly api = inject(PromptsApiService);
   private readonly foldersApi = inject(FoldersApiService);
   private readonly orgsApi = inject(OrganizationsApiService);
+  private readonly orgStore = inject(OrgContextStore);
 
-  protected readonly organizations = signal<Organization[]>([]);
-  protected readonly selectedOrgId = signal<string | null>(null);
   protected readonly folders = signal<Folder[]>([]);
   protected readonly prompts = signal<PromptSummary[]>([]);
   protected readonly currentFolderId = signal<string | null>(null);
@@ -217,8 +205,10 @@ export class PromptList implements OnInit {
   protected readonly name = signal('');
   protected readonly description = signal('');
 
+  /** The active org comes from the global context (topbar switcher), not a local picker. */
+  protected readonly currentOrgId = this.orgStore.currentOrgId;
   protected readonly currentOrgName = computed(
-    () => this.organizations().find((o) => o.id === this.selectedOrgId())?.name ?? 'Organization',
+    () => this.orgStore.currentOrg()?.name ?? 'Organization',
   );
 
   protected readonly subfolders = computed(() =>
@@ -249,15 +239,16 @@ export class PromptList implements OnInit {
     return [{ id: null, name: this.currentOrgName() }, ...chain];
   });
 
-  ngOnInit(): void {
-    this.orgsApi.listOrganizations().subscribe({
-      next: (orgs) => {
-        this.organizations.set(orgs);
-        if (orgs.length > 0) {
-          this.selectOrg(orgs[0].id);
-        }
-      },
-      error: () => this.error.set('Could not load organizations — is the stack running?'),
+  constructor() {
+    // Reload the folder tree + prompts whenever the global org changes; reset to the org root.
+    effect(() => {
+      const orgId = this.orgStore.currentOrgId();
+      this.currentFolderId.set(null);
+      this.folders.set([]);
+      this.prompts.set([]);
+      if (orgId) {
+        this.loadOrgData(orgId);
+      }
     });
   }
 
@@ -272,12 +263,6 @@ export class PromptList implements OnInit {
       },
       error: () => this.error.set('Could not load the organization’s prompts.'),
     });
-  }
-
-  protected selectOrg(orgId: string): void {
-    this.selectedOrgId.set(orgId);
-    this.currentFolderId.set(null);
-    this.loadOrgData(orgId);
   }
 
   protected openFolder(id: string): void {
@@ -297,8 +282,7 @@ export class PromptList implements OnInit {
       next: (created) => {
         this.orgName.set('');
         this.showNewOrg.set(false);
-        this.organizations.update((list) => [...list, created]);
-        this.selectOrg(created.id);
+        this.orgStore.add(created); // append + make current → effect reloads the tree
       },
       error: () => this.error.set('Could not create the organization.'),
     });
@@ -306,7 +290,7 @@ export class PromptList implements OnInit {
 
   protected createFolder(event: Event): void {
     event.preventDefault();
-    const orgId = this.selectedOrgId();
+    const orgId = this.currentOrgId();
     const name = this.folderName().trim();
     if (!orgId || !name) return;
     this.error.set(null);
@@ -322,7 +306,7 @@ export class PromptList implements OnInit {
 
   protected createPrompt(event: Event): void {
     event.preventDefault();
-    const orgId = this.selectedOrgId();
+    const orgId = this.currentOrgId();
     const name = this.name().trim();
     if (!orgId || !name) return;
     this.error.set(null);
@@ -347,7 +331,7 @@ export class PromptList implements OnInit {
   }
 
   protected move(prompt: PromptSummary, folderIdValue: string): void {
-    const orgId = this.selectedOrgId();
+    const orgId = this.currentOrgId();
     const folderId = folderIdValue || null;
     if (!orgId || (prompt.folderId ?? null) === folderId) return;
     this.error.set(null);

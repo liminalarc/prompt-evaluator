@@ -1,6 +1,9 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { DatasetSummary } from '../dataset';
+import { PromptsApiService } from '../prompts/prompts-api.service';
+import { OrgContextStore } from '../shared/org-context.store';
 import { DatasetsApiService } from './datasets-api.service';
 
 @Component({
@@ -12,7 +15,7 @@ import { DatasetsApiService } from './datasets-api.service';
         <h1 class="title">Datasets</h1>
         <p class="subtitle">
           Every dataset lives with a prompt — create and manage them from the prompt's workspace.
-          This is the cross-prompt browse view.
+          This is the cross-prompt browse view for the current organization.
         </p>
       </header>
 
@@ -54,15 +57,34 @@ import { DatasetsApiService } from './datasets-api.service';
   `,
   styleUrl: '../prompts/prompts.css',
 })
-export class DatasetList implements OnInit {
+export class DatasetList {
   private readonly api = inject(DatasetsApiService);
+  private readonly promptsApi = inject(PromptsApiService);
+  private readonly orgStore = inject(OrgContextStore);
 
   protected readonly datasets = signal<DatasetSummary[] | null>(null);
   protected readonly error = signal<string | null>(null);
 
-  ngOnInit(): void {
-    this.api.listDatasets().subscribe({
-      next: (list) => this.datasets.set(list),
+  constructor() {
+    // Scope the browse list to the active org — datasets belonging to the org's prompts.
+    effect(() => {
+      const orgId = this.orgStore.currentOrgId();
+      this.datasets.set(null);
+      if (orgId) {
+        this.load(orgId);
+      }
+    });
+  }
+
+  private load(orgId: string): void {
+    forkJoin({
+      prompts: this.promptsApi.listPromptsByOrganization(orgId),
+      datasets: this.api.listDatasets(),
+    }).subscribe({
+      next: ({ prompts, datasets }) => {
+        const orgPromptIds = new Set(prompts.map((p) => p.id));
+        this.datasets.set(datasets.filter((d) => orgPromptIds.has(d.promptId)));
+      },
       error: () => this.error.set('Could not load datasets — is the stack running?'),
     });
   }

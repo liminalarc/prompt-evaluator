@@ -1,6 +1,7 @@
-import { Component, OnInit, effect, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import {
   RegressionFlag,
   TrendSeries,
@@ -10,6 +11,7 @@ import {
 import { AnalyticsApiService } from './analytics-api.service';
 import { PromptsApiService } from '../prompts/prompts-api.service';
 import { DatasetsApiService } from '../datasets/datasets-api.service';
+import { OrgContextStore } from '../shared/org-context.store';
 import { PromptSummary, PromptVersion } from '../prompt';
 import { DatasetSummary } from '../dataset';
 import { TrendChart } from './trend-chart';
@@ -173,10 +175,11 @@ import { VersionComparison } from './version-comparison';
   `,
   styleUrls: ['../prompts/prompts.css', './analytics-dashboard.css'],
 })
-export class AnalyticsDashboard implements OnInit {
+export class AnalyticsDashboard {
   private readonly api = inject(AnalyticsApiService);
   private readonly promptsApi = inject(PromptsApiService);
   private readonly datasetsApi = inject(DatasetsApiService);
+  private readonly orgStore = inject(OrgContextStore);
 
   protected readonly prompts = signal<PromptSummary[]>([]);
   protected readonly datasets = signal<DatasetSummary[]>([]);
@@ -193,6 +196,19 @@ export class AnalyticsDashboard implements OnInit {
   protected readonly comparison = signal<VersionComparisonData | null>(null);
 
   constructor() {
+    // Reload the org's prompts + datasets whenever the global org changes; clear the selection
+    // (a prompt/dataset belongs to one org, so it can't carry across a switch).
+    effect(() => {
+      const orgId = this.orgStore.currentOrgId();
+      this.promptId.set(null);
+      this.datasetId.set(null);
+      this.prompts.set([]);
+      this.datasets.set([]);
+      if (orgId) {
+        this.loadOrgLists(orgId);
+      }
+    });
+
     // Reload trends + regressions whenever the prompt, dataset, or threshold changes.
     effect(() => {
       const promptId = this.promptId();
@@ -217,14 +233,19 @@ export class AnalyticsDashboard implements OnInit {
     });
   }
 
-  ngOnInit(): void {
-    this.promptsApi.listPrompts().subscribe({
-      next: (list) => this.prompts.set(list),
+  // Scope both lists to the active org: the org's prompts, and the datasets that belong to them
+  // (datasets live with a prompt, so we intersect the cross-prompt list by the org's prompt ids).
+  private loadOrgLists(orgId: string): void {
+    forkJoin({
+      prompts: this.promptsApi.listPromptsByOrganization(orgId),
+      datasets: this.datasetsApi.listDatasets(),
+    }).subscribe({
+      next: ({ prompts, datasets }) => {
+        const orgPromptIds = new Set(prompts.map((p) => p.id));
+        this.prompts.set(prompts);
+        this.datasets.set(datasets.filter((d) => orgPromptIds.has(d.promptId)));
+      },
       error: () => this.error.set('Could not load prompts — is the stack running?'),
-    });
-    this.datasetsApi.listDatasets().subscribe({
-      next: (list) => this.datasets.set(list),
-      error: () => this.error.set('Could not load datasets — is the stack running?'),
     });
   }
 
