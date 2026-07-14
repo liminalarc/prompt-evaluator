@@ -149,18 +149,30 @@ import { VersionDiff } from './version-diff';
             </table>
           }
         }
-        <form class="create" (submit)="createDataset($event)">
-          <div class="sb-field">
-            <label for="datasetName">New dataset name</label>
-            <input
-              id="datasetName"
-              name="datasetName"
-              [ngModel]="datasetName()"
-              (ngModelChange)="datasetName.set($event)"
-            />
-          </div>
-          <button class="sb-btn" type="submit" data-testid="create-dataset">Add dataset</button>
-        </form>
+        <div class="toolbar">
+          <button
+            class="sb-btn sb-btn--sm"
+            type="button"
+            data-testid="toggle-create-dataset"
+            (click)="showCreateDataset.set(!showCreateDataset())"
+          >
+            + New dataset
+          </button>
+        </div>
+        @if (showCreateDataset()) {
+          <form class="create reveal" (submit)="createDataset($event)">
+            <div class="sb-field">
+              <label for="datasetName">New dataset name</label>
+              <input
+                id="datasetName"
+                name="datasetName"
+                [ngModel]="datasetName()"
+                (ngModelChange)="datasetName.set($event)"
+              />
+            </div>
+            <button class="sb-btn" type="submit" data-testid="create-dataset">Add dataset</button>
+          </form>
+        }
 
         <h2 class="section-title">Analytics</h2>
         @if (datasets()?.length) {
@@ -188,40 +200,51 @@ import { VersionDiff } from './version-diff';
           />
         }
 
-        <h2 class="section-title">Add a version</h2>
-        <form class="add-version" (submit)="addVersion($event)">
-          <div class="sb-field">
-            <label for="content">Content</label>
-            <textarea
-              id="content"
-              name="content"
-              rows="4"
-              [ngModel]="content()"
-              (ngModelChange)="content.set($event)"
-            ></textarea>
-          </div>
-          <div class="sb-field">
-            <label for="targetModel">Target model</label>
-            <input
-              id="targetModel"
-              name="targetModel"
-              [ngModel]="targetModel()"
-              (ngModelChange)="targetModel.set($event)"
-            />
-          </div>
-          <div class="sb-field">
-            <label for="label">Label (optional)</label>
-            <input
-              id="label"
-              name="label"
-              [ngModel]="label()"
-              (ngModelChange)="label.set($event)"
-            />
-          </div>
-          <button class="sb-btn sb-btn--primary" type="submit" data-testid="add-version">
-            Add version
+        <div class="toolbar">
+          <button
+            class="sb-btn sb-btn--sm"
+            type="button"
+            data-testid="toggle-add-version"
+            (click)="showAddVersion.set(!showAddVersion())"
+          >
+            + Add version
           </button>
-        </form>
+        </div>
+        @if (showAddVersion()) {
+          <form class="add-version reveal" (submit)="addVersion($event)">
+            <div class="sb-field">
+              <label for="content">Content</label>
+              <textarea
+                id="content"
+                name="content"
+                rows="4"
+                [ngModel]="content()"
+                (ngModelChange)="content.set($event)"
+              ></textarea>
+            </div>
+            <div class="sb-field">
+              <label for="targetModel">Target model</label>
+              <input
+                id="targetModel"
+                name="targetModel"
+                [ngModel]="targetModel()"
+                (ngModelChange)="targetModel.set($event)"
+              />
+            </div>
+            <div class="sb-field">
+              <label for="label">Label (optional)</label>
+              <input
+                id="label"
+                name="label"
+                [ngModel]="label()"
+                (ngModelChange)="label.set($event)"
+              />
+            </div>
+            <button class="sb-btn sb-btn--primary" type="submit" data-testid="add-version">
+              Add version
+            </button>
+          </form>
+        }
       }
     </section>
   `,
@@ -249,6 +272,10 @@ export class PromptDetail implements OnInit {
   protected readonly content = signal('');
   protected readonly targetModel = signal('claude-sonnet-5');
   protected readonly label = signal('');
+
+  // Progressive disclosure: the version history + datasets stay visible; the create forms reveal.
+  protected readonly showAddVersion = signal(false);
+  protected readonly showCreateDataset = signal(false);
 
   // Datasets + analytics — this prompt's, shown together with it (1.7).
   protected readonly datasets = signal<DatasetSummary[] | null>(null);

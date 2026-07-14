@@ -37,23 +37,27 @@ test('runs a prompt version over a dataset and shows per-fixture scores', async 
   await page.getByTestId('create-prompt').click();
   await page.getByTestId('prompts').getByRole('link', { name: promptName }).click();
   await expect(page.getByRole('heading', { name: promptName })).toBeVisible();
+  await page.getByTestId('toggle-add-version').click();
   await page.fill('#content', 'You summarize text.');
   await page.fill('#targetModel', 'claude-opus-4-8');
   await page.getByTestId('add-version').click();
   await expect(page.getByTestId('versions').locator('tbody tr')).toHaveCount(1);
 
   // 2. Create a dataset under the prompt (in its workspace), then open it.
+  await page.getByTestId('toggle-create-dataset').click();
   await page.fill('#datasetName', datasetName);
   await page.getByTestId('create-dataset').click();
   await page.getByTestId('datasets').getByRole('link', { name: datasetName }).click();
   await expect(page.getByRole('heading', { name: datasetName })).toBeVisible();
 
   // 3. Capture a fixture.
+  await page.getByTestId('toggle-capture').click();
   await page.fill('#promptInput', 'summarize this thread');
   await page.getByTestId('capture').click();
   await expect(page.getByTestId('fixtures').locator('tr[data-origin="Captured"]')).toHaveCount(1);
 
   // 4. Configure a deterministic scorer.
+  await page.getByTestId('toggle-add-scorer').click();
   await page.getByTestId('scorer-kind').selectOption('Regex');
   await page.getByTestId('scorer-config').fill('.+');
   await page.getByTestId('add-scorer').click();

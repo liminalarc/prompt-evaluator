@@ -28,12 +28,14 @@ test('a prompt workspace shows its versions, datasets, and analytics together', 
   await expect(page.getByRole('heading', { name: promptName })).toBeVisible();
 
   // Versions live here.
+  await page.getByTestId('toggle-add-version').click();
   await page.fill('#content', 'Summarize: {input}');
   await page.fill('#targetModel', 'claude-sonnet-5');
   await page.getByTestId('add-version').click();
   await expect(page.getByTestId('versions')).toContainText('claude-sonnet-5');
 
   // Datasets live here too — create one under the prompt.
+  await page.getByTestId('toggle-create-dataset').click();
   await page.fill('#datasetName', datasetName);
   await page.getByTestId('create-dataset').click();
   await expect(page.getByTestId('datasets')).toContainText(datasetName);

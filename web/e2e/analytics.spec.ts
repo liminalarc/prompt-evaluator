@@ -38,6 +38,7 @@ test('shows a score trend across versions and the regression section on the dash
   await page.getByTestId('create-prompt').click();
   await page.getByTestId('prompts').getByRole('link', { name: promptName }).click();
   await expect(page.getByRole('heading', { name: promptName })).toBeVisible();
+  await page.getByTestId('toggle-add-version').click();
   await page.fill('#content', 'good summarizer');
   await page.fill('#targetModel', 'claude-opus-4-8');
   await page.getByTestId('add-version').click();
@@ -48,11 +49,13 @@ test('shows a score trend across versions and the regression section on the dash
   await expect(page.getByTestId('versions').locator('tbody tr')).toHaveCount(2);
 
   // 2. A dataset under the prompt with two captured fixtures.
+  await page.getByTestId('toggle-create-dataset').click();
   await page.fill('#datasetName', datasetName);
   await page.getByTestId('create-dataset').click();
   await page.getByTestId('datasets').getByRole('link', { name: datasetName }).click();
   await expect(page.getByRole('heading', { name: datasetName })).toBeVisible();
   const datasetUrl = page.url();
+  await page.getByTestId('toggle-capture').click();
   await page.fill('#promptInput', 'summarize thread one');
   await page.getByTestId('capture').click();
   await expect(page.getByTestId('fixtures').locator('tr[data-origin="Captured"]')).toHaveCount(1);
@@ -61,6 +64,7 @@ test('shows a score trend across versions and the regression section on the dash
   await expect(page.getByTestId('fixtures').locator('tr[data-origin="Captured"]')).toHaveCount(2);
 
   // 3. A scorer.
+  await page.getByTestId('toggle-add-scorer').click();
   await page.getByTestId('scorer-kind').selectOption('Regex');
   await page.getByTestId('scorer-config').fill('.+');
   await page.getByTestId('add-scorer').click();

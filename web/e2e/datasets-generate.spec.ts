@@ -32,17 +32,20 @@ test('generates synthetic fixtures from a captured seed', async ({ page, request
   await page.fill('#name', promptName);
   await page.getByTestId('create-prompt').click();
   await page.getByTestId('prompts').getByRole('link', { name: promptName }).click();
+  await page.getByTestId('toggle-create-dataset').click();
   await page.fill('#datasetName', datasetName);
   await page.getByTestId('create-dataset').click();
   await page.getByTestId('datasets').getByRole('link', { name: datasetName }).click();
   await expect(page.getByRole('heading', { name: datasetName })).toBeVisible();
 
   // A captured fixture is required to seed generation.
+  await page.getByTestId('toggle-capture').click();
   await page.fill('#promptInput', 'summarize this captured thread');
   await page.getByTestId('capture').click();
   await expect(page.getByTestId('fixtures').locator('tr[data-origin="Captured"]')).toHaveCount(1);
 
   // Trigger generation; the stub returns deterministic synthetic fixtures.
+  await page.getByTestId('toggle-generate').click();
   await page.fill('#count', '2');
   await page.getByTestId('generate').click();
 

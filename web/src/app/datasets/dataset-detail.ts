@@ -96,74 +96,95 @@ const JUDGE_MODELS = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
           </table>
         }
 
-        <h2 class="section-title">Capture a fixture</h2>
-        <form class="capture" (submit)="capture($event)">
-          <div class="sb-field">
-            <label for="promptInput">Prompt input</label>
-            <textarea
-              id="promptInput"
-              name="promptInput"
-              rows="2"
-              [ngModel]="promptInput()"
-              (ngModelChange)="promptInput.set($event)"
-            ></textarea>
-          </div>
-          <div class="sb-field">
-            <label for="slmOutput">Upstream SLM output (optional)</label>
-            <textarea
-              id="slmOutput"
-              name="slmOutput"
-              rows="2"
-              [ngModel]="slmOutput()"
-              (ngModelChange)="slmOutput.set($event)"
-            ></textarea>
-          </div>
-          <button class="sb-btn sb-btn--primary" type="submit" data-testid="capture">
-            Capture fixture
-          </button>
-        </form>
-
-        <h2 class="section-title">Generate synthetic fixtures</h2>
-        <p class="subtitle">Seeded from this dataset's captured fixtures; steer with guidance.</p>
-        <form class="generate" (submit)="generate($event)">
-          <div class="sb-field">
-            <label for="coverageGoals">Coverage goals (optional)</label>
-            <input
-              id="coverageGoals"
-              name="coverageGoals"
-              [ngModel]="coverageGoals()"
-              (ngModelChange)="coverageGoals.set($event)"
-            />
-          </div>
-          <div class="sb-field">
-            <label for="edgeCases">Edge cases / adversarial (optional)</label>
-            <input
-              id="edgeCases"
-              name="edgeCases"
-              [ngModel]="edgeCases()"
-              (ngModelChange)="edgeCases.set($event)"
-            />
-          </div>
-          <div class="sb-field">
-            <label for="count">Count</label>
-            <input
-              id="count"
-              name="count"
-              type="number"
-              min="1"
-              [ngModel]="count()"
-              (ngModelChange)="count.set(+$event)"
-            />
-          </div>
+        <div class="toolbar">
           <button
-            class="sb-btn sb-btn--primary"
-            type="submit"
-            data-testid="generate"
-            [disabled]="generating()"
+            class="sb-btn sb-btn--sm"
+            type="button"
+            data-testid="toggle-capture"
+            (click)="showCapture.set(!showCapture())"
           >
-            {{ generating() ? 'Generating…' : 'Generate' }}
+            + Capture fixture
           </button>
-        </form>
+          <button
+            class="sb-btn sb-btn--sm"
+            type="button"
+            data-testid="toggle-generate"
+            (click)="showGenerate.set(!showGenerate())"
+          >
+            + Generate synthetic
+          </button>
+        </div>
+
+        @if (showCapture()) {
+          <form class="capture reveal" (submit)="capture($event)">
+            <div class="sb-field">
+              <label for="promptInput">Prompt input</label>
+              <textarea
+                id="promptInput"
+                name="promptInput"
+                rows="2"
+                [ngModel]="promptInput()"
+                (ngModelChange)="promptInput.set($event)"
+              ></textarea>
+            </div>
+            <div class="sb-field">
+              <label for="slmOutput">Upstream SLM output (optional)</label>
+              <textarea
+                id="slmOutput"
+                name="slmOutput"
+                rows="2"
+                [ngModel]="slmOutput()"
+                (ngModelChange)="slmOutput.set($event)"
+              ></textarea>
+            </div>
+            <button class="sb-btn sb-btn--primary" type="submit" data-testid="capture">
+              Capture fixture
+            </button>
+          </form>
+        }
+
+        @if (showGenerate()) {
+          <p class="subtitle">Seeded from this dataset's captured fixtures; steer with guidance.</p>
+          <form class="generate reveal" (submit)="generate($event)">
+            <div class="sb-field">
+              <label for="coverageGoals">Coverage goals (optional)</label>
+              <input
+                id="coverageGoals"
+                name="coverageGoals"
+                [ngModel]="coverageGoals()"
+                (ngModelChange)="coverageGoals.set($event)"
+              />
+            </div>
+            <div class="sb-field">
+              <label for="edgeCases">Edge cases / adversarial (optional)</label>
+              <input
+                id="edgeCases"
+                name="edgeCases"
+                [ngModel]="edgeCases()"
+                (ngModelChange)="edgeCases.set($event)"
+              />
+            </div>
+            <div class="sb-field">
+              <label for="count">Count</label>
+              <input
+                id="count"
+                name="count"
+                type="number"
+                min="1"
+                [ngModel]="count()"
+                (ngModelChange)="count.set(+$event)"
+              />
+            </div>
+            <button
+              class="sb-btn sb-btn--primary"
+              type="submit"
+              data-testid="generate"
+              [disabled]="generating()"
+            >
+              {{ generating() ? 'Generating…' : 'Generate' }}
+            </button>
+          </form>
+        }
 
         <h2 class="section-title">Scorers</h2>
         <p class="subtitle">Configured once per dataset; every run scores with this set.</p>
@@ -195,51 +216,63 @@ const JUDGE_MODELS = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
             </tbody>
           </table>
         }
-        <form class="add-scorer" (submit)="addScorer($event)">
-          <div class="sb-field">
-            <label for="scorerKind">Scorer</label>
-            <select
-              id="scorerKind"
-              name="scorerKind"
-              [ngModel]="scorerKind()"
-              (ngModelChange)="scorerKind.set($event)"
-              data-testid="scorer-kind"
-            >
-              @for (k of scorerKinds; track k) {
-                <option [value]="k">{{ k }}</option>
-              }
-            </select>
-          </div>
-          <div class="sb-field">
-            <label for="scorerConfig">{{ isJudge() ? 'Rubric' : 'Config (optional)' }}</label>
-            <input
-              id="scorerConfig"
-              name="scorerConfig"
-              [ngModel]="scorerConfig()"
-              (ngModelChange)="scorerConfig.set($event)"
-              data-testid="scorer-config"
-            />
-          </div>
-          @if (isJudge()) {
+        <div class="toolbar">
+          <button
+            class="sb-btn sb-btn--sm"
+            type="button"
+            data-testid="toggle-add-scorer"
+            (click)="showAddScorer.set(!showAddScorer())"
+          >
+            + Add scorer
+          </button>
+        </div>
+        @if (showAddScorer()) {
+          <form class="add-scorer reveal" (submit)="addScorer($event)">
             <div class="sb-field">
-              <label for="judgeModel">Judge model</label>
+              <label for="scorerKind">Scorer</label>
               <select
-                id="judgeModel"
-                name="judgeModel"
-                [ngModel]="judgeModel()"
-                (ngModelChange)="judgeModel.set($event)"
-                data-testid="judge-model"
+                id="scorerKind"
+                name="scorerKind"
+                [ngModel]="scorerKind()"
+                (ngModelChange)="scorerKind.set($event)"
+                data-testid="scorer-kind"
               >
-                @for (m of judgeModels; track m) {
-                  <option [value]="m">{{ m }}</option>
+                @for (k of scorerKinds; track k) {
+                  <option [value]="k">{{ k }}</option>
                 }
               </select>
             </div>
-          }
-          <button class="sb-btn sb-btn--primary" type="submit" data-testid="add-scorer">
-            Add scorer
-          </button>
-        </form>
+            <div class="sb-field">
+              <label for="scorerConfig">{{ isJudge() ? 'Rubric' : 'Config (optional)' }}</label>
+              <input
+                id="scorerConfig"
+                name="scorerConfig"
+                [ngModel]="scorerConfig()"
+                (ngModelChange)="scorerConfig.set($event)"
+                data-testid="scorer-config"
+              />
+            </div>
+            @if (isJudge()) {
+              <div class="sb-field">
+                <label for="judgeModel">Judge model</label>
+                <select
+                  id="judgeModel"
+                  name="judgeModel"
+                  [ngModel]="judgeModel()"
+                  (ngModelChange)="judgeModel.set($event)"
+                  data-testid="judge-model"
+                >
+                  @for (m of judgeModels; track m) {
+                    <option [value]="m">{{ m }}</option>
+                  }
+                </select>
+              </div>
+            }
+            <button class="sb-btn sb-btn--primary" type="submit" data-testid="add-scorer">
+              Add scorer
+            </button>
+          </form>
+        }
 
         <h2 class="section-title">Run evaluation</h2>
         <form class="run" (submit)="triggerRun($event)">
@@ -319,6 +352,11 @@ export class DatasetDetail implements OnInit {
   protected readonly promptName = signal<string | null>(null);
   protected readonly originFilter = signal<OriginFilter>('all');
   protected readonly generating = signal(false);
+
+  // Progressive disclosure: data tables stay visible, creation forms are revealed on demand.
+  protected readonly showCapture = signal(false);
+  protected readonly showGenerate = signal(false);
+  protected readonly showAddScorer = signal(false);
 
   protected readonly originBadge = originBadge;
 

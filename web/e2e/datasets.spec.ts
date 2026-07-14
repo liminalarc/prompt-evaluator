@@ -31,6 +31,7 @@ test('creates a dataset in a prompt workspace, captures a fixture, and filters b
   await expect(page.getByRole('heading', { name: promptName })).toBeVisible();
 
   // Create a dataset under the prompt, then open it.
+  await page.getByTestId('toggle-create-dataset').click();
   await page.fill('#datasetName', datasetName);
   await page.getByTestId('create-dataset').click();
   const dsRow = page.getByTestId('datasets').getByText(datasetName);
@@ -40,6 +41,7 @@ test('creates a dataset in a prompt workspace, captures a fixture, and filters b
   await expect(page.getByRole('heading', { name: datasetName })).toBeVisible();
 
   // Capture a ground-truth fixture.
+  await page.getByTestId('toggle-capture').click();
   await page.fill('#promptInput', 'summarize this captured thread');
   await page.fill('#slmOutput', 'raw upstream slm output');
   await page.getByTestId('capture').click();
