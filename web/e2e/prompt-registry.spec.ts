@@ -6,9 +6,11 @@ test('registers a prompt, records versions, and diffs them', async ({ page }) =>
   const name = `e2e prompt ${Date.now()}`;
 
   await page.goto('/prompts');
+  // Org dropdown defaults to the seeded Default org; reveal the collapsed new-prompt form.
+  await page.getByTestId('toggle-new-prompt').click();
   await page.fill('#name', name);
   await page.fill('#description', 'created by e2e');
-  await page.getByTestId('create').click();
+  await page.getByTestId('create-prompt').click();
 
   // The new prompt appears in the list; open it.
   const row = page.getByTestId('prompts').getByText(name);

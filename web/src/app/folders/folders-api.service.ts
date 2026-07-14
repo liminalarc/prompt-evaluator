@@ -13,13 +13,13 @@ import { PromptSummary } from '../prompt';
 export class FoldersApiService {
   private readonly http = inject(HttpClient);
 
-  /** The whole tree as a flat list — the client assembles it via parentId. */
-  listFolders(): Observable<Folder[]> {
-    return this.http.get<Folder[]>('/api/folders');
+  /** An organization's folder tree as a flat list (1.9) — the client assembles it via parentId. */
+  listFolders(organizationId: string): Observable<Folder[]> {
+    return this.http.get<Folder[]>(`/api/organizations/${organizationId}/folders`);
   }
 
-  createFolder(name: string, parentId: string | null): Observable<Folder> {
-    return this.http.post<Folder>('/api/folders', { name, parentId });
+  createFolder(organizationId: string, name: string, parentId: string | null): Observable<Folder> {
+    return this.http.post<Folder>(`/api/organizations/${organizationId}/folders`, { name, parentId });
   }
 
   renameFolder(id: string, name: string): Observable<Folder> {
@@ -33,10 +33,5 @@ export class FoldersApiService {
   /** The prompts filed directly in a folder. */
   listFolderPrompts(id: string): Observable<PromptSummary[]> {
     return this.http.get<PromptSummary[]>(`/api/folders/${id}/prompts`);
-  }
-
-  /** The unfiled prompts — the contents of the root. */
-  listRootPrompts(): Observable<PromptSummary[]> {
-    return this.http.get<PromptSummary[]>('/api/folders/root/prompts');
   }
 }

@@ -10,10 +10,11 @@ test('creates a dataset in a prompt workspace, captures a fixture, and filters b
   const promptName = `e2e ds-owner ${stamp}`;
   const datasetName = `e2e dataset ${stamp}`;
 
-  // An owning prompt, opened in its workspace.
+  // An owning prompt (in the default org), opened in its workspace.
   await page.goto('/prompts');
+  await page.getByTestId('toggle-new-prompt').click();
   await page.fill('#name', promptName);
-  await page.getByTestId('create').click();
+  await page.getByTestId('create-prompt').click();
   await page.getByTestId('prompts').getByText(promptName).click();
   await expect(page.getByRole('heading', { name: promptName })).toBeVisible();
 

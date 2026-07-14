@@ -83,67 +83,93 @@
   font-size: var(--sb-type-small-size);
 }
 
-/* Folder browse layout (1.7): a folder-tree sidebar beside the prompt list. */
-.browse {
-  display: grid;
-  grid-template-columns: minmax(180px, 240px) 1fr;
-  gap: var(--sb-space-xl);
-  align-items: start;
-}
-
-@media (max-width: 640px) {
-  .browse {
-    grid-template-columns: 1fr;
-  }
-}
-
-.sidebar {
+/* Organization + folder navigation (1.9): an org switcher, a breadcrumb, and a main-area
+   file-explorer view — subfolders you descend into, then prompts in the current folder. */
+.orgbar {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: var(--sb-space-md);
+  flex-wrap: wrap;
 }
 
-.tree {
+.orgbar select {
+  min-width: 180px;
+}
+
+.breadcrumb {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: var(--sb-space-xs);
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: var(--sb-type-small-size);
 }
 
-.tree__node {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: var(--sb-space-xs) var(--sb-space-sm);
+.crumb {
   border: none;
   background: transparent;
+  padding: 2px 4px;
   border-radius: var(--sb-radius-sm);
-  color: var(--sb-text-secondary);
+  color: var(--sb-primary);
+  cursor: pointer;
+  font-size: inherit;
+}
+
+.crumb:disabled {
+  color: var(--sb-text);
+  cursor: default;
+  font-weight: 600;
+}
+
+.crumb__sep {
+  color: var(--sb-text-muted);
+}
+
+.toolbar {
+  display: flex;
+  gap: var(--sb-space-sm);
+  flex-wrap: wrap;
+}
+
+.reveal {
+  display: flex;
+  gap: var(--sb-space-sm);
+  align-items: flex-end;
+  flex-wrap: wrap;
+  padding: var(--sb-space-md);
+  border-radius: var(--sb-radius-md);
+  background: var(--sb-surface);
+}
+
+.reveal .sb-field {
+  flex: 1;
+  min-width: 160px;
+}
+
+.folders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--sb-space-sm);
+}
+
+.folder-card {
+  display: flex;
+  align-items: center;
+  gap: var(--sb-space-xs);
+  text-align: left;
+  padding: var(--sb-space-sm) var(--sb-space-md);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--sb-radius-md);
+  background: var(--sb-surface);
+  color: var(--sb-text);
   font-size: var(--sb-type-small-size);
   cursor: pointer;
 }
 
-.tree__node:hover {
-  background: var(--sb-surface);
+.folder-card:hover {
+  border-color: var(--sb-primary);
 }
 
-.tree__node--active {
-  background: var(--sb-surface);
-  color: var(--sb-text);
-  font-weight: 600;
-}
-
-.breadcrumb {
-  color: var(--sb-text-secondary);
-  font-size: var(--sb-type-small-size);
-  margin: 0;
-}
-
-.new-folder {
-  display: flex;
-  gap: var(--sb-space-sm);
-}
-
-.new-folder input {
-  flex: 1;
-  min-width: 0;
+.folder-card__icon {
+  color: var(--sb-text-muted);
 }

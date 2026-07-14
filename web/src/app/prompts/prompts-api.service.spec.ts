@@ -31,12 +31,19 @@ describe('PromptsApiService', () => {
     req.flush({ id: 'abc', name: 'x', description: null, versions: [] });
   });
 
-  it('creates a prompt', () => {
-    service.createPrompt('Summarizer', 'desc').subscribe();
-    const req = httpMock.expectOne('/api/prompts');
+  it('creates a prompt under an organization', () => {
+    service.createPrompt('org-1', 'Summarizer', 'desc').subscribe();
+    const req = httpMock.expectOne('/api/organizations/org-1/prompts');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ name: 'Summarizer', description: 'desc' });
-    req.flush({ id: 'abc', name: 'Summarizer', description: 'desc', versions: [] });
+    req.flush({ id: 'abc', folderId: null, name: 'Summarizer', description: 'desc', versions: [] });
+  });
+
+  it('lists prompts by organization', () => {
+    service.listPromptsByOrganization('org-1').subscribe();
+    const req = httpMock.expectOne('/api/organizations/org-1/prompts');
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
   });
 
   it('moves a prompt into a folder', () => {

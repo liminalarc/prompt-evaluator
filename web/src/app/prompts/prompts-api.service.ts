@@ -23,12 +23,18 @@ export class PromptsApiService {
     return this.http.get<PromptSummary[]>('/api/prompts');
   }
 
+  /** The prompts in an organization (1.9). */
+  listPromptsByOrganization(organizationId: string): Observable<PromptSummary[]> {
+    return this.http.get<PromptSummary[]>(`/api/organizations/${organizationId}/prompts`);
+  }
+
   getPrompt(id: string): Observable<Prompt> {
     return this.http.get<Prompt>(`/api/prompts/${id}`);
   }
 
-  createPrompt(name: string, description: string | null): Observable<Prompt> {
-    return this.http.post<Prompt>('/api/prompts', { name, description });
+  /** Creates a prompt under an organization (1.9). */
+  createPrompt(organizationId: string, name: string, description: string | null): Observable<Prompt> {
+    return this.http.post<Prompt>(`/api/organizations/${organizationId}/prompts`, { name, description });
   }
 
   addVersion(id: string, body: AddVersionBody): Observable<Prompt> {

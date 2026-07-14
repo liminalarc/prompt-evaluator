@@ -17,16 +17,16 @@ describe('FoldersApiService', () => {
 
   afterEach(() => httpMock.verify());
 
-  it('lists the folder tree', () => {
-    service.listFolders().subscribe();
-    const req = httpMock.expectOne('/api/folders');
+  it('lists an org folder tree', () => {
+    service.listFolders('org-1').subscribe();
+    const req = httpMock.expectOne('/api/organizations/org-1/folders');
     expect(req.request.method).toBe('GET');
     req.flush([]);
   });
 
-  it('creates a folder with a parent', () => {
-    service.createFolder('Summarization', 'root-id').subscribe();
-    const req = httpMock.expectOne('/api/folders');
+  it('creates a folder under an org with a parent', () => {
+    service.createFolder('org-1', 'Summarization', 'root-id').subscribe();
+    const req = httpMock.expectOne('/api/organizations/org-1/folders');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ name: 'Summarization', parentId: 'root-id' });
     req.flush({ id: 'x', parentId: 'root-id', name: 'Summarization' });
@@ -51,13 +51,6 @@ describe('FoldersApiService', () => {
   it('lists the prompts in a folder', () => {
     service.listFolderPrompts('abc').subscribe();
     const req = httpMock.expectOne('/api/folders/abc/prompts');
-    expect(req.request.method).toBe('GET');
-    req.flush([]);
-  });
-
-  it('lists the unfiled (root) prompts', () => {
-    service.listRootPrompts().subscribe();
-    const req = httpMock.expectOne('/api/folders/root/prompts');
     expect(req.request.method).toBe('GET');
     req.flush([]);
   });
