@@ -15,7 +15,6 @@
 - **2.1** Human Review UI — `NOT STARTED` — [detail](specs/2.1.md)
 - **2.2** Prompt-Engineering Advisory — `NOT STARTED` — [detail](specs/2.2.md)
 - **2.3** Prompt Authoring UX — `NOT STARTED` — [detail](specs/2.3.md)
-- **2.4** UX Overhaul — App Shell, Navigation & Design-System Foundation — `IN PROGRESS` — [detail](specs/2.4.md)
 
 ## Phase 3 — Integrations & Ops
 - **3.1** Zatomic-backed Prompt Registry — `NOT STARTED` — [detail](specs/3.1.md)
@@ -25,6 +24,7 @@
 - **4.1** Authentication & Multi-User Access — `NOT STARTED` — [detail](specs/4.1.md)
 
 ## Archive
+- **2.4** UX Overhaul — App Shell, Navigation & Design-System Foundation — `DONE` — [detail](specs/archive/2.4.md)
 - **1.9** Organizations (top-level + permission boundary) + Prompts UX overhaul — `DONE` — [detail](specs/archive/1.9.md)
 - **1.7** Prompt Grouping (folders) + Unified Prompt Workspace — `DONE` — [detail](specs/archive/1.7.md)
 - **1.4** Score Tracking & Analytics — `DONE` — [detail](specs/archive/1.4.md)
