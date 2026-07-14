@@ -1,7 +1,16 @@
 import { test, expect } from '@playwright/test';
+import { deleteOrg } from './support';
 
 // Drives org + folder navigation end to end against the running stack (1.9): create an org, add a
-// folder, descend into it, file a prompt there, and confirm it's scoped to that folder.
+// folder, descend into it, file a prompt there, and confirm it's scoped to that folder. The org is
+// created through the UI (covering that flow) and deleted on teardown so nothing is left behind.
+let orgId = '';
+
+test.afterEach(async ({ request }) => {
+  await deleteOrg(request, orgId);
+  orgId = '';
+});
+
 test('creates an org and folder, files a prompt into it, and navigates by folder', async ({ page }) => {
   const stamp = Date.now();
   const org = `e2e org ${stamp}`;
@@ -10,11 +19,18 @@ test('creates an org and folder, files a prompt into it, and navigates by folder
 
   await page.goto('/prompts');
 
-  // Create an isolated organization and select it.
+  // Create an isolated organization via the UI and select it; capture its id from the create
+  // response so teardown can delete it reliably.
   await page.getByTestId('toggle-new-org').click();
   await page.fill('#orgName', org);
-  await page.getByTestId('create-org').click();
-  await expect(page.getByTestId('org-select')).toHaveValue(/.+/);
+  const [orgRes] = await Promise.all([
+    page.waitForResponse(
+      (r) => r.url().endsWith('/api/organizations') && r.request().method() === 'POST',
+    ),
+    page.getByTestId('create-org').click(),
+  ]);
+  orgId = (await orgRes.json()).id;
+  await expect(page.getByTestId('org-select')).toHaveValue(orgId);
 
   // Create a top-level folder (at the org root), then descend into it.
   await page.getByTestId('toggle-new-folder').click();

@@ -1,21 +1,33 @@
 import { test, expect } from '@playwright/test';
+import { createOrg, deleteOrg, orgName } from './support';
 
-// Drives datasets end to end against the running stack (1.7): a dataset lives with a prompt, so
-// it is created from the prompt's workspace, then captured/browsed on its own detail page.
-// (Synthetic generation makes a live model call, so it is exercised by unit tests, not here.)
+// Drives datasets end to end against the running stack (1.7/1.9): a dataset lives with a prompt in
+// an org, so it is created from the prompt's workspace, then captured/browsed on its own detail
+// page. Runs inside a disposable org deleted on teardown. (Synthetic generation makes a live model
+// call, so it is exercised by unit tests, not here.)
+let orgId = '';
+
+test.afterEach(async ({ request }) => {
+  await deleteOrg(request, orgId);
+  orgId = '';
+});
+
 test('creates a dataset in a prompt workspace, captures a fixture, and filters by origin', async ({
   page,
+  request,
 }) => {
   const stamp = Date.now();
   const promptName = `e2e ds-owner ${stamp}`;
   const datasetName = `e2e dataset ${stamp}`;
+  orgId = await createOrg(request, orgName('datasets'));
 
-  // An owning prompt (in the default org), opened in its workspace.
+  // An owning prompt in the disposable org, opened in its workspace.
   await page.goto('/prompts');
+  await page.getByTestId('org-select').selectOption(orgId);
   await page.getByTestId('toggle-new-prompt').click();
   await page.fill('#name', promptName);
   await page.getByTestId('create-prompt').click();
-  await page.getByTestId('prompts').getByText(promptName).click();
+  await page.getByTestId('prompts').getByRole('link', { name: promptName }).click();
   await expect(page.getByRole('heading', { name: promptName })).toBeVisible();
 
   // Create a dataset under the prompt, then open it.
