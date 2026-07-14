@@ -4,6 +4,40 @@ All notable changes to this project are documented here. Versions follow one uni
 SemVer (pre-1.0 `0.x`) across the API, web, and eval-runner. A release is a tagged, verified
 **compose-stack build** — there is no hosted deployment yet (production deploy is spec 3.2).
 
+## [0.5.0] — 2026-07-14
+
+Makes the app coherent: one shell, one navigation model, a product dashboard, and the brand
+system applied throughout — with no API or domain change.
+
+### Added
+
+- **[#2.4] UX Overhaul — App Shell, Navigation & Design-System Foundation**
+  ([detail](specs/archive/2.4.md)) — a **persistent global organization context**
+  (`OrgContextStore`, signals-based; persisted to localStorage **and** a `?org=` query param)
+  that scopes prompts, datasets, analytics, and the dashboard from a topbar switcher; a redesigned
+  topbar (`Dashboard · Prompts · Analytics`); a **landing dashboard** at `/` (built on a bounded
+  facade over existing read APIs — org prompts + latest scores, recent runs, open regressions),
+  retiring the echo skeleton from product nav (`/_skeleton`); a **shared UI kit** under
+  `web/src/app/shared/` (PageHeader, Breadcrumb, Loading/Empty/Error, StatusBadge + origin/scorer/
+  severity chips) applied to every page; eval runs made discoverable with a run linking back to its
+  dataset **and** prompt.
+
+### Changed
+
+- Design-system pass: brand primitives (`.sb-badge`/`.sb-chip`/`.sb-card`, button variants,
+  `.sb-field--error`) adopted app-wide, replacing raw emoji/plain-text status; **no hardcoded hex**
+  (light + dark follow `data-theme` via `--sb-*` tokens by construction).
+- IA reconciliation: the prompt workspace is the hub; `/datasets` demoted from the topbar to a
+  deep-link browse; `/analytics` kept as an org-scoped cross-prompt destination. Long stacked pages
+  grouped into setup / data / action with progressive disclosure.
+
+### Notes
+
+- **UI-only** — no prompts API/domain change and no new endpoints; dashboard aggregates are a
+  client-side fan-out over existing read APIs (2.4's "no API change" deferral resolved to `built`).
+- Deployable artifact is still the compose stack (local + CI only). CI gates: `backend`,
+  `eval-runner`, `web`, `compose-smoke`. Hosted deployment remains spec 3.2.
+
 ## [0.4.0] — 2026-07-14
 
 Organizes the registry: prompts group into folders under a top-level organization, with
