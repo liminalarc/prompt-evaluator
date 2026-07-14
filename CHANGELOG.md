@@ -4,6 +4,36 @@ All notable changes to this project are documented here. Versions follow one uni
 SemVer (pre-1.0 `0.x`) across the API, web, and eval-runner. A release is a tagged, verified
 **compose-stack build** — there is no hosted deployment yet (production deploy is spec 3.2).
 
+## [0.6.0] — 2026-07-14
+
+Adds authentication and multi-user access: users sign in and their access is scoped to the
+organizations they belong to.
+
+### Added
+
+- **[#4.1] Authentication & Multi-User Access** ([detail](specs/archive/4.1.md)) —
+  cookie-session auth over an **in-process Identity bounded context** (self-service registration,
+  login/logout, and password forgot/reset behind an `IEmailSender` seam with enumeration-resistant
+  responses). Credentials live in Infrastructure behind an `IUserDirectory` port (ASP.NET Core
+  Identity over a separate `AppIdentityDbContext`), so `Domain` stays framework-free.
+- **Per-organization authorization** enforced across every API data endpoint — the **organization
+  is the permission boundary** (resolved from `Prompt.OrganizationId`): non-members get `403`,
+  the org switcher lists only accessible orgs, and creating an org grants the creator ownership.
+- **Angular auth**: `/login`, `/register`, `/forgot-password`, `/reset-password`, a route guard,
+  and an HTTP interceptor (cookie credentials + 401→login); the shell shows the current user +
+  logout only when authenticated.
+- **eval-runner as an internal trusted service** — authenticated by a shared `X-Service-Token`
+  (`EvalRunner__ServiceToken` ↔ `EVAL_RUNNER_SERVICE_TOKEN`), distinct from user credentials;
+  enforced on its work endpoints, probes stay open.
+
+### Notes
+
+- **New backlog from 4.1's deferrals** (all reconciled): **[#4.2]** SSO / OAuth (new spec, not
+  scheduled); **[#3.2]** gains the concrete hosted email provider plus two multi-instance auth-
+  hardening items (immediate live-session invalidation on reset, Data-Protection key persistence).
+- Deployable artifact is still the compose stack (local + CI only). CI gates: `backend`,
+  `eval-runner`, `web`, `compose-smoke`. Hosted deployment remains spec 3.2.
+
 ## [0.5.0] — 2026-07-14
 
 Makes the app coherent: one shell, one navigation model, a product dashboard, and the brand
