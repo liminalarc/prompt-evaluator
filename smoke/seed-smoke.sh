@@ -8,7 +8,9 @@
 #       Smoke Summarizer               a prompt, filed here, with a v1
 #         Smoke Summaries              a dataset owned by the prompt, 1 captured fixture
 #
-# Idempotent by name — safe to re-run; existing items are reused, not duplicated.
+# Resets first: any existing "Smoke Test" org is deleted (cascading to its folders/prompts/
+# datasets) before a fresh one is seeded, so the app always holds exactly one clean smoke set.
+# Other organizations (e.g. Default) are left untouched.
 #
 # Usage:
 #   ./smoke/seed-smoke.sh                          # against http://localhost:4240
@@ -30,15 +32,19 @@ curl -sf "$BASE/health" >/dev/null 2>&1 || {
   exit 1
 }
 
-# --- "Smoke Test" organization (the top-level boundary) ---
-org_id=$(curl -s "$BASE/api/organizations" | find_by_name "Smoke Test")
-if [ -z "$org_id" ]; then
-  org_id=$(curl -sf -X POST "$BASE/api/organizations" -H 'Content-Type: application/json' \
-    -d '{"name":"Smoke Test"}' | jget "['id']")
-  echo "+ created organization 'Smoke Test'"
-else
-  echo ". organization 'Smoke Test' already present"
+# --- reset: remove any existing "Smoke Test" org so there is only ever one clean set. Deleting
+#     the org cascades to its folders, prompts, and those prompts' datasets. Other orgs (Default,
+#     etc.) are left untouched. ---
+existing=$(curl -s "$BASE/api/organizations" | find_by_name "Smoke Test")
+if [ -n "$existing" ]; then
+  curl -sf -X DELETE "$BASE/api/organizations/$existing" >/dev/null
+  echo "- reset: removed the previous 'Smoke Test' org and its contents"
 fi
+
+# --- "Smoke Test" organization (the top-level boundary), created fresh ---
+org_id=$(curl -sf -X POST "$BASE/api/organizations" -H 'Content-Type: application/json' \
+  -d '{"name":"Smoke Test"}' | jget "['id']")
+echo "+ created organization 'Smoke Test'"
 
 # --- "Summarization" folder in the org ---
 folder_id=$(curl -s "$BASE/api/organizations/$org_id/folders" | find_by_name "Summarization")

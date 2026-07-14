@@ -15,5 +15,11 @@ public interface IOrganizationRepository
     /// <summary>Every organization — for the switcher (access-filtered by 4.1 later; all for now).</summary>
     Task<IReadOnlyList<Organization>> ListAsync(CancellationToken ct = default);
 
+    /// <summary>
+    /// Deletes an organization and everything under it (its folders, prompts, and those prompts'
+    /// datasets cascade via the FKs). No-op if it does not exist.
+    /// </summary>
+    Task DeleteAsync(Guid id, CancellationToken ct = default);
+
     Task SaveChangesAsync(CancellationToken ct = default);
 }

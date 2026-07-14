@@ -22,5 +22,11 @@ internal sealed class InMemoryOrganizationRepo : IOrganizationRepository
     public Task<IReadOnlyList<Organization>> ListAsync(CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<Organization>>(Saved);
 
+    public Task DeleteAsync(Guid id, CancellationToken ct = default)
+    {
+        Saved.RemoveAll(o => o.Id == id);
+        return Task.CompletedTask;
+    }
+
     public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
 }

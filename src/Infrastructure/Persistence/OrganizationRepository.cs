@@ -18,6 +18,10 @@ public sealed class OrganizationRepository(EvalDbContext db) : IOrganizationRepo
     public async Task<IReadOnlyList<Organization>> ListAsync(CancellationToken ct = default)
         => await db.Organizations.OrderBy(o => o.Name).ToListAsync(ct);
 
+    public async Task DeleteAsync(Guid id, CancellationToken ct = default)
+        // FK cascades remove the org's folders, prompts, and those prompts' datasets/fixtures.
+        => await db.Organizations.Where(o => o.Id == id).ExecuteDeleteAsync(ct);
+
     public Task SaveChangesAsync(CancellationToken ct = default)
         => db.SaveChangesAsync(ct);
 }

@@ -47,6 +47,13 @@ public static class OrganizationEndpoints
             }
         });
 
+        // Deletes an org and everything under it (folders, prompts, datasets cascade). Idempotent.
+        group.MapDelete("/{id:guid}", async (Guid id, IOrganizationRepository repository, CancellationToken ct) =>
+        {
+            await repository.DeleteAsync(id, ct);
+            return Results.NoContent();
+        });
+
         return app;
     }
 }

@@ -80,4 +80,34 @@ public sealed class OrganizationsEndpointTests : IAsyncLifetime
         var res = await client.PutAsJsonAsync($"/api/organizations/{Guid.NewGuid()}", new { name = "X" });
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
     }
+
+    private sealed record PromptDto(Guid Id, Guid? FolderId, string Name);
+
+    [Fact]
+    public async Task Delete_removes_the_org_and_cascades_to_its_prompts()
+    {
+        var client = _factory.CreateClient();
+        var org = await (await client.PostAsJsonAsync("/api/organizations", new { name = "Acme" }))
+            .Content.ReadFromJsonAsync<OrgDto>();
+        var prompt = await (await client.PostAsJsonAsync($"/api/organizations/{org!.Id}/prompts",
+            new { name = "Summarizer", description = (string?)null }))
+            .Content.ReadFromJsonAsync<PromptDto>();
+
+        var del = await client.DeleteAsync($"/api/organizations/{org.Id}");
+        Assert.Equal(HttpStatusCode.NoContent, del.StatusCode);
+
+        // The org is gone from the list, and its prompt cascaded away.
+        var orgs = await client.GetFromJsonAsync<List<OrgDto>>("/api/organizations");
+        Assert.DoesNotContain(orgs!, o => o.Id == org.Id);
+        var get = await client.GetAsync($"/api/prompts/{prompt!.Id}");
+        Assert.Equal(HttpStatusCode.NotFound, get.StatusCode);
+    }
+
+    [Fact]
+    public async Task Delete_a_missing_org_is_a_no_op_204()
+    {
+        var client = _factory.CreateClient();
+        var res = await client.DeleteAsync($"/api/organizations/{Guid.NewGuid()}");
+        Assert.Equal(HttpStatusCode.NoContent, res.StatusCode);
+    }
 }

@@ -34,7 +34,9 @@ workspace — its versions, its datasets, and its analytics on one page.
 
 ## Notes
 
-- Idempotent by name: re-running reuses existing items instead of duplicating them.
+- **Resets first:** each run deletes any existing `Smoke Test` org (cascading to its folders,
+  prompts, and datasets) before seeding a fresh one — so the app always holds exactly one clean
+  smoke set, never accumulating. Other orgs (e.g. `Default`) are left untouched.
 - Needs `curl` + `python` on PATH (both ship with the dev environment / Git Bash).
 - Starting from a **fresh** DB? `docker compose down -v` first, then `up`, then seed — see the
   migration note in `specs/archive/1.7.md`.
