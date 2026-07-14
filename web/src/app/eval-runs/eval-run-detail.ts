@@ -1,30 +1,53 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { EvalRun } from '../eval-run';
+import { PromptsApiService } from '../prompts/prompts-api.service';
+import { DatasetsApiService } from '../datasets/datasets-api.service';
+import {
+  Breadcrumb,
+  Chip,
+  Crumb,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  PageHeader,
+  StatusBadge,
+  passBadge,
+} from '../shared';
 import { EvalRunsApiService } from './eval-runs-api.service';
 
 @Component({
   selector: 'app-eval-run-detail',
-  imports: [RouterLink],
+  imports: [
+    RouterLink,
+    Breadcrumb,
+    Chip,
+    EmptyState,
+    ErrorState,
+    LoadingState,
+    PageHeader,
+    StatusBadge,
+  ],
   template: `
     <section class="panel">
-      <a class="back" routerLink="/datasets">← All datasets</a>
+      <app-breadcrumb [items]="crumbs()" />
 
-      @if (error(); as message) {
-        <div class="error-box" data-testid="error">{{ message }}</div>
-      }
-
-      @if (run(); as r) {
-        <header class="panel__head">
-          <h1 class="title">Eval run</h1>
-          <p class="subtitle">
-            {{ r.results.length }} fixture(s) · {{ scoreCount(r) }} score(s) ·
-            <a [routerLink]="['/datasets', r.datasetId]">dataset</a>
-          </p>
-        </header>
+      @if (loading()) {
+        <app-loading-state label="Loading run…" />
+      } @else if (error(); as message) {
+        <app-error-state [message]="message" />
+      } @else if (run(); as r) {
+        <app-page-header heading="Eval run" [subtitle]="summary(r)">
+          <a actions class="sb-btn sb-btn--sm" [routerLink]="['/datasets', r.datasetId]"
+            >View dataset</a
+          >
+          <a actions class="sb-btn sb-btn--sm" [routerLink]="['/prompts', r.promptId]"
+            >View prompt</a
+          >
+        </app-page-header>
 
         @if (r.results.length === 0) {
-          <p class="empty" data-testid="no-results">This run has no fixture results.</p>
+          <app-empty-state message="This run has no fixture results." data-testid="no-results" />
         } @else {
           @for (fixtureRun of r.results; track fixtureRun.fixtureId) {
             <div class="sb-card fixture-run" data-testid="fixture-run">
@@ -51,10 +74,21 @@ import { EvalRunsApiService } from './eval-runs-api.service';
                 <tbody>
                   @for (score of fixtureRun.scores; track score.scorerIdentity) {
                     <tr [attr.data-scorer]="score.scorerKind">
-                      <td>{{ score.scorerKind }}</td>
-                      <td>{{ score.judgeModel ?? '—' }}</td>
+                      <td><app-chip [label]="score.scorerKind" /></td>
+                      <td>
+                        @if (score.judgeModel; as m) {
+                          <app-chip [label]="m" />
+                        } @else {
+                          —
+                        }
+                      </td>
                       <td>{{ score.value }}</td>
-                      <td>{{ score.passed === null ? '—' : score.passed ? '✅' : '❌' }}</td>
+                      <td>
+                        <app-status-badge
+                          [variant]="pass(score.passed).variant"
+                          [label]="pass(score.passed).label"
+                        />
+                      </td>
                       <td>{{ score.detail ?? '—' }}</td>
                     </tr>
                   }
@@ -70,17 +104,53 @@ import { EvalRunsApiService } from './eval-runs-api.service';
 })
 export class EvalRunDetail implements OnInit {
   private readonly api = inject(EvalRunsApiService);
+  private readonly promptsApi = inject(PromptsApiService);
+  private readonly datasetsApi = inject(DatasetsApiService);
   private readonly route = inject(ActivatedRoute);
 
   protected readonly run = signal<EvalRun | null>(null);
   protected readonly error = signal<string | null>(null);
+  protected readonly loading = signal(true);
+  protected readonly promptName = signal<string | null>(null);
+  protected readonly datasetName = signal<string | null>(null);
+
+  protected readonly pass = passBadge;
+
+  // A run links back to both its prompt and its dataset (2.4) — the trail names them once loaded.
+  protected readonly crumbs = computed<Crumb[]>(() => {
+    const r = this.run();
+    if (!r) return [{ label: 'Dashboard', link: '/' }];
+    return [
+      { label: 'Dashboard', link: '/' },
+      { label: this.promptName() ?? 'Prompt', link: ['/prompts', r.promptId] },
+      { label: this.datasetName() ?? 'Dataset', link: ['/datasets', r.datasetId] },
+      { label: 'Eval run' },
+    ];
+  });
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
     this.api.getRun(id).subscribe({
-      next: (r) => this.run.set(r),
-      error: () => this.error.set('Could not load the eval run.'),
+      next: (r) => {
+        this.run.set(r);
+        this.loading.set(false);
+        // Names for the breadcrumb + back-links; failures leave the generic labels in place.
+        this.promptsApi
+          .getPrompt(r.promptId)
+          .subscribe({ next: (p) => this.promptName.set(p.name) });
+        this.datasetsApi
+          .getDataset(r.datasetId)
+          .subscribe({ next: (d) => this.datasetName.set(d.name) });
+      },
+      error: () => {
+        this.error.set('Could not load the eval run.');
+        this.loading.set(false);
+      },
     });
+  }
+
+  protected summary(run: EvalRun): string {
+    return `${run.results.length} fixture(s) · ${this.scoreCount(run)} score(s)`;
   }
 
   protected scoreCount(run: EvalRun): number {

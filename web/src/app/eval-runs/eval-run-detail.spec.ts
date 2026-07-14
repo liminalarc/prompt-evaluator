@@ -64,6 +64,17 @@ describe('EvalRunDetail', () => {
         },
       ],
     });
+    // The run links back to both its prompt and its dataset — names fetched for the trail.
+    httpMock
+      .expectOne('/api/prompts/p1')
+      .flush({ id: 'p1', folderId: null, name: 'Summarizer', description: null, versions: [] });
+    httpMock.expectOne('/api/datasets/d1').flush({
+      id: 'd1',
+      promptId: 'p1',
+      name: 'Summaries',
+      description: null,
+      fixtures: [],
+    });
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
@@ -74,6 +85,11 @@ describe('EvalRunDetail', () => {
     const rows = el.querySelectorAll('[data-testid="scores"] tbody tr');
     expect(rows.length).toBe(2);
     expect(el.querySelector('[data-scorer="LlmJudge"]')!.textContent).toContain('claude-opus-4-8');
+
+    // Back-links to the dataset and the prompt are both present.
+    const hrefs = Array.from(el.querySelectorAll('a')).map((a) => a.getAttribute('href'));
+    expect(hrefs).toContain('/prompts/p1');
+    expect(hrefs).toContain('/datasets/d1');
   });
 
   it('shows an error when the run cannot be loaded', () => {

@@ -7,6 +7,7 @@ import { PromptSummary } from '../prompt';
 import { FoldersApiService } from '../folders/folders-api.service';
 import { OrganizationsApiService } from '../organizations/organizations-api.service';
 import { OrgContextStore } from '../shared/org-context.store';
+import { EmptyState, ErrorState, PageHeader } from '../shared';
 import { PromptsApiService } from './prompts-api.service';
 
 interface Crumb {
@@ -16,19 +17,15 @@ interface Crumb {
 
 @Component({
   selector: 'app-prompt-list',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, EmptyState, ErrorState, PageHeader],
   template: `
     <section class="panel">
-      <header class="panel__head">
-        <h1 class="title">Prompts</h1>
-        <p class="subtitle">
-          Navigate {{ currentOrgName() }}'s folders — each prompt keeps its versions, datasets, and
-          analytics together. Switch organizations from the top bar.
-        </p>
-      </header>
-
-      <div class="orgbar">
+      <app-page-header
+        heading="Prompts"
+        subtitle="Navigate this organization's folders — each prompt keeps its versions, datasets, and analytics together. Switch organizations from the top bar."
+      >
         <button
+          actions
           class="sb-btn"
           type="button"
           data-testid="toggle-new-org"
@@ -36,7 +33,7 @@ interface Crumb {
         >
           + New org
         </button>
-      </div>
+      </app-page-header>
 
       @if (showNewOrg()) {
         <form class="reveal" (submit)="createOrg($event)">
@@ -56,7 +53,7 @@ interface Crumb {
       }
 
       @if (error(); as message) {
-        <div class="error-box" data-testid="error">{{ message }}</div>
+        <app-error-state [message]="message" />
       }
 
       @if (currentOrgId()) {
@@ -144,7 +141,10 @@ interface Crumb {
         }
 
         @if (currentPrompts().length === 0) {
-          <p class="empty" data-testid="empty">No prompts in {{ currentFolderName() }}.</p>
+          <app-empty-state
+            [message]="'No prompts in ' + currentFolderName() + '.'"
+            data-testid="empty"
+          />
         } @else {
           <table class="sb-table" data-testid="prompts">
             <thead>

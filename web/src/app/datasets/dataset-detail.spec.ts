@@ -44,7 +44,14 @@ describe('DatasetDetail origin filter', () => {
           provide: EvalRunsApiService,
           useValue: { listScorers: () => of([]), listRuns: () => of([]) },
         },
-        { provide: PromptsApiService, useValue: { listPrompts: () => of([]) } },
+        {
+          provide: PromptsApiService,
+          useValue: {
+            listPrompts: () => of([]),
+            getPrompt: () =>
+              of({ id: 'p1', folderId: null, name: 'Owner', description: null, versions: [] }),
+          },
+        },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => 'abc' } } } },
         provideRouter([]),
       ],

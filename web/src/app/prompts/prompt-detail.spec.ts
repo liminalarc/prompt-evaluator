@@ -46,7 +46,7 @@ describe('PromptDetail (unified workspace)', () => {
   it('shows the prompt together with its datasets', () => {
     const fixture = setup();
     const el: HTMLElement = fixture.nativeElement;
-    expect(el.querySelector('.title')?.textContent).toContain('Summarizer');
+    expect(el.querySelector('.page-header__title')?.textContent).toContain('Summarizer');
     expect(el.querySelector('[data-testid="datasets"]')?.textContent).toContain('Summaries');
   });
 

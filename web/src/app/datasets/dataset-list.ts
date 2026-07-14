@@ -4,30 +4,27 @@ import { forkJoin } from 'rxjs';
 import { DatasetSummary } from '../dataset';
 import { PromptsApiService } from '../prompts/prompts-api.service';
 import { OrgContextStore } from '../shared/org-context.store';
+import { EmptyState, ErrorState, LoadingState, PageHeader } from '../shared';
 import { DatasetsApiService } from './datasets-api.service';
 
 @Component({
   selector: 'app-dataset-list',
-  imports: [RouterLink],
+  imports: [RouterLink, EmptyState, ErrorState, LoadingState, PageHeader],
   template: `
     <section class="panel">
-      <header class="panel__head">
-        <h1 class="title">Datasets</h1>
-        <p class="subtitle">
-          Every dataset lives with a prompt — create and manage them from the prompt's workspace.
-          This is the cross-prompt browse view for the current organization.
-        </p>
-      </header>
+      <app-page-header
+        heading="Datasets"
+        subtitle="Every dataset lives with a prompt — create and manage them from the prompt's workspace. This is the cross-prompt browse view for the current organization."
+      />
 
       @if (error(); as message) {
-        <div class="error-box" data-testid="error">{{ message }}</div>
-      }
-
-      @if (datasets(); as list) {
+        <app-error-state [message]="message" />
+      } @else if (datasets(); as list) {
         @if (list.length === 0) {
-          <p class="empty" data-testid="empty">
-            No datasets yet — open a prompt and add one in its workspace.
-          </p>
+          <app-empty-state
+            message="No datasets yet — open a prompt and add one in its workspace."
+            data-testid="empty"
+          />
         } @else {
           <table class="sb-table" data-testid="datasets">
             <thead>
@@ -52,6 +49,8 @@ import { DatasetsApiService } from './datasets-api.service';
             </tbody>
           </table>
         }
+      } @else {
+        <app-loading-state label="Loading datasets…" />
       }
     </section>
   `,

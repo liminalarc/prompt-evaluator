@@ -7,31 +7,51 @@ import { TrendSeries } from '../analytics';
 import { DatasetsApiService } from '../datasets/datasets-api.service';
 import { AnalyticsApiService } from '../analytics/analytics-api.service';
 import { TrendChart } from '../analytics/trend-chart';
+import {
+  Breadcrumb,
+  Chip,
+  Crumb,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  PageHeader,
+} from '../shared';
 import { PromptsApiService } from './prompts-api.service';
 import { VersionDiff } from './version-diff';
 
 @Component({
   selector: 'app-prompt-detail',
-  imports: [FormsModule, RouterLink, VersionDiff, TrendChart],
+  imports: [
+    FormsModule,
+    RouterLink,
+    VersionDiff,
+    TrendChart,
+    Breadcrumb,
+    Chip,
+    EmptyState,
+    ErrorState,
+    LoadingState,
+    PageHeader,
+  ],
   template: `
     <section class="panel">
-      <a class="back" routerLink="/prompts">← All prompts</a>
+      <app-breadcrumb [items]="crumbs()" />
 
       @if (error(); as message) {
-        <div class="error-box" data-testid="error">{{ message }}</div>
+        <app-error-state [message]="message" />
       }
 
-      @if (prompt(); as p) {
-        <header class="panel__head">
-          <h1 class="title">{{ p.name }}</h1>
-          @if (p.description) {
-            <p class="subtitle">{{ p.description }}</p>
-          }
-        </header>
+      @if (loading()) {
+        <app-loading-state label="Loading prompt…" />
+      } @else if (prompt(); as p) {
+        <app-page-header [heading]="p.name" [subtitle]="p.description ?? ''" />
 
         <h2 class="section-title">Version history</h2>
         @if (p.versions.length === 0) {
-          <p class="empty" data-testid="no-versions">No versions yet — add the first below.</p>
+          <app-empty-state
+            message="No versions yet — add the first below."
+            data-testid="no-versions"
+          />
         } @else {
           <table class="sb-table" data-testid="versions">
             <thead>
@@ -47,9 +67,15 @@ import { VersionDiff } from './version-diff';
               @for (v of p.versions; track v.id) {
                 <tr>
                   <td>{{ v.versionNumber }}</td>
-                  <td>{{ v.targetModel }}</td>
+                  <td><app-chip [label]="v.targetModel" /></td>
                   <td>{{ v.label ?? '—' }}</td>
-                  <td>{{ v.sourceApp ?? '—' }}</td>
+                  <td>
+                    @if (v.sourceApp; as s) {
+                      <app-chip [label]="s" />
+                    } @else {
+                      —
+                    }
+                  </td>
                   <td>{{ v.createdAt }}</td>
                 </tr>
               }
@@ -94,7 +120,10 @@ import { VersionDiff } from './version-diff';
         </p>
         @if (datasets(); as ds) {
           @if (ds.length === 0) {
-            <p class="empty" data-testid="no-datasets">No datasets yet — create one below.</p>
+            <app-empty-state
+              message="No datasets yet — create one below."
+              data-testid="no-datasets"
+            />
           } @else {
             <table class="sb-table" data-testid="datasets">
               <thead>
@@ -153,9 +182,10 @@ import { VersionDiff } from './version-diff';
             <app-trend-chart [series]="trends()" />
           }
         } @else {
-          <p class="empty" data-testid="no-analytics">
-            Add a dataset and run this prompt to see analytics.
-          </p>
+          <app-empty-state
+            message="Add a dataset and run this prompt to see analytics."
+            data-testid="no-analytics"
+          />
         }
 
         <h2 class="section-title">Add a version</h2>
@@ -205,6 +235,13 @@ export class PromptDetail implements OnInit {
 
   protected readonly prompt = signal<Prompt | null>(null);
   protected readonly error = signal<string | null>(null);
+  protected readonly loading = signal(true);
+
+  protected readonly crumbs = computed<Crumb[]>(() => [
+    { label: 'Dashboard', link: '/' },
+    { label: 'Prompts', link: '/prompts' },
+    { label: this.prompt()?.name ?? 'Prompt' },
+  ]);
 
   protected readonly fromNumber = signal(1);
   protected readonly toNumber = signal(1);
@@ -234,12 +271,16 @@ export class PromptDetail implements OnInit {
     this.api.getPrompt(this.id).subscribe({
       next: (p) => {
         this.prompt.set(p);
+        this.loading.set(false);
         if (p.versions.length >= 2) {
           this.fromNumber.set(p.versions[p.versions.length - 2].versionNumber);
           this.toNumber.set(p.versions[p.versions.length - 1].versionNumber);
         }
       },
-      error: () => this.error.set('Could not load the prompt.'),
+      error: () => {
+        this.error.set('Could not load the prompt.');
+        this.loading.set(false);
+      },
     });
   }
 

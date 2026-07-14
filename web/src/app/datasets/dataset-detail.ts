@@ -6,6 +6,17 @@ import { EvalRunSummary, SCORER_KINDS, ScorerConfig, ScorerKind } from '../eval-
 import { Prompt, PromptSummary, PromptVersion } from '../prompt';
 import { EvalRunsApiService } from '../eval-runs/eval-runs-api.service';
 import { PromptsApiService } from '../prompts/prompts-api.service';
+import {
+  Breadcrumb,
+  Chip,
+  Crumb,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  PageHeader,
+  StatusBadge,
+  originBadge,
+} from '../shared';
 import { DatasetsApiService } from './datasets-api.service';
 
 type OriginFilter = 'all' | 'Captured' | 'Synthetic';
@@ -14,22 +25,29 @@ const JUDGE_MODELS = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
 
 @Component({
   selector: 'app-dataset-detail',
-  imports: [FormsModule, RouterLink],
+  imports: [
+    FormsModule,
+    RouterLink,
+    Breadcrumb,
+    Chip,
+    EmptyState,
+    ErrorState,
+    LoadingState,
+    PageHeader,
+    StatusBadge,
+  ],
   template: `
     <section class="panel">
-      <a class="back" routerLink="/datasets">← All datasets</a>
+      <app-breadcrumb [items]="crumbs()" />
 
       @if (error(); as message) {
-        <div class="error-box" data-testid="error">{{ message }}</div>
+        <app-error-state [message]="message" />
       }
 
-      @if (dataset(); as d) {
-        <header class="panel__head">
-          <h1 class="title">{{ d.name }}</h1>
-          @if (d.description) {
-            <p class="subtitle">{{ d.description }}</p>
-          }
-        </header>
+      @if (loading()) {
+        <app-loading-state label="Loading dataset…" />
+      } @else if (dataset(); as d) {
+        <app-page-header [heading]="d.name" [subtitle]="d.description ?? ''" />
 
         <h2 class="section-title">Fixtures</h2>
         <div class="filter">
@@ -47,7 +65,7 @@ const JUDGE_MODELS = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
         </div>
 
         @if (filteredFixtures().length === 0) {
-          <p class="empty" data-testid="no-fixtures">No fixtures for this filter.</p>
+          <app-empty-state message="No fixtures for this filter." data-testid="no-fixtures" />
         } @else {
           <table class="sb-table" data-testid="fixtures">
             <thead>
@@ -62,7 +80,12 @@ const JUDGE_MODELS = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
             <tbody>
               @for (f of filteredFixtures(); track f.id) {
                 <tr [attr.data-origin]="f.origin">
-                  <td>{{ f.origin }}</td>
+                  <td>
+                    <app-status-badge
+                      [variant]="originBadge(f.origin).variant"
+                      [label]="originBadge(f.origin).label"
+                    />
+                  </td>
                   <td>{{ f.input }}</td>
                   <td>{{ f.upstreamContext ?? '—' }}</td>
                   <td>{{ f.expectedOutput ?? '—' }}</td>
@@ -145,7 +168,7 @@ const JUDGE_MODELS = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
         <h2 class="section-title">Scorers</h2>
         <p class="subtitle">Configured once per dataset; every run scores with this set.</p>
         @if (scorers().length === 0) {
-          <p class="empty" data-testid="no-scorers">No scorers configured yet.</p>
+          <app-empty-state message="No scorers configured yet." data-testid="no-scorers" />
         } @else {
           <table class="sb-table" data-testid="scorers">
             <thead>
@@ -158,9 +181,15 @@ const JUDGE_MODELS = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
             <tbody>
               @for (s of scorers(); track s.id) {
                 <tr [attr.data-scorer]="s.kind">
-                  <td>{{ s.kind }}</td>
+                  <td><app-chip [label]="s.kind" /></td>
                   <td>{{ s.config || '—' }}</td>
-                  <td>{{ s.judgeModel ?? '—' }}</td>
+                  <td>
+                    @if (s.judgeModel; as m) {
+                      <app-chip [label]="m" />
+                    } @else {
+                      —
+                    }
+                  </td>
                 </tr>
               }
             </tbody>
@@ -257,7 +286,7 @@ const JUDGE_MODELS = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
 
         <h2 class="section-title">Runs</h2>
         @if (runs().length === 0) {
-          <p class="empty" data-testid="no-runs">No runs yet.</p>
+          <app-empty-state message="No runs yet." data-testid="no-runs" />
         } @else {
           <ul class="runs" data-testid="runs">
             @for (r of runs(); track r.id) {
@@ -286,8 +315,12 @@ export class DatasetDetail implements OnInit {
 
   protected readonly dataset = signal<Dataset | null>(null);
   protected readonly error = signal<string | null>(null);
+  protected readonly loading = signal(true);
+  protected readonly promptName = signal<string | null>(null);
   protected readonly originFilter = signal<OriginFilter>('all');
   protected readonly generating = signal(false);
+
+  protected readonly originBadge = originBadge;
 
   protected readonly promptInput = signal('');
   protected readonly slmOutput = signal('');
@@ -318,6 +351,17 @@ export class DatasetDetail implements OnInit {
 
   protected readonly isJudge = computed(() => this.scorerKind() === 'LlmJudge');
 
+  // A dataset lives with a prompt (1.7) — the trail leads back through its owning prompt workspace.
+  protected readonly crumbs = computed<Crumb[]>(() => {
+    const d = this.dataset();
+    if (!d) return [{ label: 'Dashboard', link: '/' }];
+    return [
+      { label: 'Dashboard', link: '/' },
+      { label: this.promptName() ?? 'Prompt', link: ['/prompts', d.promptId] },
+      { label: d.name },
+    ];
+  });
+
   ngOnInit(): void {
     this.id = this.route.snapshot.paramMap.get('id') ?? '';
     this.load();
@@ -328,8 +372,17 @@ export class DatasetDetail implements OnInit {
 
   private load(): void {
     this.api.getDataset(this.id).subscribe({
-      next: (d) => this.dataset.set(d),
-      error: () => this.error.set('Could not load the dataset.'),
+      next: (d) => {
+        this.dataset.set(d);
+        this.loading.set(false);
+        this.promptsApi
+          .getPrompt(d.promptId)
+          .subscribe({ next: (p) => this.promptName.set(p.name) });
+      },
+      error: () => {
+        this.error.set('Could not load the dataset.');
+        this.loading.set(false);
+      },
     });
   }
 

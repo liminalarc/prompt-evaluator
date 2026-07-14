@@ -16,6 +16,7 @@ import { PromptSummary, PromptVersion } from '../prompt';
 import { DatasetSummary } from '../dataset';
 import { TrendChart } from './trend-chart';
 import { VersionComparison } from './version-comparison';
+import { BadgeVariant, EmptyState, ErrorState, PageHeader, StatusBadge } from '../shared';
 
 /**
  * Score-tracking dashboard: pick a prompt + dataset, then see the score trend across versions
@@ -23,15 +24,22 @@ import { VersionComparison } from './version-comparison';
  */
 @Component({
   selector: 'app-analytics-dashboard',
-  imports: [FormsModule, DecimalPipe, TrendChart, VersionComparison],
+  imports: [
+    FormsModule,
+    DecimalPipe,
+    TrendChart,
+    VersionComparison,
+    EmptyState,
+    ErrorState,
+    PageHeader,
+    StatusBadge,
+  ],
   template: `
     <section class="panel">
-      <header class="panel__head">
-        <h1 class="title">Score Analytics</h1>
-        <p class="subtitle">
-          Trends and regressions per <code>Prompt × Version × Dataset × Scorer</code>.
-        </p>
-      </header>
+      <app-page-header
+        heading="Score Analytics"
+        subtitle="Trends and regressions per Prompt × Version × Dataset × Scorer."
+      />
 
       <form class="selectors">
         <div class="sb-field">
@@ -81,7 +89,7 @@ import { VersionComparison } from './version-comparison';
       </form>
 
       @if (error(); as message) {
-        <div class="error-box" data-testid="error">{{ message }}</div>
+        <app-error-state [message]="message" />
       }
 
       @if (promptId() && datasetId()) {
@@ -94,9 +102,10 @@ import { VersionComparison } from './version-comparison';
           <h2 class="section-title">Regressions</h2>
           @if (regressions(); as flags) {
             @if (flags.length === 0) {
-              <p class="empty" data-testid="no-regressions">
-                No regressions beyond the threshold. 🎉
-              </p>
+              <app-empty-state
+                message="No regressions beyond the threshold."
+                data-testid="no-regressions"
+              />
             } @else {
               <table class="sb-table" data-testid="regressions">
                 <thead>
@@ -116,7 +125,12 @@ import { VersionComparison } from './version-comparison';
                       <td>v{{ f.fromVersionNumber }} → v{{ f.toVersionNumber }}</td>
                       <td>{{ f.priorMean | number: '1.3-3' }}</td>
                       <td>{{ f.currentMean | number: '1.3-3' }}</td>
-                      <td class="delta-down">⚠ {{ f.delta | number: '1.3-3' }}</td>
+                      <td>
+                        <app-status-badge
+                          [variant]="deltaVariant(f.delta)"
+                          [label]="deltaLabel(f.delta)"
+                        />
+                      </td>
                       <td>{{ f.pValue != null ? (f.pValue | number: '1.4-4') : '—' }}</td>
                     </tr>
                   }
@@ -251,6 +265,15 @@ export class AnalyticsDashboard {
 
   protected label(flag: RegressionFlag): string {
     return scorerLabel(flag.scorer);
+  }
+
+  // A sharper drop reads as an error; a shallow one as a warning — both are flagged regressions.
+  protected deltaVariant(delta: number): BadgeVariant {
+    return delta <= -0.1 ? 'error' : 'warn';
+  }
+
+  protected deltaLabel(delta: number): string {
+    return delta.toFixed(3);
   }
 
   protected versionLabel(version: PromptVersion): string {
