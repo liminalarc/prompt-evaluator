@@ -5,18 +5,24 @@
   margin-bottom: var(--sb-space-2xl);
 }
 
+/* Stat-card accent (mirrors Stormboard): a brand-primary left border marks each prompt card as a
+   scored entity. Tokenized, subtle — the accent is on the rail, the card body stays neutral. */
 .dash-prompt {
   display: flex;
   flex-direction: column;
   gap: var(--sb-space-sm);
   padding: var(--sb-space-lg);
+  border-left: 3px solid var(--sb-primary);
   text-decoration: none;
   color: inherit;
-  transition: border-color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .dash-prompt:hover {
   border-color: var(--sb-primary);
+  box-shadow: var(--sb-shadow-sm);
 }
 
 .dash-prompt__head {

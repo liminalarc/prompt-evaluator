@@ -30,7 +30,7 @@ import { EvalRunsApiService } from './eval-runs-api.service';
     StatusBadge,
   ],
   template: `
-    <section class="panel">
+    <section class="panel panel--wide">
       <app-breadcrumb [items]="crumbs()" />
 
       @if (loading()) {

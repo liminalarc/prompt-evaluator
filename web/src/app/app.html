@@ -1,5 +1,22 @@
 <header class="topbar">
-  <span class="brand">LitmusAI</span>
+  <span class="brand">
+    <!-- Litmus-drop logo mark — blaze-orange (--sb-accent) glyph anchoring the wordmark. -->
+    <svg
+      class="brand__mark"
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        d="M12 2.5c0 0 6.5 7.7 6.5 12a6.5 6.5 0 0 1-13 0c0-4.3 6.5-12 6.5-12Z"
+        fill="var(--sb-accent)"
+      />
+      <circle cx="9.6" cy="15.2" r="1.9" fill="var(--sb-on-dark)" opacity="0.85" />
+    </svg>
+    <span class="brand__word">LitmusAI</span>
+  </span>
   @if (auth.isAuthenticated()) {
     <nav class="nav">
       <a
