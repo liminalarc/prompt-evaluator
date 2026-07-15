@@ -4,6 +4,34 @@ All notable changes to this project are documented here. Versions follow one uni
 SemVer (pre-1.0 `0.x`) across the API, web, and eval-runner. A release is a tagged, verified
 **compose-stack build** — there is no hosted deployment yet (production deploy is spec 3.2).
 
+## [0.8.0] — 2026-07-15
+
+Surfaces the running build in the app: a version badge + build chip in the UI, and an
+environment-channel signal that stays honest across upper environments.
+
+### Added
+
+- **[#3.3] Version display in the web UI + deploy-channel plumbing** ([detail](specs/archive/3.3.md))
+  — a flat, SPA-facing `GET /api/version` (`{version, commit, buildTime, environment, channel}`),
+  distinct from the aggregated `GET /version`. The web surfaces it via a root `VersionService` signal
+  loaded by an app initializer: a **footer build chip** (channel-keyed — `v<ver> · <sha>` in prod,
+  `dev · <sha>` in dev, `local` locally; full detail on hover) and a topbar **environment badge**
+  (`DEV`/`STAGING`/`LOCAL`, none in prod). A failed/absent fetch renders nothing.
+- **Deploy channel (`DEPLOY_CHANNEL`) as the reliable dev/prod discriminator** — `ASPNETCORE_-
+  ENVIRONMENT` isn't trusted (a host can report `Production` everywhere), so the UI keys off
+  `channel`: CI derives `APP_CHANNEL` from the git-ref (`v*` tag → `prod`, else `dev`) → Docker
+  `ENV DEPLOY_CHANNEL` → the payload; a plain local build is `local`. `channel` is an open string, so
+  staging/prod deploy targets drop in with spec 3.2. `compose-smoke` now asserts `/api/version`
+  carries the channel through the web proxy (shape, never a literal).
+
+### Notes
+
+- Follows the Stormboard pattern (channel over environment; footer chip + env badge). Mirrored here
+  by user decision; the flat endpoint matches Stormboard exactly while the aggregated `/version` is
+  left unchanged.
+- Deployable artifact is still the compose stack (local + CI only). CI gates: `backend`,
+  `eval-runner`, `web`, `compose-smoke`. Hosted deployment remains spec 3.2.
+
 ## [0.7.0] — 2026-07-15
 
 Sharpens the eval loop end-to-end: a cohesive branded UI, deletion/lifecycle for registry
