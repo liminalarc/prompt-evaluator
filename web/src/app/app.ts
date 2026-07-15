@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from './auth/auth.service';
 import { OrgContextStore } from './shared/org-context.store';
-import { ConfirmDialog, ThemeService } from './shared';
+import { ConfirmDialog, ThemeService, VersionService } from './shared';
 
 @Component({
   selector: 'app-root',
@@ -15,6 +15,7 @@ export class App {
   protected readonly org = inject(OrgContextStore);
   protected readonly auth = inject(AuthService);
   protected readonly theme = inject(ThemeService);
+  protected readonly version = inject(VersionService);
   private readonly router = inject(Router);
 
   constructor() {

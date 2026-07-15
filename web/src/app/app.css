@@ -30,6 +30,22 @@
   letter-spacing: 0.01em;
 }
 
+/* Environment badge (3.3) — a small on-dark pill next to the wordmark. Blaze-tinted so a non-prod
+   environment reads at a glance; never shown in prod. */
+.env-badge {
+  margin-left: var(--sb-space-sm);
+  padding: 2px var(--sb-space-sm);
+  border: 1px solid var(--sb-accent);
+  border-radius: var(--sb-radius-full);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--sb-on-dark);
+  font-size: 0.68rem;
+  font-weight: var(--sb-type-h3-weight);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
 .nav {
   display: flex;
   gap: var(--sb-space-lg);
@@ -154,4 +170,26 @@
 
 .page {
   padding: var(--sb-space-3xl) var(--sb-space-lg);
+}
+
+/* Footer build chip (3.3) — the running version, fixed in the bottom-right corner. Deliberately
+   faint and out of the way; hover reveals the full detail (tooltip). Theme-aware via tokens. */
+.build-chip {
+  position: fixed;
+  right: var(--sb-space-md);
+  bottom: var(--sb-space-sm);
+  z-index: 10;
+  padding: 2px var(--sb-space-sm);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--sb-radius-full);
+  background: var(--sb-surface);
+  color: var(--sb-text-faint);
+  font-family: var(--sb-font-mono);
+  font-size: 0.7rem;
+  user-select: text;
+  cursor: default;
+}
+
+.build-chip:hover {
+  color: var(--sb-text-muted);
 }

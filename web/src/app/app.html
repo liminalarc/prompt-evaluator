@@ -16,6 +16,10 @@
       <circle cx="9.6" cy="15.2" r="1.9" fill="var(--sb-on-dark)" opacity="0.85" />
     </svg>
     <span class="brand__word">LitmusAI</span>
+    <!-- Environment badge (3.3): channel-keyed (DEV / STAGING / LOCAL); nothing in prod. -->
+    @if (version.envBadge(); as env) {
+      <span class="env-badge" data-testid="env-badge">{{ env }}</span>
+    }
   </span>
   @if (auth.isAuthenticated()) {
     <nav class="nav">
@@ -82,5 +86,12 @@
 <main class="page">
   <router-outlet />
 </main>
+
+<!-- Footer build chip (3.3): the running version, subtle + fixed in the corner. Full detail on hover. -->
+@if (version.buildLabel(); as label) {
+  <span class="build-chip" data-testid="build-chip" [title]="version.buildTooltip()">{{
+    label
+  }}</span>
+}
 
 <app-confirm-dialog />

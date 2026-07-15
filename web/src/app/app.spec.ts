@@ -2,12 +2,15 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
 import { of } from 'rxjs';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { App } from './app';
 import { routes } from './app.routes';
 import { AuthService } from './auth/auth.service';
 import { AuthUser } from './auth/user';
 import { OrganizationsApiService } from './organizations/organizations-api.service';
 import { OrgContextStore } from './shared/org-context.store';
+import { VersionService } from './shared';
 
 /** A minimal signals-based stand-in for AuthService — authenticated by default. */
 function fakeAuth(user: AuthUser | null = { id: 'u1', email: 'a@b.co', displayName: 'Ada' }) {
@@ -20,20 +23,28 @@ function fakeAuth(user: AuthUser | null = { id: 'u1', email: 'a@b.co', displayNa
   };
 }
 
+/** Stand-in for VersionService exposing the two chrome labels; defaults to "nothing loaded". */
+function fakeVersion(envBadge: string | null = null, buildLabel: string | null = null) {
+  return { envBadge: () => envBadge, buildLabel: () => buildLabel, buildTooltip: () => null };
+}
+
 describe('App shell', () => {
   const orgs = [
     { id: 'o1', name: 'Acme' },
     { id: 'o2', name: 'Globex' },
   ];
 
-  function configure(auth = fakeAuth()) {
+  function configure(auth = fakeAuth(), version = fakeVersion()) {
     localStorage.clear();
     TestBed.configureTestingModule({
       imports: [App],
       providers: [
         provideRouter(routes),
+        provideHttpClient(),
+        provideHttpClientTesting(),
         { provide: AuthService, useValue: auth },
         { provide: OrganizationsApiService, useValue: { listOrganizations: () => of(orgs) } },
+        { provide: VersionService, useValue: version },
       ],
     });
   }
@@ -102,5 +113,25 @@ describe('App shell', () => {
     expect(el.querySelector('a.nav__link')).toBeFalsy();
     expect(el.querySelector('[data-testid="org-select"]')).toBeFalsy();
     expect(el.querySelector('[data-testid="logout"]')).toBeFalsy();
+  });
+
+  it('renders the env badge + build chip from the version service (3.3)', () => {
+    configure(fakeAuth(), fakeVersion('DEV', 'dev · abc1234'));
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="env-badge"]')?.textContent?.trim()).toBe('DEV');
+    expect(el.querySelector('[data-testid="build-chip"]')?.textContent?.trim()).toBe(
+      'dev · abc1234',
+    );
+  });
+
+  it('omits the env badge + build chip when no version is loaded', () => {
+    configure(); // default fakeVersion → both null
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="env-badge"]')).toBeFalsy();
+    expect(el.querySelector('[data-testid="build-chip"]')).toBeFalsy();
   });
 });

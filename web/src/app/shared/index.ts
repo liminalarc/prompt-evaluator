@@ -10,4 +10,5 @@ export { Card, CardFoot } from './card';
 export { ConfirmDialog } from './confirm-dialog';
 export { ConfirmService, type ConfirmRequest } from './confirm.service';
 export { ThemeService, type Theme } from './theme.service';
+export { VersionService, type VersionInfo } from './version.service';
 export { passBadge, originBadge, type BadgeVariant, type BadgeSpec } from './status';
