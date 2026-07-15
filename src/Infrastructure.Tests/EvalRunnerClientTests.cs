@@ -163,6 +163,8 @@ public class EvalRunnerClientTests
 
         Assert.Equal("the summary", execution.Output);
         Assert.Equal(512, execution.LatencyMs);
+        Assert.Equal(1000, execution.InputTokens);
+        Assert.Equal(500, execution.OutputTokens);
         Assert.Equal(0.0175m, execution.CostUsd);
         Assert.Equal("/execute-prompt", handler.LastRequest!.RequestUri!.AbsolutePath);
 

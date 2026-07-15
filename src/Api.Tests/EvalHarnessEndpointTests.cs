@@ -26,7 +26,7 @@ public sealed class EvalHarnessEndpointTests : IAsyncLifetime
             => Task.FromResult<IReadOnlyList<GeneratedFixtureData>>([]);
         public Task<PromptExecution> ExecutePromptAsync(
             string promptContent, string targetModel, string input, string? upstreamContext, CancellationToken ct = default)
-            => Task.FromResult(new PromptExecution($"OUT:{input}", 100, 0.001m));
+            => Task.FromResult(new PromptExecution($"OUT:{input}", 100, 1000, 500, 0.001m));
         public Task<JudgeVerdict> JudgeAsync(
             string rubric, string input, string output, string? expected, string judgeModel, CancellationToken ct = default)
             => Task.FromResult(new JudgeVerdict(0.9, true, $"judged by {judgeModel}"));
@@ -62,7 +62,7 @@ public sealed class EvalHarnessEndpointTests : IAsyncLifetime
     private sealed record VersionDto(Guid Id);
     private sealed record ScorerDto(Guid Id, string Kind, string Identity, string? JudgeModel);
     private sealed record ScoreDto(string ScorerKind, string ScorerIdentity, string? JudgeModel, double Value, bool? Passed, string? Detail);
-    private sealed record FixtureRunDto(Guid FixtureId, string ModelOutput, int LatencyMs, decimal? CostUsd, List<ScoreDto> Scores);
+    private sealed record FixtureRunDto(Guid FixtureId, string ModelOutput, int LatencyMs, int InputTokens, int OutputTokens, decimal? CostUsd, List<ScoreDto> Scores);
     private sealed record RunDto(Guid Id, Guid PromptId, Guid PromptVersionId, Guid DatasetId, List<FixtureRunDto> Results);
 
     private async Task<(Guid promptId, Guid versionId, Guid datasetId)> SeedAsync(HttpClient client)
@@ -114,6 +114,8 @@ public sealed class EvalHarnessEndpointTests : IAsyncLifetime
         var fixtureRun = Assert.Single(run.Results);
         Assert.Equal("OUT:hello world", fixtureRun.ModelOutput);
         Assert.Equal(100, fixtureRun.LatencyMs);
+        Assert.Equal(1000, fixtureRun.InputTokens);
+        Assert.Equal(500, fixtureRun.OutputTokens);
         Assert.Equal(2, fixtureRun.Scores.Count); // deterministic + judge composed
         Assert.Contains(fixtureRun.Scores, s => s.ScorerKind == "Regex" && s.Value == 1.0);
         var judged = Assert.Single(fixtureRun.Scores, s => s.ScorerKind == "LlmJudge");

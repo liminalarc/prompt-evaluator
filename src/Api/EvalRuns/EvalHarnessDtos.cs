@@ -35,12 +35,20 @@ public sealed record ScoreResponse(
 }
 
 public sealed record FixtureRunResponse(
-    Guid FixtureId, string ModelOutput, int LatencyMs, decimal? CostUsd, IReadOnlyList<ScoreResponse> Scores)
+    Guid FixtureId,
+    string ModelOutput,
+    int LatencyMs,
+    int InputTokens,
+    int OutputTokens,
+    decimal? CostUsd,
+    IReadOnlyList<ScoreResponse> Scores)
 {
     public static FixtureRunResponse From(FixtureRun fixtureRun) => new(
         fixtureRun.FixtureId,
         fixtureRun.ModelOutput,
         fixtureRun.LatencyMs,
+        fixtureRun.InputTokens,
+        fixtureRun.OutputTokens,
         fixtureRun.CostUsd,
         fixtureRun.Scores.Select(ScoreResponse.From).ToList());
 }

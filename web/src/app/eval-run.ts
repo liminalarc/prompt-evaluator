@@ -13,6 +13,8 @@ export interface FixtureRunView {
   fixtureId: string;
   modelOutput: string;
   latencyMs: number;
+  inputTokens: number;
+  outputTokens: number;
   costUsd: number | null;
   scores: ScoreView[];
 }

@@ -42,7 +42,7 @@ public class TrendAnalyticsTests
         var run = EvalRun.Create(promptId, versionId, datasetId, at);
         foreach (var (value, passed) in fixtureScores)
         {
-            var fr = run.RecordFixture(Guid.NewGuid(), "out", latencyMs: 10, costUsd: 0.001m);
+            var fr = run.RecordFixture(Guid.NewGuid(), "out", latencyMs: 10, inputTokens: 0, outputTokens: 0, costUsd: 0.001m);
             fr.AddScore(scorer, value, passed, detail: null);
         }
         return run;
@@ -122,7 +122,7 @@ public class TrendAnalyticsTests
         await promptRepo.AddAsync(prompt);
         var runs = new InMemoryEvalRunRepo();
         var run = EvalRun.Create(prompt.Id, v1.Id, datasetId, When);
-        var fr = run.RecordFixture(Guid.NewGuid(), "out", 10, 0.001m);
+        var fr = run.RecordFixture(Guid.NewGuid(), "out", 10, 0, 0, 0.001m);
         fr.AddScore(regex, 1.0, true, null);
         fr.AddScore(judge, 0.8, null, "ok");
         await runs.AddAsync(run);

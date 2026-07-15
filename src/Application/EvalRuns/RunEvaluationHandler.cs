@@ -47,7 +47,8 @@ public sealed class RunEvaluationHandler(
                 version.Content, version.TargetModel, fixture.Input, fixture.UpstreamContext, ct);
 
             var fixtureRun = run.RecordFixture(
-                fixture.Id, execution.Output, execution.LatencyMs, execution.CostUsd);
+                fixture.Id, execution.Output, execution.LatencyMs,
+                execution.InputTokens, execution.OutputTokens, execution.CostUsd);
 
             var context = new ScoringContext(
                 fixture.Input, fixture.ExpectedOutput, execution.Output, execution.LatencyMs, execution.CostUsd);

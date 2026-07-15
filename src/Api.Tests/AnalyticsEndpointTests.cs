@@ -28,7 +28,7 @@ public sealed class AnalyticsEndpointTests : IAsyncLifetime
             => Task.FromResult<IReadOnlyList<GeneratedFixtureData>>([]);
         public Task<PromptExecution> ExecutePromptAsync(
             string promptContent, string targetModel, string input, string? upstreamContext, CancellationToken ct = default)
-            => Task.FromResult(new PromptExecution(promptContent, 100, 0.001m));
+            => Task.FromResult(new PromptExecution(promptContent, 100, 1000, 500, 0.001m));
         public Task<JudgeVerdict> JudgeAsync(
             string rubric, string input, string output, string? expected, string judgeModel, CancellationToken ct = default)
         {

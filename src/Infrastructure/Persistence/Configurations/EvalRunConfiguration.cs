@@ -25,6 +25,8 @@ internal sealed class EvalRunConfiguration : IEntityTypeConfiguration<EvalRun>
             fr.Property(x => x.FixtureId).IsRequired();
             fr.Property(x => x.ModelOutput).IsRequired();
             fr.Property(x => x.LatencyMs).IsRequired();
+            fr.Property(x => x.InputTokens).IsRequired();
+            fr.Property(x => x.OutputTokens).IsRequired();
             fr.Property(x => x.CostUsd);
 
             // Each FixtureRun owns its Scores; each Score owns its ScorerDescriptor (flattened to columns).

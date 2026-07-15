@@ -33,7 +33,8 @@ public class EvalHarnessTests
             string promptContent, string targetModel, string input, string? upstreamContext, CancellationToken ct = default)
         {
             ExecutedInputs.Add(input);
-            return Task.FromResult(new PromptExecution($"OUT:{input}", LatencyMs: 100, CostUsd: 0.001m));
+            return Task.FromResult(new PromptExecution(
+                $"OUT:{input}", LatencyMs: 100, InputTokens: 1000, OutputTokens: 500, CostUsd: 0.001m));
         }
 
         public Task<JudgeVerdict> JudgeAsync(
@@ -145,6 +146,8 @@ public class EvalHarnessTests
         {
             Assert.StartsWith("OUT:", fixtureRun.ModelOutput);
             Assert.Equal(100, fixtureRun.LatencyMs);
+            Assert.Equal(1000, fixtureRun.InputTokens);
+            Assert.Equal(500, fixtureRun.OutputTokens);
             Assert.Equal(0.001m, fixtureRun.CostUsd);
             Assert.Equal(2, fixtureRun.Scores.Count); // deterministic + judge compose (AC #4)
             Assert.All(fixtureRun.Scores.Where(s => s.Scorer.Kind == ScorerKind.Regex), s => Assert.Equal(1.0, s.Value));

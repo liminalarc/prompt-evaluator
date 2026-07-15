@@ -44,20 +44,25 @@ public sealed class EvalRun
     }
 
     /// <summary>
-    /// Records a fixture's execution — the captured model output plus its latency/cost — and returns
-    /// the <see cref="FixtureRun"/> so the caller can attach scores. Output may be empty; cost may be
-    /// null. Latency and cost must be non-negative.
+    /// Records a fixture's execution — the captured model output plus its latency, token counts, and
+    /// cost — and returns the <see cref="FixtureRun"/> so the caller can attach scores. Output may be
+    /// empty; cost may be null. Latency, token counts, and cost must be non-negative.
     /// </summary>
-    public FixtureRun RecordFixture(Guid fixtureId, string modelOutput, int latencyMs, decimal? costUsd)
+    public FixtureRun RecordFixture(
+        Guid fixtureId, string modelOutput, int latencyMs, int inputTokens, int outputTokens, decimal? costUsd)
     {
         Require(fixtureId, nameof(fixtureId));
         ArgumentNullException.ThrowIfNull(modelOutput);
         if (latencyMs < 0)
             throw new ArgumentOutOfRangeException(nameof(latencyMs), latencyMs, "Latency must be non-negative.");
+        if (inputTokens < 0)
+            throw new ArgumentOutOfRangeException(nameof(inputTokens), inputTokens, "Input tokens must be non-negative.");
+        if (outputTokens < 0)
+            throw new ArgumentOutOfRangeException(nameof(outputTokens), outputTokens, "Output tokens must be non-negative.");
         if (costUsd is < 0)
             throw new ArgumentOutOfRangeException(nameof(costUsd), costUsd, "Cost must be non-negative.");
 
-        var result = new FixtureRun(fixtureId, modelOutput, latencyMs, costUsd);
+        var result = new FixtureRun(fixtureId, modelOutput, latencyMs, inputTokens, outputTokens, costUsd);
         _results.Add(result);
         return result;
     }

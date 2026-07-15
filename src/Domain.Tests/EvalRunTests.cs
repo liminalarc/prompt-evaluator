@@ -32,8 +32,8 @@ public class EvalRunTests
         var run = NewRun();
         var scorer = ScorerDescriptor.Deterministic(ScorerKind.Regex, "^x");
 
-        var s1 = run.RecordFixture(Guid.NewGuid(), "x1", 10, null).AddScore(scorer, 1.0, true, null);
-        var s2 = run.RecordFixture(Guid.NewGuid(), "x2", 10, null).AddScore(scorer, 0.5, false, null);
+        var s1 = run.RecordFixture(Guid.NewGuid(), "x1", 10, 0, 0, null).AddScore(scorer, 1.0, true, null);
+        var s2 = run.RecordFixture(Guid.NewGuid(), "x2", 10, 0, 0, null).AddScore(scorer, 0.5, false, null);
 
         Assert.NotSame(s1.Scorer, s2.Scorer);              // distinct instances
         Assert.Equal(s1.Scorer.Identity, s2.Scorer.Identity); // same value/identity
@@ -53,13 +53,16 @@ public class EvalRunTests
         var run = NewRun();
         var fixtureId = Guid.NewGuid();
 
-        var result = run.RecordFixture(fixtureId, "the model output", latencyMs: 1234, costUsd: 0.0021m);
+        var result = run.RecordFixture(
+            fixtureId, "the model output", latencyMs: 1234, inputTokens: 1000, outputTokens: 500, costUsd: 0.0021m);
 
         var only = Assert.Single(run.Results);
         Assert.Same(result, only);
         Assert.Equal(fixtureId, only.FixtureId);
         Assert.Equal("the model output", only.ModelOutput);
         Assert.Equal(1234, only.LatencyMs);
+        Assert.Equal(1000, only.InputTokens);
+        Assert.Equal(500, only.OutputTokens);
         Assert.Equal(0.0021m, only.CostUsd);
         Assert.Empty(only.Scores);
     }
@@ -70,9 +73,11 @@ public class EvalRunTests
         // A subject model can legitimately return an empty string; cost may be unknown.
         var run = NewRun();
 
-        var result = run.RecordFixture(Guid.NewGuid(), string.Empty, latencyMs: 0, costUsd: null);
+        var result = run.RecordFixture(Guid.NewGuid(), string.Empty, latencyMs: 0, inputTokens: 0, outputTokens: 0, costUsd: null);
 
         Assert.Equal(string.Empty, result.ModelOutput);
+        Assert.Equal(0, result.InputTokens);
+        Assert.Equal(0, result.OutputTokens);
         Assert.Null(result.CostUsd);
     }
 
@@ -81,10 +86,12 @@ public class EvalRunTests
     {
         var run = NewRun();
 
-        Assert.Throws<ArgumentException>(() => run.RecordFixture(Guid.Empty, "out", 1, null));
-        Assert.Throws<ArgumentNullException>(() => run.RecordFixture(Guid.NewGuid(), null!, 1, null));
-        Assert.Throws<ArgumentOutOfRangeException>(() => run.RecordFixture(Guid.NewGuid(), "out", -1, null));
-        Assert.Throws<ArgumentOutOfRangeException>(() => run.RecordFixture(Guid.NewGuid(), "out", 1, -0.01m));
+        Assert.Throws<ArgumentException>(() => run.RecordFixture(Guid.Empty, "out", 1, 0, 0, null));
+        Assert.Throws<ArgumentNullException>(() => run.RecordFixture(Guid.NewGuid(), null!, 1, 0, 0, null));
+        Assert.Throws<ArgumentOutOfRangeException>(() => run.RecordFixture(Guid.NewGuid(), "out", -1, 0, 0, null));
+        Assert.Throws<ArgumentOutOfRangeException>(() => run.RecordFixture(Guid.NewGuid(), "out", 1, -1, 0, null));
+        Assert.Throws<ArgumentOutOfRangeException>(() => run.RecordFixture(Guid.NewGuid(), "out", 1, 0, -1, null));
+        Assert.Throws<ArgumentOutOfRangeException>(() => run.RecordFixture(Guid.NewGuid(), "out", 1, 0, 0, -0.01m));
     }
 
     [Fact]
@@ -92,7 +99,7 @@ public class EvalRunTests
     {
         // AC #4: scorers compose — deterministic + llm-judge produce distinct scores per fixture.
         var run = NewRun();
-        var fixture = run.RecordFixture(Guid.NewGuid(), "42", latencyMs: 10, costUsd: null);
+        var fixture = run.RecordFixture(Guid.NewGuid(), "42", latencyMs: 10, inputTokens: 0, outputTokens: 0, costUsd: null);
 
         var regex = ScorerDescriptor.Deterministic(ScorerKind.Regex, @"^\d+$");
         var judge = ScorerDescriptor.LlmJudge("Is the answer correct?", "claude-opus-4-8");
@@ -112,7 +119,7 @@ public class EvalRunTests
     public void AddScore_rejects_value_outside_the_unit_interval(double value)
     {
         var run = NewRun();
-        var fixture = run.RecordFixture(Guid.NewGuid(), "out", 1, null);
+        var fixture = run.RecordFixture(Guid.NewGuid(), "out", 1, 0, 0, null);
         var scorer = ScorerDescriptor.Deterministic(ScorerKind.ExactMatch);
 
         Assert.Throws<ArgumentOutOfRangeException>(() => fixture.AddScore(scorer, value, null, null));
@@ -123,8 +130,8 @@ public class EvalRunTests
     {
         var run = NewRun();
 
-        run.RecordFixture(Guid.NewGuid(), "a", 1, null);
-        run.RecordFixture(Guid.NewGuid(), "b", 1, null);
+        run.RecordFixture(Guid.NewGuid(), "a", 1, 0, 0, null);
+        run.RecordFixture(Guid.NewGuid(), "b", 1, 0, 0, null);
 
         Assert.Equal(2, run.Results.Count);
         // The exposed collections are read-only snapshots — no external mutation path.

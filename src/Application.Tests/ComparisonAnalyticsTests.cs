@@ -40,7 +40,7 @@ public class ComparisonAnalyticsTests
     {
         var run = EvalRun.Create(promptId, versionId, datasetId, at);
         foreach (var (fixtureId, value) in scores)
-            run.RecordFixture(fixtureId, "out", 10, 0.001m).AddScore(scorer, value, value >= 0.5, null);
+            run.RecordFixture(fixtureId, "out", 10, 0, 0, 0.001m).AddScore(scorer, value, value >= 0.5, null);
         return run;
     }
 

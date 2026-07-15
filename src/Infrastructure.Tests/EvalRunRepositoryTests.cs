@@ -40,7 +40,8 @@ public sealed class EvalRunRepositoryTests : IAsyncLifetime
 
         var run = EvalRun.Create(promptId, versionId, datasetId,
             new DateTimeOffset(2026, 7, 12, 0, 0, 0, TimeSpan.Zero));
-        var fixture = run.RecordFixture(fixtureId, "the answer is 42", latencyMs: 512, costUsd: 0.0034m);
+        var fixture = run.RecordFixture(
+            fixtureId, "the answer is 42", latencyMs: 512, inputTokens: 1000, outputTokens: 500, costUsd: 0.0034m);
         fixture.AddScore(ScorerDescriptor.Deterministic(ScorerKind.Regex, @"^\D*\d+"), value: 1.0, passed: true, detail: null);
         fixture.AddScore(ScorerDescriptor.LlmJudge("Is it correct?", "claude-opus-4-8"), value: 0.9, passed: null, detail: "accurate");
 
@@ -58,6 +59,8 @@ public sealed class EvalRunRepositoryTests : IAsyncLifetime
         Assert.Equal(fixtureId, loadedFixture.FixtureId);
         Assert.Equal("the answer is 42", loadedFixture.ModelOutput);
         Assert.Equal(512, loadedFixture.LatencyMs);
+        Assert.Equal(1000, loadedFixture.InputTokens);
+        Assert.Equal(500, loadedFixture.OutputTokens);
         Assert.Equal(0.0034m, loadedFixture.CostUsd);
 
         Assert.Equal(2, loadedFixture.Scores.Count);
@@ -82,7 +85,7 @@ public sealed class EvalRunRepositoryTests : IAsyncLifetime
         async Task Seed(Guid prompt, Guid dataset, DateTimeOffset at)
         {
             var run = EvalRun.Create(prompt, Guid.NewGuid(), dataset, at);
-            run.RecordFixture(Guid.NewGuid(), "x", 1, 0.0m)
+            run.RecordFixture(Guid.NewGuid(), "x", 1, 0, 0, 0.0m)
                 .AddScore(ScorerDescriptor.Deterministic(ScorerKind.Regex, "^x"), 1.0, true, null);
             await repo.AddAsync(run);
         }

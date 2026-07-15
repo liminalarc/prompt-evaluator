@@ -19,18 +19,26 @@ public sealed class FixtureRun
 
     public int LatencyMs { get; private set; }
 
+    /// <summary>Prompt (input) tokens the subject model consumed producing the output.</summary>
+    public int InputTokens { get; private set; }
+
+    /// <summary>Completion (output) tokens the subject model generated.</summary>
+    public int OutputTokens { get; private set; }
+
     /// <summary>Cost in USD of producing the output, or null when unknown.</summary>
     public decimal? CostUsd { get; private set; }
 
     /// <summary>The scores for this output — one per scorer. Append-only from the outside.</summary>
     public IReadOnlyList<Score> Scores => _scores.AsReadOnly();
 
-    internal FixtureRun(Guid fixtureId, string modelOutput, int latencyMs, decimal? costUsd)
+    internal FixtureRun(Guid fixtureId, string modelOutput, int latencyMs, int inputTokens, int outputTokens, decimal? costUsd)
     {
         Id = Guid.NewGuid();
         FixtureId = fixtureId;
         ModelOutput = modelOutput;
         LatencyMs = latencyMs;
+        InputTokens = inputTokens;
+        OutputTokens = outputTokens;
         CostUsd = costUsd;
     }
 

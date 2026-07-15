@@ -56,7 +56,7 @@ public sealed class EvalRunnerClient(HttpClient http) : IEvaluationRunner
         var body = await response.Content.ReadFromJsonAsync<ExecuteResponse>(ct)
             ?? throw new InvalidOperationException("eval-runner returned an empty /execute-prompt body.");
 
-        return new PromptExecution(body.Output, body.LatencyMs, body.CostUsd);
+        return new PromptExecution(body.Output, body.LatencyMs, body.InputTokens, body.OutputTokens, body.CostUsd);
     }
 
     public async Task<JudgeVerdict> JudgeAsync(
@@ -113,6 +113,8 @@ public sealed class EvalRunnerClient(HttpClient http) : IEvaluationRunner
     private sealed record ExecuteResponse(
         [property: JsonPropertyName("output")] string Output,
         [property: JsonPropertyName("latency_ms")] int LatencyMs,
+        [property: JsonPropertyName("input_tokens")] int InputTokens,
+        [property: JsonPropertyName("output_tokens")] int OutputTokens,
         [property: JsonPropertyName("cost_usd")] decimal? CostUsd);
 
     private sealed record JudgeRequest(

@@ -42,6 +42,8 @@ describe('EvalRunDetail', () => {
           fixtureId: 'f1',
           modelOutput: 'OUT:hello',
           latencyMs: 100,
+          inputTokens: 1000,
+          outputTokens: 500,
           costUsd: 0.001,
           scores: [
             {
@@ -85,6 +87,10 @@ describe('EvalRunDetail', () => {
     const rows = el.querySelectorAll('[data-testid="scores"] tbody tr');
     expect(rows.length).toBe(2);
     expect(el.querySelector('[data-scorer="LlmJudge"]')!.textContent).toContain('claude-opus-4-8');
+
+    // Per-fixture input/output token counts are surfaced (2.5).
+    expect(el.querySelector('[data-testid="input-tokens"]')!.textContent).toContain('1000');
+    expect(el.querySelector('[data-testid="output-tokens"]')!.textContent).toContain('500');
 
     // Back-links to the dataset and the prompt are both present.
     const hrefs = Array.from(el.querySelectorAll('a')).map((a) => a.getAttribute('href'));
