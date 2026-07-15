@@ -1,3 +1,7 @@
+/* Shared page layout for the eval-loop screens (prompt workspace, dataset detail, eval-run
+   detail, analytics dashboard, prompts browse, datasets browse). Only genuinely-shared layout
+   primitives live here; screen-specific rules live in each component's inline `styles`. */
+
 .panel {
   width: 100%;
   max-width: 820px;
@@ -8,21 +12,13 @@
   gap: var(--sb-space-lg);
 }
 
-.panel__head {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sb-space-xs);
-}
-
-.title {
-  margin: 0;
-  font-size: var(--sb-type-h2-size);
-  font-weight: var(--sb-type-h2-weight);
-  color: var(--sb-text);
+/* Data-dense screens widen beyond the single narrow column. */
+.panel--wide {
+  max-width: 1180px;
 }
 
 .section-title {
-  margin: var(--sb-space-md) 0 0;
+  margin: 0;
   font-size: var(--sb-type-h3-size);
   font-weight: var(--sb-type-h3-weight);
   color: var(--sb-text);
@@ -34,129 +30,62 @@
   font-size: var(--sb-type-small-size);
 }
 
-.create,
-.add-version {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sb-space-md);
-  padding: var(--sb-space-lg);
-  border-radius: var(--sb-radius-md);
-  background: var(--sb-surface);
-}
-
-.compare {
-  display: flex;
+/* Responsive multi-column card layout — cards flow side by side on wide screens, stack on narrow. */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: var(--sb-space-lg);
-  font-size: var(--sb-type-small-size);
-  color: var(--sb-text-secondary);
+  align-items: start;
 }
 
-.back {
-  font-size: var(--sb-type-small-size);
-  color: var(--sb-text-secondary);
-  text-decoration: none;
+/* A card (or block) that spans the whole grid row. */
+.col-span-all {
+  grid-column: 1 / -1;
 }
 
-.empty {
-  color: var(--sb-text-muted);
-  font-size: var(--sb-type-small-size);
-}
-
-.error-box {
-  padding: var(--sb-space-md) var(--sb-space-lg);
-  border-radius: var(--sb-radius-md);
-  background: var(--sb-error-surface);
-  color: var(--sb-error);
-  font-size: var(--sb-type-small-size);
-}
-
-/* Organization + folder navigation (1.9): an org switcher, a breadcrumb, and a main-area
-   file-explorer view — subfolders you descend into, then prompts in the current folder. */
-.orgbar {
-  display: flex;
-  align-items: center;
-  gap: var(--sb-space-md);
-  flex-wrap: wrap;
-}
-
-.orgbar select {
-  min-width: 180px;
-}
-
-.breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: var(--sb-space-xs);
-  flex-wrap: wrap;
-  margin: 0;
-  font-size: var(--sb-type-small-size);
-}
-
-.crumb {
-  border: none;
-  background: transparent;
-  padding: 2px 4px;
-  border-radius: var(--sb-radius-sm);
-  color: var(--sb-primary);
-  cursor: pointer;
-  font-size: inherit;
-}
-
-.crumb:disabled {
-  color: var(--sb-text);
-  cursor: default;
-  font-weight: 600;
-}
-
-.crumb__sep {
-  color: var(--sb-text-muted);
-}
-
+/* A horizontal row of actions/toggles. */
 .toolbar {
   display: flex;
   gap: var(--sb-space-sm);
   flex-wrap: wrap;
+  align-items: center;
 }
 
-.reveal {
+/* Creation / reveal forms — a single aligned column that fills its card. */
+.form-stack {
   display: flex;
-  gap: var(--sb-space-sm);
-  align-items: flex-end;
-  flex-wrap: wrap;
-  padding: var(--sb-space-md);
-  border-radius: var(--sb-radius-md);
-  background: var(--sb-surface);
+  flex-direction: column;
+  gap: var(--sb-space-md);
 }
 
-.reveal .sb-field {
-  flex: 1;
-  min-width: 160px;
+.form-stack .sb-field {
+  width: 100%;
 }
 
-.folders-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: var(--sb-space-sm);
+.form-stack input,
+.form-stack select,
+.form-stack textarea {
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.folder-card {
+.form-stack textarea {
+  resize: vertical;
+}
+
+.form-stack .sb-btn {
+  align-self: flex-start;
+}
+
+/* An inline label+control field (control sits beside its label) — e.g. an origin filter. */
+.field-inline {
   display: flex;
   align-items: center;
-  gap: var(--sb-space-xs);
-  text-align: left;
-  padding: var(--sb-space-sm) var(--sb-space-md);
-  border: 1px solid var(--sb-border);
-  border-radius: var(--sb-radius-md);
-  background: var(--sb-surface);
-  color: var(--sb-text);
-  font-size: var(--sb-type-small-size);
-  cursor: pointer;
+  gap: var(--sb-space-sm);
 }
 
-.folder-card:hover {
-  border-color: var(--sb-primary);
-}
-
-.folder-card__icon {
-  color: var(--sb-text-muted);
+.field-inline > label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--sb-text-secondary);
 }

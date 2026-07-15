@@ -16,7 +16,7 @@ import { PromptSummary, PromptVersion } from '../prompt';
 import { DatasetSummary } from '../dataset';
 import { TrendChart } from './trend-chart';
 import { VersionComparison } from './version-comparison';
-import { BadgeVariant, EmptyState, ErrorState, PageHeader, StatusBadge } from '../shared';
+import { BadgeVariant, Card, EmptyState, ErrorState, PageHeader, StatusBadge } from '../shared';
 
 /**
  * Score-tracking dashboard: pick a prompt + dataset, then see the score trend across versions
@@ -29,161 +29,165 @@ import { BadgeVariant, EmptyState, ErrorState, PageHeader, StatusBadge } from '.
     DecimalPipe,
     TrendChart,
     VersionComparison,
+    Card,
     EmptyState,
     ErrorState,
     PageHeader,
     StatusBadge,
   ],
   template: `
-    <section class="panel">
+    <section class="panel panel--wide">
       <app-page-header
         heading="Score Analytics"
         subtitle="Trends and regressions per Prompt × Version × Dataset × Scorer."
       />
 
-      <form class="selectors">
-        <div class="sb-field">
-          <label for="prompt">Prompt</label>
-          <select
-            id="prompt"
-            name="prompt"
-            data-testid="prompt-select"
-            [ngModel]="promptId()"
-            (ngModelChange)="selectPrompt($event)"
-          >
-            <option [ngValue]="null">Select a prompt…</option>
-            @for (p of prompts(); track p.id) {
-              <option [ngValue]="p.id">{{ p.name }}</option>
-            }
-          </select>
-        </div>
-        <div class="sb-field">
-          <label for="dataset">Dataset</label>
-          <select
-            id="dataset"
-            name="dataset"
-            data-testid="dataset-select"
-            [ngModel]="datasetId()"
-            (ngModelChange)="datasetId.set($event)"
-          >
-            <option [ngValue]="null">Select a dataset…</option>
-            @for (d of datasets(); track d.id) {
-              <option [ngValue]="d.id">{{ d.name }}</option>
-            }
-          </select>
-        </div>
-        <div class="sb-field">
-          <label for="threshold">Regression threshold</label>
-          <input
-            id="threshold"
-            name="threshold"
-            type="number"
-            min="0"
-            max="1"
-            step="0.01"
-            data-testid="threshold"
-            [ngModel]="threshold()"
-            (ngModelChange)="threshold.set($event)"
-          />
-        </div>
-      </form>
+      <app-card>
+        <form class="selectors">
+          <div class="sb-field">
+            <label for="prompt">Prompt</label>
+            <select
+              id="prompt"
+              name="prompt"
+              data-testid="prompt-select"
+              [ngModel]="promptId()"
+              (ngModelChange)="selectPrompt($event)"
+            >
+              <option [ngValue]="null">Select a prompt…</option>
+              @for (p of prompts(); track p.id) {
+                <option [ngValue]="p.id">{{ p.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="sb-field">
+            <label for="dataset">Dataset</label>
+            <select
+              id="dataset"
+              name="dataset"
+              data-testid="dataset-select"
+              [ngModel]="datasetId()"
+              (ngModelChange)="datasetId.set($event)"
+            >
+              <option [ngValue]="null">Select a dataset…</option>
+              @for (d of datasets(); track d.id) {
+                <option [ngValue]="d.id">{{ d.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="sb-field">
+            <label for="threshold">Regression threshold</label>
+            <input
+              id="threshold"
+              name="threshold"
+              type="number"
+              min="0"
+              max="1"
+              step="0.01"
+              data-testid="threshold"
+              [ngModel]="threshold()"
+              (ngModelChange)="threshold.set($event)"
+            />
+          </div>
+        </form>
+      </app-card>
 
       @if (error(); as message) {
         <app-error-state [message]="message" />
       }
 
       @if (promptId() && datasetId()) {
-        <div class="card chart-card">
-          <h2 class="section-title">Score trend</h2>
+        <app-card heading="Score trend">
           <app-trend-chart [series]="trends()" />
-        </div>
+        </app-card>
 
-        <div class="card">
-          <h2 class="section-title">Regressions</h2>
-          @if (regressions(); as flags) {
-            @if (flags.length === 0) {
+        <div class="card-grid">
+          <app-card heading="Regressions">
+            @if (regressions(); as flags) {
+              @if (flags.length === 0) {
+                <app-empty-state
+                  message="No regressions beyond the threshold."
+                  data-testid="no-regressions"
+                />
+              } @else {
+                <table class="sb-table" data-testid="regressions">
+                  <thead>
+                    <tr>
+                      <th>Scorer</th>
+                      <th>From → To</th>
+                      <th>Prior</th>
+                      <th>Current</th>
+                      <th>Δ</th>
+                      <th>p-value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (f of flags; track f.scorer.identity + f.toVersionId) {
+                      <tr data-testid="regression-row">
+                        <td>{{ label(f) }}</td>
+                        <td>v{{ f.fromVersionNumber }} → v{{ f.toVersionNumber }}</td>
+                        <td>{{ f.priorMean | number: '1.3-3' }}</td>
+                        <td>{{ f.currentMean | number: '1.3-3' }}</td>
+                        <td>
+                          <app-status-badge
+                            [variant]="deltaVariant(f.delta)"
+                            [label]="deltaLabel(f.delta)"
+                          />
+                        </td>
+                        <td>{{ f.pValue != null ? (f.pValue | number: '1.4-4') : '—' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            }
+          </app-card>
+
+          <app-card heading="Compare versions">
+            @if (versions().length < 2) {
               <app-empty-state
-                message="No regressions beyond the threshold."
-                data-testid="no-regressions"
+                message="Need at least two versions to compare."
+                data-testid="compare-need-versions"
               />
             } @else {
-              <table class="sb-table" data-testid="regressions">
-                <thead>
-                  <tr>
-                    <th>Scorer</th>
-                    <th>From → To</th>
-                    <th>Prior</th>
-                    <th>Current</th>
-                    <th>Δ</th>
-                    <th>p-value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (f of flags; track f.scorer.identity + f.toVersionId) {
-                    <tr data-testid="regression-row">
-                      <td>{{ label(f) }}</td>
-                      <td>v{{ f.fromVersionNumber }} → v{{ f.toVersionNumber }}</td>
-                      <td>{{ f.priorMean | number: '1.3-3' }}</td>
-                      <td>{{ f.currentMean | number: '1.3-3' }}</td>
-                      <td>
-                        <app-status-badge
-                          [variant]="deltaVariant(f.delta)"
-                          [label]="deltaLabel(f.delta)"
-                        />
-                      </td>
-                      <td>{{ f.pValue != null ? (f.pValue | number: '1.4-4') : '—' }}</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
+              <form class="selectors">
+                <div class="sb-field">
+                  <label for="from">From</label>
+                  <select
+                    id="from"
+                    name="from"
+                    data-testid="from-version"
+                    [ngModel]="fromVersionId()"
+                    (ngModelChange)="fromVersionId.set($event)"
+                  >
+                    @for (v of versions(); track v.id) {
+                      <option [ngValue]="v.id">{{ versionLabel(v) }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="sb-field">
+                  <label for="to">To</label>
+                  <select
+                    id="to"
+                    name="to"
+                    data-testid="to-version"
+                    [ngModel]="toVersionId()"
+                    (ngModelChange)="toVersionId.set($event)"
+                  >
+                    @for (v of versions(); track v.id) {
+                      <option [ngValue]="v.id">{{ versionLabel(v) }}</option>
+                    }
+                  </select>
+                </div>
+              </form>
+              <app-version-comparison [comparison]="comparison()" />
             }
-          }
-        </div>
-
-        <div class="card">
-          <h2 class="section-title">Compare versions</h2>
-          @if (versions().length < 2) {
-            <p class="empty" data-testid="compare-need-versions">
-              Need at least two versions to compare.
-            </p>
-          } @else {
-            <form class="selectors">
-              <div class="sb-field">
-                <label for="from">From</label>
-                <select
-                  id="from"
-                  name="from"
-                  data-testid="from-version"
-                  [ngModel]="fromVersionId()"
-                  (ngModelChange)="fromVersionId.set($event)"
-                >
-                  @for (v of versions(); track v.id) {
-                    <option [ngValue]="v.id">{{ versionLabel(v) }}</option>
-                  }
-                </select>
-              </div>
-              <div class="sb-field">
-                <label for="to">To</label>
-                <select
-                  id="to"
-                  name="to"
-                  data-testid="to-version"
-                  [ngModel]="toVersionId()"
-                  (ngModelChange)="toVersionId.set($event)"
-                >
-                  @for (v of versions(); track v.id) {
-                    <option [ngValue]="v.id">{{ versionLabel(v) }}</option>
-                  }
-                </select>
-              </div>
-            </form>
-            <app-version-comparison [comparison]="comparison()" />
-          }
+          </app-card>
         </div>
       } @else {
-        <p class="empty" data-testid="prompt-choose">
-          Choose a prompt and a dataset to see its score history.
-        </p>
+        <app-empty-state
+          message="Choose a prompt and a dataset to see its score history."
+          data-testid="prompt-choose"
+        />
       }
     </section>
   `,
@@ -255,6 +259,8 @@ export class AnalyticsDashboard {
       datasets: this.datasetsApi.listDatasets(),
     }).subscribe({
       next: ({ prompts, datasets }) => {
+        // Ignore a response for an org we've since switched away from (stale-response race).
+        if (this.orgStore.currentOrgId() !== orgId) return;
         const orgPromptIds = new Set(prompts.map((p) => p.id));
         this.prompts.set(prompts);
         this.datasets.set(datasets.filter((d) => orgPromptIds.has(d.promptId)));

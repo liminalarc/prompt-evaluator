@@ -7,7 +7,7 @@ import { PromptSummary } from '../prompt';
 import { FoldersApiService } from '../folders/folders-api.service';
 import { OrganizationsApiService } from '../organizations/organizations-api.service';
 import { OrgContextStore } from '../shared/org-context.store';
-import { EmptyState, ErrorState, PageHeader } from '../shared';
+import { Card, EmptyState, ErrorState, PageHeader } from '../shared';
 import { PromptsApiService } from './prompts-api.service';
 
 interface Crumb {
@@ -17,9 +17,9 @@ interface Crumb {
 
 @Component({
   selector: 'app-prompt-list',
-  imports: [FormsModule, RouterLink, EmptyState, ErrorState, PageHeader],
+  imports: [FormsModule, RouterLink, Card, EmptyState, ErrorState, PageHeader],
   template: `
-    <section class="panel">
+    <section class="panel panel--wide">
       <app-page-header
         heading="Prompts"
         subtitle="Navigate this organization's folders — each prompt keeps its versions, datasets, and analytics together. Switch organizations from the top bar."
@@ -36,20 +36,22 @@ interface Crumb {
       </app-page-header>
 
       @if (showNewOrg()) {
-        <form class="reveal" (submit)="createOrg($event)">
-          <div class="sb-field">
-            <label for="orgName">New organization name</label>
-            <input
-              id="orgName"
-              name="orgName"
-              [ngModel]="orgName()"
-              (ngModelChange)="orgName.set($event)"
-            />
-          </div>
-          <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-org">
-            Create
-          </button>
-        </form>
+        <app-card heading="New organization">
+          <form class="form-stack" (submit)="createOrg($event)">
+            <div class="sb-field">
+              <label for="orgName">Organization name</label>
+              <input
+                id="orgName"
+                name="orgName"
+                [ngModel]="orgName()"
+                (ngModelChange)="orgName.set($event)"
+              />
+            </div>
+            <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-org">
+              Create
+            </button>
+          </form>
+        </app-card>
       }
 
       @if (error(); as message) {
@@ -88,103 +90,186 @@ interface Crumb {
         </div>
 
         @if (showNewFolder()) {
-          <form class="reveal" (submit)="createFolder($event)">
-            <div class="sb-field">
-              <label for="folderName">New folder in {{ currentFolderName() }}</label>
-              <input
-                id="folderName"
-                name="folderName"
-                [ngModel]="folderName()"
-                (ngModelChange)="folderName.set($event)"
-              />
-            </div>
-            <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-folder">
-              Add folder
-            </button>
-          </form>
+          <app-card heading="New folder">
+            <form class="form-stack" (submit)="createFolder($event)">
+              <div class="sb-field">
+                <label for="folderName">Folder name in {{ currentFolderName() }}</label>
+                <input
+                  id="folderName"
+                  name="folderName"
+                  [ngModel]="folderName()"
+                  (ngModelChange)="folderName.set($event)"
+                />
+              </div>
+              <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-folder">
+                Add folder
+              </button>
+            </form>
+          </app-card>
         }
 
         @if (showNewPrompt()) {
-          <form class="reveal" (submit)="createPrompt($event)">
-            <div class="sb-field">
-              <label for="name">New prompt in {{ currentFolderName() }}</label>
-              <input id="name" name="name" [ngModel]="name()" (ngModelChange)="name.set($event)" />
-            </div>
-            <div class="sb-field">
-              <label for="description">Description (optional)</label>
-              <input
-                id="description"
-                name="description"
-                [ngModel]="description()"
-                (ngModelChange)="description.set($event)"
-              />
-            </div>
-            <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-prompt">
-              Create prompt
-            </button>
-          </form>
+          <app-card heading="New prompt">
+            <form class="form-stack" (submit)="createPrompt($event)">
+              <div class="sb-field">
+                <label for="name">Prompt name in {{ currentFolderName() }}</label>
+                <input
+                  id="name"
+                  name="name"
+                  [ngModel]="name()"
+                  (ngModelChange)="name.set($event)"
+                />
+              </div>
+              <div class="sb-field">
+                <label for="description">Description (optional)</label>
+                <input
+                  id="description"
+                  name="description"
+                  [ngModel]="description()"
+                  (ngModelChange)="description.set($event)"
+                />
+              </div>
+              <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-prompt">
+                Create prompt
+              </button>
+            </form>
+          </app-card>
         }
 
         @if (subfolders().length > 0) {
           <div class="folders-grid" data-testid="subfolders">
             @for (f of subfolders(); track f.id) {
               <button
-                class="folder-card"
+                class="folder-card sb-card"
                 type="button"
                 [attr.data-testid]="'subfolder-' + f.id"
                 (click)="openFolder(f.id)"
               >
-                <span class="folder-card__icon">📁</span> {{ f.name }}
+                <span class="folder-card__badge" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                    <path
+                      d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"
+                    />
+                  </svg>
+                </span>
+                <span class="folder-card__name">{{ f.name }}</span>
               </button>
             }
           </div>
         }
 
-        @if (currentPrompts().length === 0) {
-          <app-empty-state
-            [message]="'No prompts in ' + currentFolderName() + '.'"
-            data-testid="empty"
-          />
-        } @else {
-          <table class="sb-table" data-testid="prompts">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Versions</th>
-                <th>Latest target model</th>
-                <th>Move to</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (p of currentPrompts(); track p.id) {
+        <app-card heading="Prompts">
+          @if (currentPrompts().length === 0) {
+            <app-empty-state
+              [message]="'No prompts in ' + currentFolderName() + '.'"
+              data-testid="empty"
+            />
+          } @else {
+            <table class="sb-table" data-testid="prompts">
+              <thead>
                 <tr>
-                  <td>
-                    <a [routerLink]="['/prompts', p.id]">{{ p.name }}</a>
-                  </td>
-                  <td>{{ p.versionCount }}</td>
-                  <td>{{ p.latestTargetModel ?? '—' }}</td>
-                  <td>
-                    <select
-                      [ngModel]="p.folderId ?? ''"
-                      [attr.name]="'move-' + p.id"
-                      [attr.data-testid]="'move-' + p.id"
-                      (ngModelChange)="move(p, $event)"
-                    >
-                      <option value="">{{ currentOrgName() }} (root)</option>
-                      @for (f of folders(); track f.id) {
-                        <option [value]="f.id">{{ f.name }}</option>
-                      }
-                    </select>
-                  </td>
+                  <th>Name</th>
+                  <th>Versions</th>
+                  <th>Latest target model</th>
+                  <th>Move to</th>
                 </tr>
-              }
-            </tbody>
-          </table>
-        }
+              </thead>
+              <tbody>
+                @for (p of currentPrompts(); track p.id) {
+                  <tr>
+                    <td>
+                      <a [routerLink]="['/prompts', p.id]">{{ p.name }}</a>
+                    </td>
+                    <td>{{ p.versionCount }}</td>
+                    <td>{{ p.latestTargetModel ?? '—' }}</td>
+                    <td>
+                      <select
+                        [ngModel]="p.folderId ?? ''"
+                        [attr.name]="'move-' + p.id"
+                        [attr.data-testid]="'move-' + p.id"
+                        (ngModelChange)="move(p, $event)"
+                      >
+                        <option value="">{{ currentOrgName() }} (root)</option>
+                        @for (f of folders(); track f.id) {
+                          <option [value]="f.id">{{ f.name }}</option>
+                        }
+                      </select>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </app-card>
       }
     </section>
   `,
   styleUrl: './prompts.css',
+  styles: [
+    `
+      .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: var(--sb-space-xs);
+        flex-wrap: wrap;
+        margin: 0;
+        font-size: var(--sb-type-small-size);
+      }
+      .crumb {
+        border: none;
+        background: transparent;
+        padding: 2px 4px;
+        border-radius: var(--sb-radius-sm);
+        color: var(--sb-primary);
+        cursor: pointer;
+        font-size: inherit;
+      }
+      .crumb:disabled {
+        color: var(--sb-text);
+        cursor: default;
+        font-weight: 600;
+      }
+      .crumb__sep {
+        color: var(--sb-text-muted);
+      }
+      .folders-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: var(--sb-space-md);
+      }
+      .folder-card {
+        display: flex;
+        align-items: center;
+        gap: var(--sb-space-sm);
+        text-align: left;
+        padding: var(--sb-space-md) var(--sb-space-lg);
+        color: var(--sb-text);
+        font-size: var(--sb-type-body-size);
+        cursor: pointer;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+      .folder-card:hover {
+        border-color: var(--sb-primary);
+      }
+      .folder-card__badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        flex: none;
+        border-radius: var(--sb-radius-md);
+        background: var(--sb-primary-surface);
+        color: var(--sb-primary);
+      }
+      .folder-card__name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    `,
+  ],
 })
 export class PromptList {
   private readonly api = inject(PromptsApiService);
@@ -258,10 +343,16 @@ export class PromptList {
       prompts: this.api.listPromptsByOrganization(orgId),
     }).subscribe({
       next: ({ folders, prompts }) => {
+        // Drop a response for an org we've since switched away from: a slower in-flight request
+        // for the previous org must not overwrite the current org's data (stale-response race).
+        if (this.orgStore.currentOrgId() !== orgId) return;
         this.folders.set(folders);
         this.prompts.set(prompts);
       },
-      error: () => this.error.set('Could not load the organization’s prompts.'),
+      error: () => {
+        if (this.orgStore.currentOrgId() !== orgId) return;
+        this.error.set('Could not load the organization’s prompts.');
+      },
     });
   }
 

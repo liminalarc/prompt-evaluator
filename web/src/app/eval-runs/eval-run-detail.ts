@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { EvalRun } from '../eval-run';
+import { Fixture } from '../dataset';
 import { PromptsApiService } from '../prompts/prompts-api.service';
 import { DatasetsApiService } from '../datasets/datasets-api.service';
 import {
@@ -57,49 +58,65 @@ import { EvalRunsApiService } from './eval-runs-api.service';
         } @else {
           @for (fixtureRun of r.results; track fixtureRun.fixtureId) {
             <div class="sb-card fixture-run" data-testid="fixture-run">
-              <div class="result__row">
-                <span class="result__key">output</span> {{ fixtureRun.modelOutput }}
-              </div>
-              <div class="result__row">
-                <span class="result__key">latency</span> {{ fixtureRun.latencyMs }}ms
-                @if (fixtureRun.costUsd !== null) {
-                  · <span class="result__key">cost</span> \${{ fixtureRun.costUsd }}
-                }
-              </div>
+              <div class="sb-card__body">
+                <div class="io-grid">
+                  <div class="io-block">
+                    <span class="result__key">Fixture input</span>
+                    <pre class="io-text">{{ fixtureInput(fixtureRun.fixtureId) }}</pre>
+                  </div>
+                  <div class="io-block">
+                    <span class="result__key">Model output</span>
+                    <pre class="io-text">{{ formatOutput(fixtureRun.modelOutput) }}</pre>
+                  </div>
+                </div>
 
-              <table class="sb-table" data-testid="scores">
-                <thead>
-                  <tr>
-                    <th>Scorer</th>
-                    <th>Judge model</th>
-                    <th>Value</th>
-                    <th>Passed</th>
-                    <th>Detail</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (score of fixtureRun.scores; track score.scorerIdentity) {
-                    <tr [attr.data-scorer]="score.scorerKind">
-                      <td><app-chip [label]="score.scorerKind" /></td>
-                      <td>
-                        @if (score.judgeModel; as m) {
-                          <app-chip [label]="m" />
-                        } @else {
-                          —
-                        }
-                      </td>
-                      <td>{{ score.value }}</td>
-                      <td>
-                        <app-status-badge
-                          [variant]="pass(score.passed).variant"
-                          [label]="pass(score.passed).label"
-                        />
-                      </td>
-                      <td>{{ score.detail ?? '—' }}</td>
+                <dl class="result__meta">
+                  <div class="result__row">
+                    <dt class="result__key">Latency</dt>
+                    <dd class="result__val">{{ fixtureRun.latencyMs }} ms</dd>
+                  </div>
+                  <div class="result__row">
+                    <dt class="result__key">Cost</dt>
+                    <dd class="result__val">
+                      {{ fixtureRun.costUsd !== null ? '$' + fixtureRun.costUsd : '—' }}
+                    </dd>
+                  </div>
+                </dl>
+
+                <table class="sb-table" data-testid="scores">
+                  <thead>
+                    <tr>
+                      <th>Scorer</th>
+                      <th>Judge model</th>
+                      <th>Value</th>
+                      <th>Passed</th>
+                      <th>Detail</th>
                     </tr>
-                  }
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    @for (score of fixtureRun.scores; track score.scorerIdentity) {
+                      <tr [attr.data-scorer]="score.scorerKind">
+                        <td><app-chip [label]="score.scorerKind" /></td>
+                        <td>
+                          @if (score.judgeModel; as m) {
+                            <app-chip [label]="m" />
+                          } @else {
+                            —
+                          }
+                        </td>
+                        <td>{{ score.value }}</td>
+                        <td>
+                          <app-status-badge
+                            [variant]="pass(score.passed).variant"
+                            [label]="pass(score.passed).label"
+                          />
+                        </td>
+                        <td>{{ score.detail ?? '—' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
             </div>
           }
         }
@@ -107,6 +124,63 @@ import { EvalRunsApiService } from './eval-runs-api.service';
     </section>
   `,
   styleUrl: '../prompts/prompts.css',
+  styles: [
+    `
+      .fixture-run + .fixture-run {
+        margin-top: var(--sb-space-lg);
+      }
+      .io-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: var(--sb-space-lg);
+        margin-bottom: var(--sb-space-lg);
+      }
+      .io-block {
+        display: flex;
+        flex-direction: column;
+        gap: var(--sb-space-xs);
+        min-width: 0;
+      }
+      .io-text {
+        margin: 0;
+        font-family: var(--sb-font-mono);
+        font-size: var(--sb-type-small-size);
+        line-height: 1.5;
+        color: var(--sb-text);
+        background: var(--sb-surface-variant);
+        border: 1px solid var(--sb-border);
+        border-radius: var(--sb-radius-md);
+        padding: var(--sb-space-md);
+        max-height: 320px;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .result__meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--sb-space-xl);
+        margin: 0 0 var(--sb-space-lg);
+      }
+      .result__row {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .result__key {
+        font-size: var(--sb-type-caption-size);
+        font-weight: var(--sb-type-caption-weight);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--sb-text-muted);
+      }
+      .result__val {
+        margin: 0;
+        font-variant-numeric: tabular-nums;
+        color: var(--sb-text);
+      }
+    `,
+  ],
 })
 export class EvalRunDetail implements OnInit {
   private readonly api = inject(EvalRunsApiService);
@@ -119,6 +193,9 @@ export class EvalRunDetail implements OnInit {
   protected readonly loading = signal(true);
   protected readonly promptName = signal<string | null>(null);
   protected readonly datasetName = signal<string | null>(null);
+  // The run DTO carries only fixtureId per result; the dataset supplies each fixture's input text
+  // so we can show the input alongside its output.
+  protected readonly fixturesById = signal<Map<string, Fixture>>(new Map());
 
   protected readonly pass = passBadge;
 
@@ -144,9 +221,12 @@ export class EvalRunDetail implements OnInit {
         this.promptsApi
           .getPrompt(r.promptId)
           .subscribe({ next: (p) => this.promptName.set(p.name) });
-        this.datasetsApi
-          .getDataset(r.datasetId)
-          .subscribe({ next: (d) => this.datasetName.set(d.name) });
+        this.datasetsApi.getDataset(r.datasetId).subscribe({
+          next: (d) => {
+            this.datasetName.set(d.name);
+            this.fixturesById.set(new Map(d.fixtures.map((f) => [f.id, f])));
+          },
+        });
       },
       error: () => {
         this.error.set('Could not load the eval run.');
@@ -161,5 +241,29 @@ export class EvalRunDetail implements OnInit {
 
   protected scoreCount(run: EvalRun): number {
     return run.results.reduce((total, fixtureRun) => total + fixtureRun.scores.length, 0);
+  }
+
+  /** The captured/synthetic input the model was run over; '—' until the dataset resolves. */
+  protected fixtureInput(fixtureId: string): string {
+    return this.fixturesById().get(fixtureId)?.input ?? '—';
+  }
+
+  /**
+   * Model output is often returned wrapped in a ```json … ``` markdown fence. Strip the fence and
+   * pretty-print when the payload parses as JSON; otherwise show the plain text as-is.
+   */
+  protected formatOutput(raw: string): string {
+    const stripped = this.stripFence(raw ?? '');
+    try {
+      return JSON.stringify(JSON.parse(stripped), null, 2);
+    } catch {
+      return stripped;
+    }
+  }
+
+  private stripFence(raw: string): string {
+    const trimmed = raw.trim();
+    const fenced = trimmed.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/i);
+    return (fenced ? fenced[1] : trimmed).trim();
   }
 }

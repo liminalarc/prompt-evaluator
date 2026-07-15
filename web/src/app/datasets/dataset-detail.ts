@@ -8,6 +8,8 @@ import { EvalRunsApiService } from '../eval-runs/eval-runs-api.service';
 import { PromptsApiService } from '../prompts/prompts-api.service';
 import {
   Breadcrumb,
+  Card,
+  CardFoot,
   Chip,
   Crumb,
   EmptyState,
@@ -29,6 +31,8 @@ const JUDGE_MODELS = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
     FormsModule,
     RouterLink,
     Breadcrumb,
+    Card,
+    CardFoot,
     Chip,
     EmptyState,
     ErrorState,
@@ -37,7 +41,7 @@ const JUDGE_MODELS = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
     StatusBadge,
   ],
   template: `
-    <section class="panel">
+    <section class="panel panel--wide">
       <app-breadcrumb [items]="crumbs()" />
 
       @if (error(); as message) {
@@ -49,175 +53,238 @@ const JUDGE_MODELS = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
       } @else if (dataset(); as d) {
         <app-page-header [heading]="d.name" [subtitle]="d.description ?? ''" />
 
-        <h2 class="section-title">Fixtures</h2>
-        <div class="filter">
-          <label for="origin">Origin</label>
-          <select
-            id="origin"
-            [ngModel]="originFilter()"
-            (ngModelChange)="originFilter.set($event)"
-            data-testid="origin-filter"
-          >
-            <option value="all">All</option>
-            <option value="Captured">Captured</option>
-            <option value="Synthetic">Synthetic</option>
-          </select>
-        </div>
-
-        @if (filteredFixtures().length === 0) {
-          <app-empty-state message="No fixtures for this filter." data-testid="no-fixtures" />
-        } @else {
-          <table class="sb-table" data-testid="fixtures">
-            <thead>
-              <tr>
-                <th>Origin</th>
-                <th>Input</th>
-                <th>Upstream context</th>
-                <th>Expected output</th>
-                <th>Seed</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (f of filteredFixtures(); track f.id) {
-                <tr [attr.data-origin]="f.origin">
-                  <td>
-                    <app-status-badge
-                      [variant]="originBadge(f.origin).variant"
-                      [label]="originBadge(f.origin).label"
-                    />
-                  </td>
-                  <td>{{ f.input }}</td>
-                  <td>{{ f.upstreamContext ?? '—' }}</td>
-                  <td>{{ f.expectedOutput ?? '—' }}</td>
-                  <td>{{ f.seedFixtureId ? 'linked' : '—' }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        }
-
-        <div class="toolbar">
-          <button
-            class="sb-btn sb-btn--sm sb-btn--secondary"
-            type="button"
-            data-testid="toggle-capture"
-            (click)="showCapture.set(!showCapture())"
-          >
-            + Capture fixture
-          </button>
-          <button
-            class="sb-btn sb-btn--sm sb-btn--secondary"
-            type="button"
-            data-testid="toggle-generate"
-            (click)="showGenerate.set(!showGenerate())"
-          >
-            + Generate synthetic
-          </button>
-        </div>
-
-        @if (showCapture()) {
-          <form class="capture reveal" (submit)="capture($event)">
-            <div class="sb-field">
-              <label for="promptInput">Prompt input</label>
-              <textarea
-                id="promptInput"
-                name="promptInput"
-                rows="2"
-                [ngModel]="promptInput()"
-                (ngModelChange)="promptInput.set($event)"
-              ></textarea>
-            </div>
-            <div class="sb-field">
-              <label for="slmOutput">Upstream SLM output (optional)</label>
-              <textarea
-                id="slmOutput"
-                name="slmOutput"
-                rows="2"
-                [ngModel]="slmOutput()"
-                (ngModelChange)="slmOutput.set($event)"
-              ></textarea>
-            </div>
-            <button class="sb-btn sb-btn--primary" type="submit" data-testid="capture">
-              Capture fixture
-            </button>
-          </form>
-        }
-
-        @if (showGenerate()) {
-          <p class="subtitle">Seeded from this dataset's captured fixtures; steer with guidance.</p>
-          <form class="generate reveal" (submit)="generate($event)">
-            <div class="sb-field">
-              <label for="coverageGoals">Coverage goals (optional)</label>
-              <input
-                id="coverageGoals"
-                name="coverageGoals"
-                [ngModel]="coverageGoals()"
-                (ngModelChange)="coverageGoals.set($event)"
-              />
-            </div>
-            <div class="sb-field">
-              <label for="edgeCases">Edge cases / adversarial (optional)</label>
-              <input
-                id="edgeCases"
-                name="edgeCases"
-                [ngModel]="edgeCases()"
-                (ngModelChange)="edgeCases.set($event)"
-              />
-            </div>
-            <div class="sb-field">
-              <label for="count">Count</label>
-              <input
-                id="count"
-                name="count"
-                type="number"
-                min="1"
-                [ngModel]="count()"
-                (ngModelChange)="count.set(+$event)"
-              />
-            </div>
-            <button
-              class="sb-btn sb-btn--primary"
-              type="submit"
-              data-testid="generate"
-              [disabled]="generating()"
+        <app-card heading="Fixtures">
+          <div class="field-inline fixtures-filter">
+            <label for="origin">Origin</label>
+            <select
+              id="origin"
+              [ngModel]="originFilter()"
+              (ngModelChange)="originFilter.set($event)"
+              data-testid="origin-filter"
             >
-              {{ generating() ? 'Generating…' : 'Generate' }}
-            </button>
-          </form>
-        }
+              <option value="all">All</option>
+              <option value="Captured">Captured</option>
+              <option value="Synthetic">Synthetic</option>
+            </select>
+          </div>
 
-        <h2 class="section-title">Scorers</h2>
-        <p class="subtitle">Configured once per dataset; every run scores with this set.</p>
-        @if (scorers().length === 0) {
-          <app-empty-state message="No scorers configured yet." data-testid="no-scorers" />
-        } @else {
-          <table class="sb-table" data-testid="scorers">
-            <thead>
-              <tr>
-                <th>Kind</th>
-                <th>Config</th>
-                <th>Judge model</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (s of scorers(); track s.id) {
-                <tr [attr.data-scorer]="s.kind">
-                  <td><app-chip [label]="s.kind" /></td>
-                  <td>{{ s.config || '—' }}</td>
-                  <td>
-                    @if (s.judgeModel; as m) {
-                      <app-chip [label]="m" />
-                    } @else {
-                      —
-                    }
-                  </td>
+          @if (filteredFixtures().length === 0) {
+            <app-empty-state message="No fixtures for this filter." data-testid="no-fixtures" />
+          } @else {
+            <table class="sb-table" data-testid="fixtures">
+              <thead>
+                <tr>
+                  <th>Origin</th>
+                  <th>Input</th>
+                  <th>Upstream context</th>
+                  <th>Expected output</th>
+                  <th>Seed</th>
                 </tr>
+              </thead>
+              <tbody>
+                @for (f of filteredFixtures(); track f.id) {
+                  <tr [attr.data-origin]="f.origin">
+                    <td>
+                      <app-status-badge
+                        [variant]="originBadge(f.origin).variant"
+                        [label]="originBadge(f.origin).label"
+                      />
+                    </td>
+                    <td>{{ f.input }}</td>
+                    <td>{{ f.upstreamContext ?? '—' }}</td>
+                    <td>{{ f.expectedOutput ?? '—' }}</td>
+                    <td>{{ f.seedFixtureId ? 'linked' : '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+
+          @if (showCapture()) {
+            <form class="form-stack reveal-form" (submit)="capture($event)">
+              <div class="sb-field">
+                <label for="promptInput">Prompt input</label>
+                <textarea
+                  id="promptInput"
+                  name="promptInput"
+                  rows="2"
+                  [ngModel]="promptInput()"
+                  (ngModelChange)="promptInput.set($event)"
+                ></textarea>
+              </div>
+              <div class="sb-field">
+                <label for="slmOutput">Upstream SLM output (optional)</label>
+                <textarea
+                  id="slmOutput"
+                  name="slmOutput"
+                  rows="2"
+                  [ngModel]="slmOutput()"
+                  (ngModelChange)="slmOutput.set($event)"
+                ></textarea>
+              </div>
+              <div class="sb-field">
+                <label for="expectedOutput">Expected output (optional)</label>
+                <textarea
+                  id="expectedOutput"
+                  name="expectedOutput"
+                  rows="2"
+                  [ngModel]="expectedOutput()"
+                  (ngModelChange)="expectedOutput.set($event)"
+                  data-testid="expected-output"
+                ></textarea>
+              </div>
+              <button class="sb-btn sb-btn--primary" type="submit" data-testid="capture">
+                Capture fixture
+              </button>
+            </form>
+          }
+
+          @if (showGenerate()) {
+            <form class="form-stack reveal-form" (submit)="generate($event)">
+              <p class="subtitle">
+                Seeded from this dataset's captured fixtures; steer with guidance.
+              </p>
+              <div class="sb-field">
+                <label for="coverageGoals">Coverage goals (optional)</label>
+                <input
+                  id="coverageGoals"
+                  name="coverageGoals"
+                  [ngModel]="coverageGoals()"
+                  (ngModelChange)="coverageGoals.set($event)"
+                />
+              </div>
+              <div class="sb-field">
+                <label for="edgeCases">Edge cases / adversarial (optional)</label>
+                <input
+                  id="edgeCases"
+                  name="edgeCases"
+                  [ngModel]="edgeCases()"
+                  (ngModelChange)="edgeCases.set($event)"
+                />
+              </div>
+              <div class="sb-field">
+                <label for="count">Count</label>
+                <input
+                  id="count"
+                  name="count"
+                  type="number"
+                  min="1"
+                  [ngModel]="count()"
+                  (ngModelChange)="count.set(+$event)"
+                />
+              </div>
+              <button
+                class="sb-btn sb-btn--primary"
+                type="submit"
+                data-testid="generate"
+                [disabled]="generating()"
+              >
+                {{ generating() ? 'Generating…' : 'Generate' }}
+              </button>
+            </form>
+          }
+
+          <div foot class="toolbar">
+            <button
+              class="sb-btn sb-btn--sm sb-btn--secondary"
+              type="button"
+              data-testid="toggle-capture"
+              (click)="showCapture.set(!showCapture())"
+            >
+              + Capture fixture
+            </button>
+            <button
+              class="sb-btn sb-btn--sm sb-btn--secondary"
+              type="button"
+              data-testid="toggle-generate"
+              (click)="showGenerate.set(!showGenerate())"
+            >
+              + Generate synthetic
+            </button>
+          </div>
+        </app-card>
+
+        <app-card heading="Scorers">
+          <p class="subtitle">Configured once per dataset; every run scores with this set.</p>
+          @if (scorers().length === 0) {
+            <app-empty-state message="No scorers configured yet." data-testid="no-scorers" />
+          } @else {
+            <table class="sb-table" data-testid="scorers">
+              <thead>
+                <tr>
+                  <th>Kind</th>
+                  <th>Config</th>
+                  <th>Judge model</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (s of scorers(); track s.id) {
+                  <tr [attr.data-scorer]="s.kind">
+                    <td><app-chip [label]="s.kind" /></td>
+                    <td>{{ s.config || '—' }}</td>
+                    <td>
+                      @if (s.judgeModel; as m) {
+                        <app-chip [label]="m" />
+                      } @else {
+                        —
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+
+          @if (showAddScorer()) {
+            <form class="form-stack reveal-form" (submit)="addScorer($event)">
+              <div class="sb-field">
+                <label for="scorerKind">Scorer</label>
+                <select
+                  id="scorerKind"
+                  name="scorerKind"
+                  [ngModel]="scorerKind()"
+                  (ngModelChange)="scorerKind.set($event)"
+                  data-testid="scorer-kind"
+                >
+                  @for (k of scorerKinds; track k) {
+                    <option [value]="k">{{ k }}</option>
+                  }
+                </select>
+              </div>
+              <div class="sb-field">
+                <label for="scorerConfig">{{ isJudge() ? 'Rubric' : 'Config (optional)' }}</label>
+                <input
+                  id="scorerConfig"
+                  name="scorerConfig"
+                  [ngModel]="scorerConfig()"
+                  (ngModelChange)="scorerConfig.set($event)"
+                  data-testid="scorer-config"
+                />
+              </div>
+              @if (isJudge()) {
+                <div class="sb-field">
+                  <label for="judgeModel">Judge model</label>
+                  <select
+                    id="judgeModel"
+                    name="judgeModel"
+                    [ngModel]="judgeModel()"
+                    (ngModelChange)="judgeModel.set($event)"
+                    data-testid="judge-model"
+                  >
+                    @for (m of judgeModels; track m) {
+                      <option [value]="m">{{ m }}</option>
+                    }
+                  </select>
+                </div>
               }
-            </tbody>
-          </table>
-        }
-        <div class="toolbar">
+              <button class="sb-btn sb-btn--primary" type="submit" data-testid="add-scorer">
+                Add scorer
+              </button>
+            </form>
+          }
+
           <button
+            foot
             class="sb-btn sb-btn--sm sb-btn--secondary"
             type="button"
             data-testid="toggle-add-scorer"
@@ -225,116 +292,98 @@ const JUDGE_MODELS = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
           >
             + Add scorer
           </button>
-        </div>
-        @if (showAddScorer()) {
-          <form class="add-scorer reveal" (submit)="addScorer($event)">
-            <div class="sb-field">
-              <label for="scorerKind">Scorer</label>
-              <select
-                id="scorerKind"
-                name="scorerKind"
-                [ngModel]="scorerKind()"
-                (ngModelChange)="scorerKind.set($event)"
-                data-testid="scorer-kind"
-              >
-                @for (k of scorerKinds; track k) {
-                  <option [value]="k">{{ k }}</option>
-                }
-              </select>
-            </div>
-            <div class="sb-field">
-              <label for="scorerConfig">{{ isJudge() ? 'Rubric' : 'Config (optional)' }}</label>
-              <input
-                id="scorerConfig"
-                name="scorerConfig"
-                [ngModel]="scorerConfig()"
-                (ngModelChange)="scorerConfig.set($event)"
-                data-testid="scorer-config"
-              />
-            </div>
-            @if (isJudge()) {
+        </app-card>
+
+        <div class="card-grid">
+          <app-card heading="Run evaluation">
+            <form class="form-stack" (submit)="triggerRun($event)">
               <div class="sb-field">
-                <label for="judgeModel">Judge model</label>
+                <label for="promptSelect">Prompt</label>
                 <select
-                  id="judgeModel"
-                  name="judgeModel"
-                  [ngModel]="judgeModel()"
-                  (ngModelChange)="judgeModel.set($event)"
-                  data-testid="judge-model"
+                  id="promptSelect"
+                  name="promptSelect"
+                  [ngModel]="selectedPromptId()"
+                  (ngModelChange)="onPromptChange($event)"
+                  data-testid="prompt-select"
                 >
-                  @for (m of judgeModels; track m) {
-                    <option [value]="m">{{ m }}</option>
+                  <option value="">Select a prompt…</option>
+                  @for (p of prompts(); track p.id) {
+                    <option [value]="p.id">{{ p.name }}</option>
                   }
                 </select>
               </div>
-            }
-            <button class="sb-btn sb-btn--primary" type="submit" data-testid="add-scorer">
-              Add scorer
-            </button>
-          </form>
-        }
-
-        <h2 class="section-title">Run evaluation</h2>
-        <form class="run" (submit)="triggerRun($event)">
-          <div class="sb-field">
-            <label for="promptSelect">Prompt</label>
-            <select
-              id="promptSelect"
-              name="promptSelect"
-              [ngModel]="selectedPromptId()"
-              (ngModelChange)="onPromptChange($event)"
-              data-testid="prompt-select"
-            >
-              <option value="">Select a prompt…</option>
-              @for (p of prompts(); track p.id) {
-                <option [value]="p.id">{{ p.name }}</option>
+              @if (versions().length > 0) {
+                <div class="sb-field">
+                  <label for="versionSelect">Version</label>
+                  <select
+                    id="versionSelect"
+                    name="versionSelect"
+                    [ngModel]="selectedVersionId()"
+                    (ngModelChange)="selectedVersionId.set($event)"
+                    data-testid="version-select"
+                  >
+                    @for (v of versions(); track v.id) {
+                      <option [value]="v.id">v{{ v.versionNumber }} · {{ v.targetModel }}</option>
+                    }
+                  </select>
+                </div>
               }
-            </select>
-          </div>
-          @if (versions().length > 0) {
-            <div class="sb-field">
-              <label for="versionSelect">Version</label>
-              <select
-                id="versionSelect"
-                name="versionSelect"
-                [ngModel]="selectedVersionId()"
-                (ngModelChange)="selectedVersionId.set($event)"
-                data-testid="version-select"
+              <button
+                class="sb-btn sb-btn--primary"
+                type="submit"
+                data-testid="run"
+                [disabled]="running() || !selectedVersionId()"
               >
-                @for (v of versions(); track v.id) {
-                  <option [value]="v.id">v{{ v.versionNumber }} · {{ v.targetModel }}</option>
-                }
-              </select>
-            </div>
-          }
-          <button
-            class="sb-btn sb-btn--primary"
-            type="submit"
-            data-testid="run"
-            [disabled]="running() || !selectedVersionId()"
-          >
-            {{ running() ? 'Running…' : 'Run evaluation' }}
-          </button>
-        </form>
+                {{ running() ? 'Running…' : 'Run evaluation' }}
+              </button>
+            </form>
+          </app-card>
 
-        <h2 class="section-title">Runs</h2>
-        @if (runs().length === 0) {
-          <app-empty-state message="No runs yet." data-testid="no-runs" />
-        } @else {
-          <ul class="runs" data-testid="runs">
-            @for (r of runs(); track r.id) {
-              <li>
-                <a [routerLink]="['/eval-runs', r.id]" data-testid="run-link">
-                  {{ r.createdAt }} — {{ r.fixtureCount }} fixture(s), {{ r.scoreCount }} score(s)
-                </a>
-              </li>
+          <app-card heading="Runs">
+            @if (runs().length === 0) {
+              <app-empty-state message="No runs yet." data-testid="no-runs" />
+            } @else {
+              <table class="sb-table" data-testid="runs">
+                <thead>
+                  <tr>
+                    <th>Run</th>
+                    <th>Fixtures</th>
+                    <th>Scores</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (r of runs(); track r.id) {
+                    <tr>
+                      <td>
+                        <a [routerLink]="['/eval-runs', r.id]" data-testid="run-link">{{
+                          r.createdAt
+                        }}</a>
+                      </td>
+                      <td>{{ r.fixtureCount }}</td>
+                      <td>{{ r.scoreCount }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
             }
-          </ul>
-        }
+          </app-card>
+        </div>
       }
     </section>
   `,
   styleUrl: '../prompts/prompts.css',
+  styles: [
+    `
+      .fixtures-filter {
+        margin-bottom: var(--sb-space-md);
+      }
+      .reveal-form {
+        margin-top: var(--sb-space-lg);
+        padding-top: var(--sb-space-lg);
+        border-top: 1px solid var(--sb-border);
+      }
+    `,
+  ],
 })
 export class DatasetDetail implements OnInit {
   private readonly api = inject(DatasetsApiService);
@@ -362,6 +411,7 @@ export class DatasetDetail implements OnInit {
 
   protected readonly promptInput = signal('');
   protected readonly slmOutput = signal('');
+  protected readonly expectedOutput = signal('');
   protected readonly coverageGoals = signal('');
   protected readonly edgeCases = signal('');
   protected readonly count = signal(5);
@@ -445,7 +495,8 @@ export class DatasetDetail implements OnInit {
           promptInput,
           input: null,
           slmOutput: this.slmOutput().trim() || null,
-          downstreamResult: null,
+          // The optional expected output maps to Fixture.expectedOutput via downstreamResult (1.2).
+          downstreamResult: this.expectedOutput().trim() || null,
         },
       ])
       .subscribe({
@@ -453,6 +504,7 @@ export class DatasetDetail implements OnInit {
           this.dataset.set(d);
           this.promptInput.set('');
           this.slmOutput.set('');
+          this.expectedOutput.set('');
         },
         error: () => this.error.set('Could not capture the fixture.'),
       });
@@ -526,6 +578,9 @@ export class DatasetDetail implements OnInit {
     this.evalApi.triggerRun(this.id, this.selectedPromptId(), versionId).subscribe({
       next: (run) => {
         this.running.set(false);
+        // Refresh the runs list so the completed run is present when the operator returns to the
+        // dataset (no manual Back/reload needed) — finding 5.
+        this.loadRuns();
         this.router.navigate(['/eval-runs', run.id]);
       },
       error: () => {

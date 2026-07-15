@@ -1,34 +1,12 @@
+/* Analytics-dashboard-specific rules. Cards/tables/empties come from the shared `Card` kit and
+   prompts.css; only the selector controls layout is bespoke here. */
 .selectors {
   display: flex;
   flex-wrap: wrap;
   gap: var(--sb-space-lg);
-  margin-bottom: var(--sb-space-xl);
 }
 
 .selectors .sb-field {
   min-width: 220px;
-}
-
-.card {
-  background: var(--sb-surface);
-  border: 1px solid var(--sb-border-light);
-  border-radius: var(--sb-radius-lg);
-  padding: var(--sb-space-lg);
-  margin-bottom: var(--sb-space-xl);
-}
-
-.section-title {
-  font-size: var(--sb-type-h3-size);
-  font-weight: var(--sb-type-h3-weight);
-  margin: 0 0 var(--sb-space-md);
-}
-
-.delta-down {
-  color: var(--sb-error);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.empty {
-  color: var(--sb-text-muted);
+  flex: 1;
 }

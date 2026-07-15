@@ -9,6 +9,8 @@ import { AnalyticsApiService } from '../analytics/analytics-api.service';
 import { TrendChart } from '../analytics/trend-chart';
 import {
   Breadcrumb,
+  Card,
+  CardFoot,
   Chip,
   Crumb,
   EmptyState,
@@ -27,6 +29,8 @@ import { VersionDiff } from './version-diff';
     VersionDiff,
     TrendChart,
     Breadcrumb,
+    Card,
+    CardFoot,
     Chip,
     EmptyState,
     ErrorState,
@@ -34,7 +38,7 @@ import { VersionDiff } from './version-diff';
     PageHeader,
   ],
   template: `
-    <section class="panel">
+    <section class="panel panel--wide">
       <app-breadcrumb [items]="crumbs()" />
 
       @if (error(); as message) {
@@ -46,164 +50,81 @@ import { VersionDiff } from './version-diff';
       } @else if (prompt(); as p) {
         <app-page-header [heading]="p.name" [subtitle]="p.description ?? ''" />
 
-        <h2 class="section-title">Version history</h2>
-        @if (p.versions.length === 0) {
-          <app-empty-state
-            message="No versions yet — add the first below."
-            data-testid="no-versions"
-          />
-        } @else {
-          <table class="sb-table" data-testid="versions">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Target model</th>
-                <th>Label</th>
-                <th>Source app</th>
-                <th>Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (v of p.versions; track v.id) {
-                <tr>
-                  <td>{{ v.versionNumber }}</td>
-                  <td><app-chip [label]="v.targetModel" /></td>
-                  <td>{{ v.label ?? '—' }}</td>
-                  <td>
-                    @if (v.sourceApp; as s) {
-                      <app-chip [label]="s" />
-                    } @else {
-                      —
-                    }
-                  </td>
-                  <td>{{ v.createdAt }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        }
-
-        @if (p.versions.length >= 2) {
-          <h2 class="section-title">Compare versions</h2>
-          <div class="compare">
-            <label
-              >From
-              <select
-                [ngModel]="fromNumber()"
-                (ngModelChange)="fromNumber.set(+$event)"
-                data-testid="from"
-              >
-                @for (v of p.versions; track v.id) {
-                  <option [value]="v.versionNumber">v{{ v.versionNumber }}</option>
-                }
-              </select>
-            </label>
-            <label
-              >To
-              <select
-                [ngModel]="toNumber()"
-                (ngModelChange)="toNumber.set(+$event)"
-                data-testid="to"
-              >
-                @for (v of p.versions; track v.id) {
-                  <option [value]="v.versionNumber">v{{ v.versionNumber }}</option>
-                }
-              </select>
-            </label>
-          </div>
-          <app-version-diff [before]="fromContent()" [after]="toContent()" />
-        }
-
-        <h2 class="section-title">Datasets</h2>
-        <p class="subtitle">
-          This prompt's test sets — its fixtures and the runs scored against them.
-        </p>
-        @if (datasets(); as ds) {
-          @if (ds.length === 0) {
+        <app-card heading="Version history">
+          @if (p.versions.length === 0) {
             <app-empty-state
-              message="No datasets yet — create one below."
-              data-testid="no-datasets"
+              message="No versions yet — add the first with the button below."
+              data-testid="no-versions"
             />
           } @else {
-            <table class="sb-table" data-testid="datasets">
+            <table class="sb-table" data-testid="versions">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Fixtures</th>
-                  <th>Captured</th>
-                  <th>Synthetic</th>
+                  <th>#</th>
+                  <th>Target model</th>
+                  <th>Label</th>
+                  <th>Source app</th>
+                  <th>Created</th>
                 </tr>
               </thead>
               <tbody>
-                @for (d of ds; track d.id) {
+                @for (v of p.versions; track v.id) {
                   <tr>
+                    <td>{{ v.versionNumber }}</td>
+                    <td><app-chip [label]="v.targetModel" /></td>
+                    <td>{{ v.label ?? '—' }}</td>
                     <td>
-                      <a [routerLink]="['/datasets', d.id]">{{ d.name }}</a>
+                      @if (v.sourceApp; as s) {
+                        <app-chip [label]="s" />
+                      } @else {
+                        —
+                      }
                     </td>
-                    <td>{{ d.fixtureCount }}</td>
-                    <td>{{ d.capturedCount }}</td>
-                    <td>{{ d.syntheticCount }}</td>
+                    <td>{{ v.createdAt }}</td>
                   </tr>
                 }
               </tbody>
             </table>
           }
-        }
-        <div class="toolbar">
-          <button
-            class="sb-btn sb-btn--sm sb-btn--secondary"
-            type="button"
-            data-testid="toggle-create-dataset"
-            (click)="showCreateDataset.set(!showCreateDataset())"
-          >
-            + New dataset
-          </button>
-        </div>
-        @if (showCreateDataset()) {
-          <form class="create reveal" (submit)="createDataset($event)">
-            <div class="sb-field">
-              <label for="datasetName">New dataset name</label>
-              <input
-                id="datasetName"
-                name="datasetName"
-                [ngModel]="datasetName()"
-                (ngModelChange)="datasetName.set($event)"
-              />
-            </div>
-            <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-dataset">
-              Add dataset
-            </button>
-          </form>
-        }
 
-        <h2 class="section-title">Analytics</h2>
-        @if (datasets()?.length) {
-          <div class="sb-field">
-            <label for="analyticsDataset">Dataset</label>
-            <select
-              id="analyticsDataset"
-              [ngModel]="selectedDatasetId()"
-              (ngModelChange)="selectDataset($event)"
-              data-testid="analytics-dataset"
-            >
-              <option value="">Select a dataset…</option>
-              @for (d of datasets(); track d.id) {
-                <option [value]="d.id">{{ d.name }}</option>
-              }
-            </select>
-          </div>
-          @if (selectedDatasetId()) {
-            <app-trend-chart [series]="trends()" />
+          @if (showAddVersion()) {
+            <form class="form-stack add-version-form" (submit)="addVersion($event)">
+              <div class="sb-field">
+                <label for="content">Content</label>
+                <textarea
+                  id="content"
+                  name="content"
+                  rows="4"
+                  [ngModel]="content()"
+                  (ngModelChange)="content.set($event)"
+                ></textarea>
+              </div>
+              <div class="sb-field">
+                <label for="targetModel">Target model</label>
+                <input
+                  id="targetModel"
+                  name="targetModel"
+                  [ngModel]="targetModel()"
+                  (ngModelChange)="targetModel.set($event)"
+                />
+              </div>
+              <div class="sb-field">
+                <label for="label">Label (optional)</label>
+                <input
+                  id="label"
+                  name="label"
+                  [ngModel]="label()"
+                  (ngModelChange)="label.set($event)"
+                />
+              </div>
+              <button class="sb-btn sb-btn--primary" type="submit" data-testid="add-version">
+                Add version
+              </button>
+            </form>
           }
-        } @else {
-          <app-empty-state
-            message="Add a dataset and run this prompt to see analytics."
-            data-testid="no-analytics"
-          />
-        }
 
-        <div class="toolbar">
           <button
+            foot
             class="sb-btn sb-btn--sm sb-btn--secondary"
             type="button"
             data-testid="toggle-add-version"
@@ -211,46 +132,158 @@ import { VersionDiff } from './version-diff';
           >
             + Add version
           </button>
-        </div>
-        @if (showAddVersion()) {
-          <form class="add-version reveal" (submit)="addVersion($event)">
-            <div class="sb-field">
-              <label for="content">Content</label>
-              <textarea
-                id="content"
-                name="content"
-                rows="4"
-                [ngModel]="content()"
-                (ngModelChange)="content.set($event)"
-              ></textarea>
+        </app-card>
+
+        @if (p.versions.length >= 2) {
+          <app-card heading="Compare versions">
+            <div class="compare">
+              <label
+                >From
+                <select
+                  [ngModel]="fromNumber()"
+                  (ngModelChange)="fromNumber.set(+$event)"
+                  data-testid="from"
+                >
+                  @for (v of p.versions; track v.id) {
+                    <option [value]="v.versionNumber">v{{ v.versionNumber }}</option>
+                  }
+                </select>
+              </label>
+              <label
+                >To
+                <select
+                  [ngModel]="toNumber()"
+                  (ngModelChange)="toNumber.set(+$event)"
+                  data-testid="to"
+                >
+                  @for (v of p.versions; track v.id) {
+                    <option [value]="v.versionNumber">v{{ v.versionNumber }}</option>
+                  }
+                </select>
+              </label>
             </div>
-            <div class="sb-field">
-              <label for="targetModel">Target model</label>
-              <input
-                id="targetModel"
-                name="targetModel"
-                [ngModel]="targetModel()"
-                (ngModelChange)="targetModel.set($event)"
-              />
-            </div>
-            <div class="sb-field">
-              <label for="label">Label (optional)</label>
-              <input
-                id="label"
-                name="label"
-                [ngModel]="label()"
-                (ngModelChange)="label.set($event)"
-              />
-            </div>
-            <button class="sb-btn sb-btn--primary" type="submit" data-testid="add-version">
-              Add version
-            </button>
-          </form>
+            <app-version-diff [before]="fromContent()" [after]="toContent()" />
+          </app-card>
         }
+
+        <div class="card-grid">
+          <app-card heading="Datasets">
+            <p class="subtitle">
+              This prompt's test sets — its fixtures and the runs scored against them.
+            </p>
+            @if (datasets(); as ds) {
+              @if (ds.length === 0) {
+                <app-empty-state
+                  message="No datasets yet — create one with the button below."
+                  data-testid="no-datasets"
+                />
+              } @else {
+                <table class="sb-table" data-testid="datasets">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Fixtures</th>
+                      <th>Captured</th>
+                      <th>Synthetic</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (d of ds; track d.id) {
+                      <tr>
+                        <td>
+                          <a [routerLink]="['/datasets', d.id]">{{ d.name }}</a>
+                        </td>
+                        <td>{{ d.fixtureCount }}</td>
+                        <td>{{ d.capturedCount }}</td>
+                        <td>{{ d.syntheticCount }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            }
+
+            @if (showCreateDataset()) {
+              <form class="form-stack create-dataset-form" (submit)="createDataset($event)">
+                <div class="sb-field">
+                  <label for="datasetName">New dataset name</label>
+                  <input
+                    id="datasetName"
+                    name="datasetName"
+                    [ngModel]="datasetName()"
+                    (ngModelChange)="datasetName.set($event)"
+                  />
+                </div>
+                <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-dataset">
+                  Add dataset
+                </button>
+              </form>
+            }
+
+            <button
+              foot
+              class="sb-btn sb-btn--sm sb-btn--secondary"
+              type="button"
+              data-testid="toggle-create-dataset"
+              (click)="showCreateDataset.set(!showCreateDataset())"
+            >
+              + New dataset
+            </button>
+          </app-card>
+
+          <app-card heading="Analytics">
+            @if (datasets()?.length) {
+              <div class="sb-field">
+                <label for="analyticsDataset">Dataset</label>
+                <select
+                  id="analyticsDataset"
+                  [ngModel]="selectedDatasetId()"
+                  (ngModelChange)="selectDataset($event)"
+                  data-testid="analytics-dataset"
+                >
+                  <option value="">Select a dataset…</option>
+                  @for (d of datasets(); track d.id) {
+                    <option [value]="d.id">{{ d.name }}</option>
+                  }
+                </select>
+              </div>
+              @if (selectedDatasetId()) {
+                <app-trend-chart [series]="trends()" />
+              }
+            } @else {
+              <app-empty-state
+                message="Add a dataset and run this prompt to see analytics."
+                data-testid="no-analytics"
+              />
+            }
+          </app-card>
+        </div>
       }
     </section>
   `,
   styleUrl: './prompts.css',
+  styles: [
+    `
+      .compare {
+        display: flex;
+        gap: var(--sb-space-lg);
+        font-size: var(--sb-type-small-size);
+        color: var(--sb-text-secondary);
+        margin-bottom: var(--sb-space-md);
+      }
+      .compare label {
+        display: flex;
+        align-items: center;
+        gap: var(--sb-space-sm);
+      }
+      .add-version-form,
+      .create-dataset-form {
+        margin-top: var(--sb-space-lg);
+        padding-top: var(--sb-space-lg);
+        border-top: 1px solid var(--sb-border);
+      }
+    `,
+  ],
 })
 export class PromptDetail implements OnInit {
   private readonly api = inject(PromptsApiService);

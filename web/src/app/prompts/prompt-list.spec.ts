@@ -96,6 +96,56 @@ describe('PromptList (org + folder navigation)', () => {
     expect(rows[0].textContent).toContain('Marketing prompt');
   });
 
+  it('rescopes to the new org on switch and ignores a stale in-flight response for the old org', async () => {
+    localStorage.clear();
+    const twoOrgs = [
+      { id: 'o1', name: 'Acme' },
+      { id: 'o2', name: 'Globex' },
+    ];
+    TestBed.configureTestingModule({
+      imports: [PromptList],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: OrganizationsApiService, useValue: { listOrganizations: () => of(twoOrgs) } },
+      ],
+    });
+    httpMock = TestBed.inject(HttpTestingController);
+    const store = TestBed.inject(OrgContextStore);
+    store.load(); // resolves to o1
+    const fixture = TestBed.createComponent(PromptList);
+    fixture.detectChanges();
+
+    // o1's requests are still in flight — capture them without responding.
+    const o1folders = httpMock.expectOne('/api/organizations/o1/folders');
+    const o1prompts = httpMock.expectOne('/api/organizations/o1/prompts');
+
+    // Switch to o2 before o1 responds.
+    store.select('o2');
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const o2folders = httpMock.expectOne('/api/organizations/o2/folders');
+    const o2prompts = httpMock.expectOne('/api/organizations/o2/prompts');
+
+    // o2 responds first…
+    o2folders.flush([]);
+    o2prompts.flush([
+      { id: 'p2', folderId: null, name: 'O2 prompt', description: null, versionCount: 0 },
+    ]);
+    // …then the slower, now-stale o1 responses arrive.
+    o1folders.flush([]);
+    o1prompts.flush([
+      { id: 'p1', folderId: null, name: 'O1 STALE prompt', description: null, versionCount: 0 },
+    ]);
+    fixture.detectChanges();
+
+    // The current org's data must win — the stale o1 response is dropped.
+    const rows = fixture.nativeElement.querySelectorAll('[data-testid="prompts"] tbody tr');
+    expect(rows.length).toBe(1);
+    expect(rows[0].textContent).toContain('O2 prompt');
+  });
+
   it('moves a prompt to a folder via its row select', () => {
     const fixture = setup();
     const select: HTMLSelectElement =
