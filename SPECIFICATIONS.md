@@ -10,7 +10,7 @@
 - **1.5** Multi-Provider Model Support — `NOT STARTED` — [detail](specs/1.5.md)
 - **1.6** Prompt Import (file / bulk) — `NOT STARTED` — [detail](specs/1.6.md)
 - **1.8** Shared / Cross-Prompt Datasets (cloning) — `NOT STARTED` — [detail](specs/1.8.md)
-- **1.10** Deletion & lifecycle for registry entities — `NOT STARTED` — [detail](specs/1.10.md)
+- **1.10** Deletion & lifecycle for registry entities — `IN PROGRESS` — [detail](specs/1.10.md)
 - **1.11** Regression flagging — small-sample handling & clearer messaging — `NOT STARTED` — [detail](specs/1.11.md)
 
 ## Phase 2 — Review & Advisory
