@@ -37,3 +37,25 @@ body {
   background: var(--sb-surface-variant);
   color: var(--sb-text);
 }
+
+/* Content links use the LiminalArc brand navy (--sb-primary is spec'd for links); the visited
+   pseudo is pinned so links never fall back to the browser's default blue/purple. Button and nav
+   anchors own their own styling and are excluded. */
+a:not(.sb-btn):not(.nav__link) {
+  color: var(--sb-primary);
+  text-decoration: none;
+  text-underline-offset: 0.15em;
+  transition: color 0.12s ease;
+}
+a:not(.sb-btn):not(.nav__link):visited {
+  color: var(--sb-primary);
+}
+a:not(.sb-btn):not(.nav__link):hover {
+  color: var(--sb-primary-strong);
+  text-decoration: underline;
+}
+a:not(.sb-btn):not(.nav__link):focus-visible {
+  outline: 2px solid var(--sb-primary);
+  outline-offset: 2px;
+  border-radius: var(--sb-radius-xs);
+}
