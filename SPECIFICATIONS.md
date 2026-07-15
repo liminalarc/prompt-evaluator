@@ -18,6 +18,7 @@
 - **2.2** Prompt-Engineering Advisory — `NOT STARTED` — [detail](specs/2.2.md)
 - **2.3** Prompt Authoring UX — `NOT STARTED` — [detail](specs/2.3.md)
 - **2.5** Eval-loop UI/UX overhaul (dogfood findings) — `IN PROGRESS` — [detail](specs/2.5.md)
+- **2.6** Adopt brand-tokens hero tokens (drop local stopgap) — `NOT STARTED` — [detail](specs/2.6.md)
 
 ## Phase 3 — Integrations & Ops
 - **3.1** Zatomic-backed Prompt Registry — `NOT STARTED` — [detail](specs/3.1.md)
