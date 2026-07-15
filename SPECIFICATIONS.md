@@ -17,7 +17,6 @@
 - **2.1** Human Review UI — `NOT STARTED` — [detail](specs/2.1.md)
 - **2.2** Prompt-Engineering Advisory — `NOT STARTED` — [detail](specs/2.2.md)
 - **2.3** Prompt Authoring UX — `NOT STARTED` — [detail](specs/2.3.md)
-- **2.5** Eval-loop UI/UX overhaul (dogfood findings) — `IN PROGRESS` — [detail](specs/2.5.md)
 - **2.6** Adopt brand-tokens hero tokens (drop local stopgap) — `NOT STARTED` — [detail](specs/2.6.md)
 
 ## Phase 3 — Integrations & Ops
@@ -28,6 +27,7 @@
 - **4.2** SSO / OAuth Sign-In — `NOT STARTED` — [detail](specs/4.2.md)
 
 ## Archive
+- **2.5** Eval-loop UI/UX overhaul (dogfood findings) — `DONE` — [detail](specs/archive/2.5.md)
 - **4.1** Authentication & Multi-User Access — `DONE` — [detail](specs/archive/4.1.md)
 - **2.4** UX Overhaul — App Shell, Navigation & Design-System Foundation — `DONE` — [detail](specs/archive/2.4.md)
 - **1.9** Organizations (top-level + permission boundary) + Prompts UX overhaul — `DONE` — [detail](specs/archive/1.9.md)
