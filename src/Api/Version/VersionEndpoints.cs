@@ -17,8 +17,37 @@ public static class VersionEndpoints
             ?? "0.0.0-dev")
         .Split('+')[0];
 
+    // Best-effort build timestamp: the assembly file's last-write time in UTC (stable within an
+    // image). "unknown" if it can't be read (e.g. a single-file publish with no location on disk).
+    private static readonly string BuildTime = ResolveBuildTime();
+
+    private static string ResolveBuildTime()
+    {
+        try
+        {
+            var location = typeof(VersionEndpoints).Assembly.Location;
+            if (!string.IsNullOrEmpty(location) && File.Exists(location))
+                return File.GetLastWriteTimeUtc(location).ToString("yyyy-MM-ddTHH:mm:ssZ");
+        }
+        catch { /* fall through */ }
+        return "unknown";
+    }
+
     public static IEndpointRouteBuilder MapVersionEndpoints(this IEndpointRouteBuilder app)
     {
+        // Flat, single-service payload the SPA consumes for its footer chip + env badge (3.3,
+        // Stormboard pattern). Distinct from the aggregated GET /version below (which fans out to
+        // eval-runner + db). `channel` — a DEPLOY_CHANNEL env baked at build from a CI build-arg by
+        // git-ref (tag -> prod, main -> dev, local -> "local") — is the reliable dev/prod signal;
+        // `environment` (ASPNETCORE_ENVIRONMENT) is reported but deliberately NOT the discriminator.
+        app.MapGet("/api/version", (IConfiguration config, IHostEnvironment env) =>
+        {
+            var commit = config["GIT_COMMIT"] ?? "dev";
+            var channel = config["DEPLOY_CHANNEL"] ?? "local";
+            return Results.Ok(new VersionInfo(
+                ServiceVersionNumber, commit, BuildTime, env.EnvironmentName, channel));
+        });
+
         app.MapGet("/version", async (
             IConfiguration config,
             IEvaluationRunner runner,
@@ -51,6 +80,9 @@ public static class VersionEndpoints
 
         return app;
     }
+
+    private sealed record VersionInfo(
+        string Version, string Commit, string BuildTime, string Environment, string Channel);
 
     private sealed record VersionResponse(
         string Service, string Version, string Commit, DependencyVersions Dependencies);

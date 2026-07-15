@@ -20,7 +20,7 @@
 ## Phase 3 — Integrations & Ops
 - **3.1** Zatomic-backed Prompt Registry — `NOT STARTED` — [detail](specs/3.1.md)
 - **3.2** Production Deployment — `NOT STARTED` — [detail](specs/3.2.md)
-- **3.3** Version display in the web UI + deploy-channel plumbing — `NOT STARTED` — [detail](specs/3.3.md)
+- **3.3** Version display in the web UI + deploy-channel plumbing — `IN PROGRESS` — [detail](specs/3.3.md)
 
 ## Phase 4 — Accounts & Access
 - **4.2** SSO / OAuth Sign-In — `NOT STARTED` — [detail](specs/4.2.md)
