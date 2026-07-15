@@ -95,13 +95,22 @@ string to bump** anywhere in the tree (matching our other apps, e.g. Stormboard)
 stamps the version from `git describe --tags` into each service; `/version` reads it back:
 
 - **API** — `Api/Dockerfile` passes `-p:Version=$APP_VERSION`; `VersionEndpoints.cs` reads the
-  assembly's `InformationalVersion` (trimming any `+<sha>`).
+  assembly's `InformationalVersion` (trimming any `+<sha>`). It serves the aggregated `GET /version`
+  (API + eval-runner + db) **and** a flat `GET /api/version` — the SPA-facing payload
+  `{version, commit, buildTime, environment, channel}` (3.3).
 - **eval-runner** — `Dockerfile` bakes `APP_VERSION` as an env var (like `GIT_COMMIT`);
   `app/main.py` reads `os.environ["APP_VERSION"]`.
-- **web** — surfaces no version; `web/package.json` `version` is an unused `0.0.0` placeholder.
-- CI (`compose-smoke`) computes `APP_VERSION` from `git describe` and passes it as the
-  `APP_VERSION` build-arg. Local/non-CI builds are `0.0.0-dev`. **Tests assert the version's
-  shape, never a literal** — so a release never breaks a test.
+- **web** — surfaces the running version via the flat `GET /api/version` (3.3): a `VersionService`
+  signal loaded by an app initializer drives a footer **build chip** + a topbar **env badge**.
+  `web/package.json` `version` stays an unused `0.0.0` placeholder (not the source of truth).
+- **Deploy channel (`DEPLOY_CHANNEL`) — the reliable dev/prod discriminator (3.3).** `ASPNETCORE_-
+  ENVIRONMENT` is *not* trusted for this (a host can report `Production` everywhere), so the UI keys
+  off `channel`: CI derives `APP_CHANNEL` from the git-ref (a `v*` tag → `prod`, else `dev`) → Docker
+  `ENV DEPLOY_CHANNEL` → the `/api/version` payload; a plain local build is `local`. Upper
+  environments (staging/prod deploy targets that set the channel) are wired in spec 3.2.
+- CI (`compose-smoke`) computes `APP_VERSION` from `git describe` and `APP_CHANNEL` from the git-ref,
+  passing both as build-args. Local/non-CI builds are `0.0.0-dev` / `local`. **Tests assert the
+  version's (and channel's) shape, never a literal** — so a release never breaks a test.
 
 The bump is commit-derived (`feat:` → minor, `fix:` → patch, breaking → major) and confirmed
 with the user before tagging — it decides the **tag name**, nothing else.
