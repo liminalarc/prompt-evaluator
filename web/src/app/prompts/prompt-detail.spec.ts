@@ -66,6 +66,43 @@ describe('PromptDetail (unified workspace)', () => {
     httpMock.expectOne('/api/prompts/p1/datasets').flush(datasets); // reload
   });
 
+  it('imports a text file into the add-version content signal', async () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance as unknown as {
+      content: () => string;
+      importVersionFile: (e: Event) => void;
+    };
+
+    const file = new File(['Summarize: {input}'], 'prompt.txt', { type: 'text/plain' });
+    const input = document.createElement('input');
+    Object.defineProperty(input, 'files', { value: [file] });
+    cmp.importVersionFile({ target: input } as unknown as Event);
+
+    // FileReader.readAsText is async — poll the signal until the read lands.
+    await new Promise<void>((resolve) => {
+      const tick = () => (cmp.content() ? resolve() : setTimeout(tick, 5));
+      tick();
+    });
+    expect(cmp.content()).toBe('Summarize: {input}');
+  });
+
+  it('rejects a non-text file with an error and leaves content empty', () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance as unknown as {
+      content: () => string;
+      error: () => string | null;
+      importVersionFile: (e: Event) => void;
+    };
+
+    const file = new File(['x'], 'logo.png', { type: 'image/png' });
+    const input = document.createElement('input');
+    Object.defineProperty(input, 'files', { value: [file] });
+    cmp.importVersionFile({ target: input } as unknown as Event);
+
+    expect(cmp.error()).toContain('text file');
+    expect(cmp.content()).toBe('');
+  });
+
   it('loads analytics for a selected dataset', () => {
     const fixture = setup();
     const select: HTMLSelectElement = fixture.nativeElement.querySelector(

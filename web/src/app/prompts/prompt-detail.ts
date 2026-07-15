@@ -21,6 +21,7 @@ import {
 } from '../shared';
 import { PromptsApiService } from './prompts-api.service';
 import { VersionDiff } from './version-diff';
+import { validateImportFile } from './import-file';
 
 @Component({
   selector: 'app-prompt-detail',
@@ -100,6 +101,16 @@ import { VersionDiff } from './version-diff';
 
           @if (showAddVersion()) {
             <form class="form-stack add-version-form" (submit)="addVersion($event)">
+              <div class="sb-field">
+                <label for="importFile">Import content from a file (optional)</label>
+                <input
+                  id="importFile"
+                  type="file"
+                  accept=".txt,.md,.markdown,.text,.prompt,text/*"
+                  data-testid="import-version-file"
+                  (change)="importVersionFile($event)"
+                />
+              </div>
               <div class="sb-field">
                 <label for="content">Content</label>
                 <textarea
@@ -408,6 +419,30 @@ export class PromptDetail implements OnInit {
       next: () => void this.router.navigate(['/prompts']),
       error: () => this.error.set('Could not delete the prompt.'),
     });
+  }
+
+  /**
+   * Single-file import (1.6): validate the picked file, then read its text into the existing
+   * `content` signal. The unchanged add-version POST does the actual copy-in — no new API.
+   */
+  protected importVersionFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const check = validateImportFile(file);
+    if (!check.ok) {
+      this.error.set(check.message ?? 'That file could not be imported.');
+      input.value = ''; // let the same file be re-picked after fixing it
+      return;
+    }
+
+    this.error.set(null);
+    const reader = new FileReader();
+    reader.onload = () => this.content.set(String(reader.result ?? ''));
+    reader.onerror = () => this.error.set('Could not read that file.');
+    reader.readAsText(file);
+    input.value = '';
   }
 
   protected addVersion(event: Event): void {
