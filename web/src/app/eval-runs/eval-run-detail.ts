@@ -77,11 +77,15 @@ import { EvalRunsApiService } from './eval-runs-api.service';
                   </div>
                   <div class="result__row">
                     <dt class="result__key">Input tokens</dt>
-                    <dd class="result__val" data-testid="input-tokens">{{ fixtureRun.inputTokens }}</dd>
+                    <dd class="result__val" data-testid="input-tokens">
+                      {{ fixtureRun.inputTokens }}
+                    </dd>
                   </div>
                   <div class="result__row">
                     <dt class="result__key">Output tokens</dt>
-                    <dd class="result__val" data-testid="output-tokens">{{ fixtureRun.outputTokens }}</dd>
+                    <dd class="result__val" data-testid="output-tokens">
+                      {{ fixtureRun.outputTokens }}
+                    </dd>
                   </div>
                   <div class="result__row">
                     <dt class="result__key">Cost</dt>
