@@ -37,4 +37,9 @@ export class FoldersApiService {
   listFolderPrompts(id: string): Observable<PromptSummary[]> {
     return this.http.get<PromptSummary[]>(`/api/folders/${id}/prompts`);
   }
+
+  /** Deletes a folder, reparenting its subfolders and prompts up to its parent / root (1.10). */
+  deleteFolder(id: string): Observable<void> {
+    return this.http.delete<void>(`/api/folders/${id}`);
+  }
 }

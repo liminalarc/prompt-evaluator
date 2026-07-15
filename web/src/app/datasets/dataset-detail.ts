@@ -11,6 +11,7 @@ import {
   Card,
   CardFoot,
   Chip,
+  ConfirmService,
   Crumb,
   EmptyState,
   ErrorState,
@@ -51,7 +52,17 @@ const JUDGE_MODELS = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
       @if (loading()) {
         <app-loading-state label="Loading dataset…" />
       } @else if (dataset(); as d) {
-        <app-page-header [heading]="d.name" [subtitle]="d.description ?? ''" />
+        <app-page-header [heading]="d.name" [subtitle]="d.description ?? ''">
+          <button
+            actions
+            class="sb-btn sb-btn--danger sb-btn--sm"
+            type="button"
+            data-testid="delete-dataset"
+            (click)="deleteDataset(d)"
+          >
+            Delete dataset
+          </button>
+        </app-page-header>
 
         <app-card heading="Fixtures">
           <div class="field-inline fixtures-filter">
@@ -389,6 +400,7 @@ export class DatasetDetail implements OnInit {
   private readonly api = inject(DatasetsApiService);
   private readonly evalApi = inject(EvalRunsApiService);
   private readonly promptsApi = inject(PromptsApiService);
+  private readonly confirm = inject(ConfirmService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -564,6 +576,24 @@ export class DatasetDetail implements OnInit {
     }
     this.promptsApi.getPrompt(promptId).subscribe({
       next: (p: Prompt) => this.versions.set(p.versions),
+    });
+  }
+
+  protected async deleteDataset(dataset: Dataset): Promise<void> {
+    const fixtures = dataset.fixtures?.length ?? 0;
+    const ok = await this.confirm.ask({
+      title: 'Delete dataset',
+      message:
+        `Deletes “${dataset.name}” and its ${fixtures} fixture(s), its scorers, ` +
+        `and all runs and scores against it. This cannot be undone.`,
+      confirmLabel: 'Delete dataset',
+    });
+    if (!ok) return;
+    this.error.set(null);
+    this.api.deleteDataset(this.id).subscribe({
+      // A deleted dataset has nowhere to go — return to its owning prompt workspace.
+      next: () => void this.router.navigate(['/prompts', dataset.promptId]),
+      error: () => this.error.set('Could not delete the dataset.'),
     });
   }
 

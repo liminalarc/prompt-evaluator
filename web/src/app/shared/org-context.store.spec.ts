@@ -86,6 +86,36 @@ describe('OrgContextStore', () => {
     expect(store.currentOrg()).toBeNull();
   });
 
+  it('remove drops the current org and repoints to the next remaining one (1.10)', () => {
+    configure();
+    store.load(); // selects o1
+    store.remove('o1');
+    expect(store.organizations().map((o) => o.id)).toEqual(['o2']);
+    expect(store.currentOrgId()).toBe('o2');
+  });
+
+  it('remove of a non-current org leaves the selection untouched', () => {
+    configure();
+    store.load(); // selects o1
+    store.remove('o2');
+    expect(store.organizations().map((o) => o.id)).toEqual(['o1']);
+    expect(store.currentOrgId()).toBe('o1');
+  });
+
+  it('remove of the last org clears the selection and the ?org= param', () => {
+    configure([{ id: 'o1', name: 'Alpha' }]);
+    store.load();
+    const nav = spyOn(router, 'navigate');
+    store.remove('o1');
+    expect(store.organizations().length).toBe(0);
+    expect(store.currentOrgId()).toBeNull();
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(nav).toHaveBeenCalledWith(
+      [],
+      jasmine.objectContaining({ queryParams: { org: null }, queryParamsHandling: 'merge' }),
+    );
+  });
+
   it('reset clears the context and lets load() re-fetch (sign-out)', () => {
     configure();
     store.load();

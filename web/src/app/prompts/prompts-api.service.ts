@@ -52,4 +52,9 @@ export class PromptsApiService {
   movePrompt(id: string, folderId: string | null): Observable<Prompt> {
     return this.http.post<Prompt>(`/api/prompts/${id}/move`, { folderId });
   }
+
+  /** Deletes a prompt and everything it owns — versions, datasets, and their runs/scores (1.10). */
+  deletePrompt(id: string): Observable<void> {
+    return this.http.delete<void>(`/api/prompts/${id}`);
+  }
 }

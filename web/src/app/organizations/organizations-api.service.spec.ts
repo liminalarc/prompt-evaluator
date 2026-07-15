@@ -39,4 +39,11 @@ describe('OrganizationsApiService', () => {
     expect(req.request.body).toEqual({ name: 'Acme Inc' });
     req.flush({ id: 'o1', name: 'Acme Inc' });
   });
+
+  it('deletes an organization', () => {
+    service.deleteOrganization('o1').subscribe();
+    const req = httpMock.expectOne('/api/organizations/o1');
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+  });
 });

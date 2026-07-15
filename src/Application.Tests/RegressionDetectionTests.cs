@@ -19,6 +19,7 @@ public class RegressionDetectionTests
         public Task<IReadOnlyList<Prompt>> ListByFolderAsync(Guid? folderId, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Prompt>>(_saved.Where(p => p.FolderId == folderId).ToList());
         public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task DeleteAsync(Guid id, CancellationToken ct = default) { _saved.RemoveAll(p => p.Id == id); return Task.CompletedTask; }
     }
 
     private sealed class InMemoryEvalRunRepo : IEvalRunRepository

@@ -39,4 +39,10 @@ public interface IPromptRepository
 
     /// <summary>Persists changes made to a tracked aggregate (e.g. a newly appended version).</summary>
     Task SaveChangesAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Deletes a prompt and everything owned by it (1.10): its version history, its datasets, and
+    /// those datasets' fixtures, scorer configs, eval runs, and scores. No-op if it does not exist.
+    /// </summary>
+    Task DeleteAsync(Guid id, CancellationToken ct = default);
 }

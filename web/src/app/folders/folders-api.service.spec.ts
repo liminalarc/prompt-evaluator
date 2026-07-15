@@ -54,4 +54,11 @@ describe('FoldersApiService', () => {
     expect(req.request.method).toBe('GET');
     req.flush([]);
   });
+
+  it('deletes a folder', () => {
+    service.deleteFolder('abc').subscribe();
+    const req = httpMock.expectOne('/api/folders/abc');
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+  });
 });

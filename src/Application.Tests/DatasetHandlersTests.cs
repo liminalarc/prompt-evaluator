@@ -31,6 +31,8 @@ public class DatasetHandlersTests
             SaveChangesCalls++;
             return Task.CompletedTask;
         }
+
+        public Task DeleteAsync(Guid id, CancellationToken ct = default) { Saved.RemoveAll(d => d.Id == id); return Task.CompletedTask; }
     }
 
     private sealed class InMemoryPromptRepo : IPromptRepository
@@ -44,6 +46,7 @@ public class DatasetHandlersTests
         public Task<IReadOnlyList<Prompt>> ListByFolderAsync(Guid? folderId, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Prompt>>(_saved.Where(p => p.FolderId == folderId).ToList());
         public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task DeleteAsync(Guid id, CancellationToken ct = default) { _saved.RemoveAll(p => p.Id == id); return Task.CompletedTask; }
     }
 
     private sealed class FixedTime(DateTimeOffset now) : TimeProvider

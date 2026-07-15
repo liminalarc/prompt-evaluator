@@ -39,4 +39,11 @@ public interface IFolderRepository
 
     /// <summary>Persists changes made to a tracked folder (e.g. a rename or move).</summary>
     Task SaveChangesAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Deletes a folder after <b>reparenting</b> its contents (1.10) — its child folders and filed
+    /// prompts move up to this folder's parent (or the organization root when it is top-level), the
+    /// least destructive option. No-op if the folder does not exist.
+    /// </summary>
+    Task DeleteAsync(Guid id, CancellationToken ct = default);
 }

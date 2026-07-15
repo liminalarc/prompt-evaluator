@@ -23,4 +23,9 @@ export class OrganizationsApiService {
   renameOrganization(id: string, name: string): Observable<Organization> {
     return this.http.put<Organization>(`/api/organizations/${id}`, { name });
   }
+
+  /** Deletes an org and everything under it — folders, prompts, datasets cascade (1.9/1.10). */
+  deleteOrganization(id: string): Observable<void> {
+    return this.http.delete<void>(`/api/organizations/${id}`);
+  }
 }

@@ -74,4 +74,11 @@ describe('PromptsApiService', () => {
     expect(req.request.body).toEqual(body);
     req.flush({ id: 'abc', name: 'x', description: null, versions: [] });
   });
+
+  it('deletes a prompt', () => {
+    service.deletePrompt('abc').subscribe();
+    const req = httpMock.expectOne('/api/prompts/abc');
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+  });
 });

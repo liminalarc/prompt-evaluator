@@ -91,4 +91,30 @@ public sealed class FolderRepository(EvalDbContext db) : IFolderRepository
 
     public Task SaveChangesAsync(CancellationToken ct = default)
         => db.SaveChangesAsync(ct);
+
+    public async Task DeleteAsync(Guid id, CancellationToken ct = default)
+    {
+        var folder = await db.Folders
+            .AsNoTracking()
+            .SingleOrDefaultAsync(f => f.Id == id, ct);
+        if (folder is null)
+            return;
+
+        // Reparent to this folder's parent — null when it is top-level, which promotes children to
+        // top-level and unfiles prompts to the org root (1.10, least-destructive). One transaction so
+        // the folder is never deleted while something still points at it.
+        var newParentId = folder.ParentId;
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+
+        await db.Folders
+            .Where(f => f.ParentId == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(f => f.ParentId, newParentId), ct);
+        await db.Prompts
+            .Where(p => p.FolderId == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p.FolderId, newParentId), ct);
+        await db.Folders.Where(f => f.Id == id).ExecuteDeleteAsync(ct);
+
+        await tx.CommitAsync(ct);
+    }
 }

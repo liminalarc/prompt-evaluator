@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { OrganizationsApiService } from '../organizations/organizations-api.service';
 import { OrgContextStore } from '../shared/org-context.store';
+import { ConfirmService } from '../shared';
 import { PromptList } from './prompt-list';
 
 describe('PromptList (org + folder navigation)', () => {
@@ -158,5 +159,39 @@ describe('PromptList (org + folder navigation)', () => {
     expect(move.request.body).toEqual({ folderId: 'f1' });
     move.flush({ id: 'p1', folderId: 'f1', name: 'Root prompt', description: null, versions: [] });
     flushOrgData(); // reload after move
+  });
+
+  it('confirms (stating the cascade) before deleting a prompt, then reloads the list', async () => {
+    const fixture = setup();
+    const confirm = TestBed.inject(ConfirmService);
+    const askSpy = spyOn(confirm, 'ask').and.returnValue(Promise.resolve(true));
+
+    const el: HTMLElement = fixture.nativeElement;
+    (el.querySelector('[data-testid="delete-prompt-p1"]') as HTMLButtonElement).click();
+
+    // The confirmation states what cascades.
+    expect(askSpy).toHaveBeenCalledTimes(1);
+    const message = askSpy.calls.mostRecent().args[0].message;
+    expect(message).toContain('Root prompt');
+    expect(message).toContain('version');
+
+    await fixture.whenStable();
+    const del = httpMock.expectOne('/api/prompts/p1');
+    expect(del.request.method).toBe('DELETE');
+    del.flush(null);
+    flushOrgData(); // list reloads after delete
+  });
+
+  it('does not delete a prompt when the confirmation is cancelled', async () => {
+    const fixture = setup();
+    const confirm = TestBed.inject(ConfirmService);
+    spyOn(confirm, 'ask').and.returnValue(Promise.resolve(false));
+
+    const el: HTMLElement = fixture.nativeElement;
+    (el.querySelector('[data-testid="delete-prompt-p1"]') as HTMLButtonElement).click();
+    await fixture.whenStable();
+
+    // No DELETE issued — httpMock.verify() in afterEach asserts nothing outstanding.
+    httpMock.expectNone('/api/prompts/p1');
   });
 });

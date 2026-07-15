@@ -63,6 +63,16 @@ public static class DatasetEndpoints
                 }
             }).RequireAuthorization();
 
+        // Deletes a dataset and everything scoped to it (1.10): fixtures, scorer-configs, eval-runs,
+        // scores. Org-scoped via the owning prompt — missing is 404, a non-member is 403.
+        group.MapDelete("/{id:guid}", async (Guid id, IDatasetRepository repository, OrgAccess access, CancellationToken ct) =>
+        {
+            if ((await access.CanAccessDatasetAsync(id, ct)).ToProblem() is { } problem)
+                return problem;
+            await repository.DeleteAsync(id, ct);
+            return Results.NoContent();
+        });
+
         group.MapPost("/{id:guid}/fixtures/capture",
             async (Guid id, CaptureFixturesRequest request, CaptureFixturesHandler handler, OrgAccess access, CancellationToken ct) =>
             {

@@ -23,4 +23,10 @@ public interface IDatasetRepository
 
     /// <summary>Persists changes made to a tracked aggregate (e.g. newly appended fixtures).</summary>
     Task SaveChangesAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Deletes a dataset and everything scoped to it (1.10): its fixtures, scorer configs, eval runs,
+    /// and those runs' scores. No-op if it does not exist.
+    /// </summary>
+    Task DeleteAsync(Guid id, CancellationToken ct = default);
 }

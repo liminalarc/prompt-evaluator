@@ -42,6 +42,17 @@ public class FolderHandlersTests
             }
             return Task.FromResult<IReadOnlyList<Guid>>(result);
         }
+
+        public Task DeleteAsync(Guid id, CancellationToken ct = default)
+        {
+            var folder = Saved.SingleOrDefault(f => f.Id == id);
+            if (folder is null) return Task.CompletedTask;
+            var newParentId = folder.ParentId;
+            foreach (var child in Saved.Where(f => f.ParentId == id).ToList())
+                child.MoveTo(newParentId);
+            Saved.Remove(folder);
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class InMemoryPromptRepo : IPromptRepository
@@ -55,6 +66,7 @@ public class FolderHandlersTests
         public Task<IReadOnlyList<Prompt>> ListByFolderAsync(Guid? folderId, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Prompt>>(Saved.Where(p => p.FolderId == folderId).ToList());
         public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task DeleteAsync(Guid id, CancellationToken ct = default) { Saved.RemoveAll(p => p.Id == id); return Task.CompletedTask; }
     }
 
     private static readonly Organization Org = Organization.Create("Acme");

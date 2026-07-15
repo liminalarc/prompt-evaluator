@@ -72,6 +72,17 @@ public static class PromptEndpoints
                 }
             });
 
+        // Deletes a prompt and everything it owns (1.10): versions, datasets, and those datasets'
+        // fixtures/scorer-configs/eval-runs/scores. Org-scoped — a missing prompt is 404, a
+        // non-member is 403 (via OrgAccess); a delete the caller may perform returns 204.
+        group.MapDelete("/{id:guid}", async (Guid id, IPromptRepository repository, OrgAccess access, CancellationToken ct) =>
+        {
+            if ((await access.CanAccessPromptAsync(id, ct)).ToProblem() is { } problem)
+                return problem;
+            await repository.DeleteAsync(id, ct);
+            return Results.NoContent();
+        });
+
         group.MapPost("/{id:guid}/versions",
             async (Guid id, AddPromptVersionRequest request, AddPromptVersionHandler handler, OrgAccess access, CancellationToken ct) =>
             {

@@ -7,7 +7,7 @@ import { PromptSummary } from '../prompt';
 import { FoldersApiService } from '../folders/folders-api.service';
 import { OrganizationsApiService } from '../organizations/organizations-api.service';
 import { OrgContextStore } from '../shared/org-context.store';
-import { Card, EmptyState, ErrorState, PageHeader } from '../shared';
+import { Card, ConfirmService, EmptyState, ErrorState, PageHeader } from '../shared';
 import { PromptsApiService } from './prompts-api.service';
 
 interface Crumb {
@@ -33,6 +33,17 @@ interface Crumb {
         >
           + New org
         </button>
+        @if (currentOrgId()) {
+          <button
+            actions
+            class="sb-btn sb-btn--danger sb-btn--sm"
+            type="button"
+            data-testid="delete-org"
+            (click)="deleteOrg()"
+          >
+            Delete org
+          </button>
+        }
       </app-page-header>
 
       @if (showNewOrg()) {
@@ -139,21 +150,32 @@ interface Crumb {
         @if (subfolders().length > 0) {
           <div class="folders-grid" data-testid="subfolders">
             @for (f of subfolders(); track f.id) {
-              <button
-                class="folder-card sb-card"
-                type="button"
-                [attr.data-testid]="'subfolder-' + f.id"
-                (click)="openFolder(f.id)"
-              >
-                <span class="folder-card__badge" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                    <path
-                      d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"
-                    />
-                  </svg>
-                </span>
-                <span class="folder-card__name">{{ f.name }}</span>
-              </button>
+              <div class="folder-tile">
+                <button
+                  class="folder-card sb-card"
+                  type="button"
+                  [attr.data-testid]="'subfolder-' + f.id"
+                  (click)="openFolder(f.id)"
+                >
+                  <span class="folder-card__badge" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                      <path
+                        d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"
+                      />
+                    </svg>
+                  </span>
+                  <span class="folder-card__name">{{ f.name }}</span>
+                </button>
+                <button
+                  class="folder-tile__delete sb-btn sb-btn--ghost sb-btn--sm"
+                  type="button"
+                  [attr.data-testid]="'delete-folder-' + f.id"
+                  [attr.aria-label]="'Delete folder ' + f.name"
+                  (click)="deleteFolder(f)"
+                >
+                  Delete
+                </button>
+              </div>
             }
           </div>
         }
@@ -172,6 +194,7 @@ interface Crumb {
                   <th>Versions</th>
                   <th>Latest target model</th>
                   <th>Move to</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -194,6 +217,16 @@ interface Crumb {
                           <option [value]="f.id">{{ f.name }}</option>
                         }
                       </select>
+                    </td>
+                    <td>
+                      <button
+                        class="sb-btn sb-btn--ghost sb-btn--sm"
+                        type="button"
+                        [attr.data-testid]="'delete-prompt-' + p.id"
+                        (click)="deletePrompt(p)"
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 }
@@ -237,8 +270,23 @@ interface Crumb {
         grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
         gap: var(--sb-space-md);
       }
+      .folder-tile {
+        position: relative;
+      }
+      .folder-tile__delete {
+        position: absolute;
+        top: var(--sb-space-xs);
+        right: var(--sb-space-xs);
+        opacity: 0;
+        transition: opacity 0.15s ease;
+      }
+      .folder-tile:hover .folder-tile__delete,
+      .folder-tile:focus-within .folder-tile__delete {
+        opacity: 1;
+      }
       .folder-card {
         display: flex;
+        width: 100%;
         align-items: center;
         gap: var(--sb-space-sm);
         text-align: left;
@@ -276,6 +324,7 @@ export class PromptList {
   private readonly foldersApi = inject(FoldersApiService);
   private readonly orgsApi = inject(OrganizationsApiService);
   private readonly orgStore = inject(OrgContextStore);
+  private readonly confirm = inject(ConfirmService);
 
   protected readonly folders = signal<Folder[]>([]);
   protected readonly prompts = signal<PromptSummary[]>([]);
@@ -429,6 +478,61 @@ export class PromptList {
     this.api.movePrompt(prompt.id, folderId).subscribe({
       next: () => this.loadOrgData(orgId),
       error: () => this.error.set('Could not move the prompt.'),
+    });
+  }
+
+  protected async deletePrompt(prompt: PromptSummary): Promise<void> {
+    const orgId = this.currentOrgId();
+    if (!orgId) return;
+    const ok = await this.confirm.ask({
+      title: 'Delete prompt',
+      message:
+        `Deletes “${prompt.name}” and its ${prompt.versionCount} version(s), ` +
+        `along with its datasets and all their runs and scores. This cannot be undone.`,
+      confirmLabel: 'Delete prompt',
+    });
+    if (!ok) return;
+    this.error.set(null);
+    this.api.deletePrompt(prompt.id).subscribe({
+      next: () => this.loadOrgData(orgId),
+      error: () => this.error.set('Could not delete the prompt.'),
+    });
+  }
+
+  protected async deleteFolder(folder: Folder): Promise<void> {
+    const orgId = this.currentOrgId();
+    if (!orgId) return;
+    const ok = await this.confirm.ask({
+      title: 'Delete folder',
+      message:
+        `Deletes the folder “${folder.name}”. Its subfolders and prompts move up to ` +
+        `${this.currentFolderName()} — nothing inside is deleted.`,
+      confirmLabel: 'Delete folder',
+    });
+    if (!ok) return;
+    this.error.set(null);
+    this.foldersApi.deleteFolder(folder.id).subscribe({
+      next: () => this.loadOrgData(orgId),
+      error: () => this.error.set('Could not delete the folder.'),
+    });
+  }
+
+  protected async deleteOrg(): Promise<void> {
+    const id = this.currentOrgId();
+    if (!id) return;
+    const name = this.currentOrgName();
+    const ok = await this.confirm.ask({
+      title: 'Delete organization',
+      message:
+        `Deletes “${name}” and everything under it — all its folders, prompts, datasets, ` +
+        `and runs. This cannot be undone.`,
+      confirmLabel: 'Delete organization',
+    });
+    if (!ok) return;
+    this.error.set(null);
+    this.orgsApi.deleteOrganization(id).subscribe({
+      next: () => this.orgStore.remove(id), // drop + repoint context → effect reloads
+      error: () => this.error.set('Could not delete the organization.'),
     });
   }
 }

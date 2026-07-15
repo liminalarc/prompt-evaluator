@@ -68,6 +68,33 @@ export class OrgContextStore {
     this.select(org.id);
   }
 
+  /**
+   * Drop a deleted org from the context (1.10). If it was the current one, repoint to the first
+   * remaining org, or clear the selection entirely when none are left (clears the `?org=` param).
+   */
+  remove(id: string): void {
+    const wasCurrent = this._currentId() === id;
+    this._orgs.update((list) => list.filter((o) => o.id !== id));
+    if (!wasCurrent) return;
+
+    const next = this._orgs()[0]?.id ?? null;
+    this._currentId.set(null); // clear first so select() re-navigates even to a new id
+    if (next) {
+      this.select(next);
+    } else {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        /* localStorage unavailable — in-memory clear still applies */
+      }
+      this.router.navigate([], {
+        queryParams: { org: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }
+  }
+
   /** Clear the context so the next `load()` re-fetches — used on sign-out (4.1). */
   reset(): void {
     this.loaded = false;

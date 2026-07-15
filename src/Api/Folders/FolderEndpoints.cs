@@ -71,6 +71,16 @@ public static class FolderEndpoints
             }
         });
 
+        // Deletes a folder, reparenting its child folders and prompts up to its parent / the org
+        // root first (1.10, least-destructive). Org-scoped — missing is 404, a non-member is 403.
+        group.MapDelete("/{id:guid}", async (Guid id, IFolderRepository repository, OrgAccess access, CancellationToken ct) =>
+        {
+            if ((await access.CanAccessFolderAsync(id, ct)).ToProblem() is { } problem)
+                return problem;
+            await repository.DeleteAsync(id, ct);
+            return Results.NoContent();
+        });
+
         group.MapPost("/{id:guid}/move", async (Guid id, MoveFolderRequest request, MoveFolderHandler handler, OrgAccess access, CancellationToken ct) =>
         {
             if ((await access.CanAccessFolderAsync(id, ct)).ToProblem() is { } problem)

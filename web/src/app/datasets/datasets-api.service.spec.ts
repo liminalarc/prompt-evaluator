@@ -65,4 +65,11 @@ describe('DatasetsApiService', () => {
     expect(req.request.body).toEqual({ guidance, count: 3 });
     req.flush({ id: 'abc', name: 'x', description: null, fixtures: [] });
   });
+
+  it('deletes a dataset', () => {
+    service.deleteDataset('abc').subscribe();
+    const req = httpMock.expectOne('/api/datasets/abc');
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+  });
 });

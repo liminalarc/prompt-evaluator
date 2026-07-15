@@ -30,6 +30,8 @@ public class PromptHandlersTests
             SaveChangesCalls++;
             return Task.CompletedTask;
         }
+
+        public Task DeleteAsync(Guid id, CancellationToken ct = default) { Saved.RemoveAll(p => p.Id == id); return Task.CompletedTask; }
     }
 
     private sealed class FixedTime(DateTimeOffset now) : TimeProvider

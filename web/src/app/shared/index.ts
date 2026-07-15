@@ -7,5 +7,7 @@ export { ErrorState } from './error-state';
 export { StatusBadge } from './status-badge';
 export { Chip } from './chip';
 export { Card, CardFoot } from './card';
+export { ConfirmDialog } from './confirm-dialog';
+export { ConfirmService, type ConfirmRequest } from './confirm.service';
 export { ThemeService, type Theme } from './theme.service';
 export { passBadge, originBadge, type BadgeVariant, type BadgeSpec } from './status';

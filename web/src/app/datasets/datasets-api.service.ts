@@ -37,4 +37,9 @@ export class DatasetsApiService {
   generateFixtures(id: string, guidance: GenerationGuidance, count: number): Observable<Dataset> {
     return this.http.post<Dataset>(`/api/datasets/${id}/fixtures/generate`, { guidance, count });
   }
+
+  /** Deletes a dataset and everything scoped to it — fixtures, scorers, runs, scores (1.10). */
+  deleteDataset(id: string): Observable<void> {
+    return this.http.delete<void>(`/api/datasets/${id}`);
+  }
 }

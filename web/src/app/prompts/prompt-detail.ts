@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Prompt } from '../prompt';
 import { DatasetSummary } from '../dataset';
 import { TrendSeries } from '../analytics';
@@ -12,6 +12,7 @@ import {
   Card,
   CardFoot,
   Chip,
+  ConfirmService,
   Crumb,
   EmptyState,
   ErrorState,
@@ -48,7 +49,17 @@ import { VersionDiff } from './version-diff';
       @if (loading()) {
         <app-loading-state label="Loading prompt…" />
       } @else if (prompt(); as p) {
-        <app-page-header [heading]="p.name" [subtitle]="p.description ?? ''" />
+        <app-page-header [heading]="p.name" [subtitle]="p.description ?? ''">
+          <button
+            actions
+            class="sb-btn sb-btn--danger sb-btn--sm"
+            type="button"
+            data-testid="delete-prompt"
+            (click)="deletePrompt(p)"
+          >
+            Delete prompt
+          </button>
+        </app-page-header>
 
         <app-card heading="Version history">
           @if (p.versions.length === 0) {
@@ -289,7 +300,9 @@ export class PromptDetail implements OnInit {
   private readonly api = inject(PromptsApiService);
   private readonly datasetsApi = inject(DatasetsApiService);
   private readonly analyticsApi = inject(AnalyticsApiService);
+  private readonly confirm = inject(ConfirmService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   protected readonly prompt = signal<Prompt | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -379,6 +392,22 @@ export class PromptDetail implements OnInit {
 
   private contentOf(versionNumber: number): string {
     return this.prompt()?.versions.find((v) => v.versionNumber === versionNumber)?.content ?? '';
+  }
+
+  protected async deletePrompt(p: Prompt): Promise<void> {
+    const ok = await this.confirm.ask({
+      title: 'Delete prompt',
+      message:
+        `Deletes “${p.name}” and its ${p.versions.length} version(s), along with its ` +
+        `datasets and all their runs and scores. This cannot be undone.`,
+      confirmLabel: 'Delete prompt',
+    });
+    if (!ok) return;
+    this.error.set(null);
+    this.api.deletePrompt(this.id).subscribe({
+      next: () => void this.router.navigate(['/prompts']),
+      error: () => this.error.set('Could not delete the prompt.'),
+    });
   }
 
   protected addVersion(event: Event): void {
