@@ -147,6 +147,89 @@ describe('PromptList (org + folder navigation)', () => {
     expect(rows[0].textContent).toContain('O2 prompt');
   });
 
+  it('bulk-imports prompts by looping create/add-version POSTs, one report row each', () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance as unknown as {
+      showImport: { set: (v: boolean) => void };
+      importResults: () => { name: string; ok: boolean }[];
+      runBulkImport: (orgId: string, text: string) => void;
+    };
+    cmp.showImport.set(true);
+
+    cmp.runBulkImport(
+      'o1',
+      JSON.stringify([
+        { name: 'Alpha', versions: [{ content: 'A: {x}', targetModel: 'claude-sonnet-5' }] },
+        { name: 'Beta' }, // no versions — just the prompt
+      ]),
+    );
+
+    // Alpha: create, then its one version.
+    const createA = httpMock.expectOne('/api/organizations/o1/prompts');
+    expect(createA.request.body).toEqual({ name: 'Alpha', description: null });
+    createA.flush({ id: 'pa', folderId: null, name: 'Alpha', description: null, versions: [] });
+    const versionA = httpMock.expectOne('/api/prompts/pa/versions');
+    expect(versionA.request.body).toEqual({
+      content: 'A: {x}',
+      targetModel: 'claude-sonnet-5',
+      label: null,
+      sourceApp: null,
+    });
+    versionA.flush({});
+
+    // Beta: create only (no versions POST).
+    httpMock
+      .expectOne('/api/organizations/o1/prompts')
+      .flush({ id: 'pb', folderId: null, name: 'Beta', description: null, versions: [] });
+
+    flushOrgData(); // reload after the import completes
+
+    const results = cmp.importResults();
+    expect(results.map((r) => r.name)).toEqual(['Alpha', 'Beta']);
+    expect(results.every((r) => r.ok)).toBe(true);
+
+    fixture.detectChanges();
+    const rows = fixture.nativeElement.querySelectorAll('[data-testid="import-results"] tbody tr');
+    expect(rows.length).toBe(2);
+    expect(fixture.nativeElement.querySelectorAll('[data-testid="import-ok"]').length).toBe(2);
+  });
+
+  it('reports a per-row error and keeps importing when one prompt fails', () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance as unknown as {
+      importResults: () => { name: string; ok: boolean }[];
+      runBulkImport: (orgId: string, text: string) => void;
+    };
+
+    cmp.runBulkImport('o1', JSON.stringify([{ name: 'Bad' }, { name: 'Good' }]));
+
+    // First prompt's create fails…
+    httpMock
+      .expectOne('/api/organizations/o1/prompts')
+      .flush('boom', { status: 500, statusText: 'Server Error' });
+    // …the second still runs.
+    httpMock
+      .expectOne('/api/organizations/o1/prompts')
+      .flush({ id: 'pg', folderId: null, name: 'Good', description: null, versions: [] });
+    flushOrgData();
+
+    const results = cmp.importResults();
+    expect(results.length).toBe(2);
+    expect(results[0]).toEqual(jasmine.objectContaining({ name: 'Bad', ok: false }));
+    expect(results[1]).toEqual(jasmine.objectContaining({ name: 'Good', ok: true }));
+  });
+
+  it('surfaces a parse error and issues no requests for a malformed file', () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance as unknown as {
+      error: () => string | null;
+      runBulkImport: (orgId: string, text: string) => void;
+    };
+    cmp.runBulkImport('o1', '{not json');
+    expect(cmp.error()).toContain('valid JSON');
+    // afterEach httpMock.verify() asserts no create/version requests went out.
+  });
+
   it('moves a prompt to a folder via its row select', () => {
     const fixture = setup();
     const select: HTMLSelectElement =

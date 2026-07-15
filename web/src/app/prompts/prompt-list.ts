@@ -1,7 +1,7 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { Observable, catchError, concatMap, forkJoin, from, map, of, toArray } from 'rxjs';
 import { Folder } from '../folder';
 import { PromptSummary } from '../prompt';
 import { FoldersApiService } from '../folders/folders-api.service';
@@ -9,10 +9,18 @@ import { OrganizationsApiService } from '../organizations/organizations-api.serv
 import { OrgContextStore } from '../shared/org-context.store';
 import { Card, ConfirmService, EmptyState, ErrorState, PageHeader } from '../shared';
 import { PromptsApiService } from './prompts-api.service';
+import { BulkPrompt, parseBulkImport } from './bulk-import';
 
 interface Crumb {
   id: string | null; // null = the organization root
   name: string;
+}
+
+/** One row of the bulk-import report — a prompt that succeeded or failed on its own. */
+interface ImportRowResult {
+  name: string;
+  ok: boolean;
+  message: string;
 }
 
 @Component({
@@ -98,7 +106,53 @@ interface Crumb {
           >
             + New prompt
           </button>
+          <button
+            class="sb-btn sb-btn--secondary"
+            type="button"
+            data-testid="toggle-import"
+            (click)="showImport.set(!showImport())"
+          >
+            + Import prompts
+          </button>
         </div>
+
+        @if (showImport()) {
+          <app-card heading="Import prompts from a file">
+            <p class="subtitle">
+              Pick a JSON file — an array of prompts, each with an optional description and a
+              <code>versions</code> list. They import into {{ currentFolderName() }}.
+            </p>
+            <div class="sb-field">
+              <label for="importFile">Prompts JSON</label>
+              <input
+                id="importFile"
+                type="file"
+                accept=".json,application/json"
+                data-testid="import-file"
+                [disabled]="importing()"
+                (change)="importPrompts($event)"
+              />
+            </div>
+            @if (importResults().length > 0) {
+              <table class="sb-table" data-testid="import-results">
+                <thead>
+                  <tr>
+                    <th>Prompt</th>
+                    <th>Result</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (r of importResults(); track $index) {
+                    <tr [attr.data-testid]="r.ok ? 'import-ok' : 'import-error'">
+                      <td>{{ r.name }}</td>
+                      <td>{{ r.message }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </app-card>
+        }
 
         @if (showNewFolder()) {
           <app-card heading="New folder">
@@ -336,6 +390,11 @@ export class PromptList {
   protected readonly showNewOrg = signal(false);
   protected readonly showNewFolder = signal(false);
   protected readonly showNewPrompt = signal(false);
+  protected readonly showImport = signal(false);
+
+  // Bulk import (1.6): per-row report + an in-flight flag while the POSTs loop.
+  protected readonly importResults = signal<ImportRowResult[]>([]);
+  protected readonly importing = signal(false);
   protected readonly orgName = signal('');
   protected readonly folderName = signal('');
   protected readonly name = signal('');
@@ -470,6 +529,82 @@ export class PromptList {
       },
       error: () => this.error.set('Could not create the prompt.'),
     });
+  }
+
+  /**
+   * Bulk import (1.6): read a JSON file, then orchestrate the import client-side by looping the
+   * existing create/add-version POSTs into the current org + folder. No new API endpoint.
+   */
+  protected importPrompts(event: Event): void {
+    const orgId = this.currentOrgId();
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!orgId || !file) return;
+    input.value = ''; // allow re-picking the same file after a fix
+
+    const reader = new FileReader();
+    reader.onload = () => this.runBulkImport(orgId, String(reader.result ?? ''));
+    reader.onerror = () => this.error.set('Could not read that file.');
+    reader.readAsText(file);
+  }
+
+  private runBulkImport(orgId: string, text: string): void {
+    const parsed = parseBulkImport(text);
+    if (!parsed.ok) {
+      this.error.set(parsed.error);
+      return;
+    }
+    this.error.set(null);
+    this.importResults.set([]);
+    this.importing.set(true);
+    const folderId = this.currentFolderId();
+
+    // Sequential: each prompt (and its versions) is created in order so partial failures are
+    // reported per row without a transaction — an early failure never stops later prompts.
+    from(parsed.prompts)
+      .pipe(concatMap((p) => this.importOne(orgId, folderId, p)))
+      .subscribe({
+        next: (result) => this.importResults.update((rows) => [...rows, result]),
+        complete: () => {
+          this.importing.set(false);
+          this.loadOrgData(orgId); // surface everything that landed
+        },
+      });
+  }
+
+  private importOne(
+    orgId: string,
+    folderId: string | null,
+    p: BulkPrompt,
+  ): Observable<ImportRowResult> {
+    return this.api.createPrompt(orgId, p.name, p.description).pipe(
+      concatMap((created) => {
+        const filed$: Observable<unknown> = folderId
+          ? this.api.movePrompt(created.id, folderId)
+          : of(null);
+        const versions$: Observable<unknown> =
+          p.versions.length === 0
+            ? of(null)
+            : from(p.versions).pipe(
+                concatMap((v) =>
+                  this.api.addVersion(created.id, {
+                    content: v.content,
+                    targetModel: v.targetModel,
+                    label: v.label,
+                    sourceApp: null,
+                  }),
+                ),
+                toArray(),
+              );
+        return filed$.pipe(concatMap(() => versions$));
+      }),
+      map((): ImportRowResult => ({
+        name: p.name,
+        ok: true,
+        message: `Imported with ${p.versions.length} version(s).`,
+      })),
+      catchError(() => of<ImportRowResult>({ name: p.name, ok: false, message: 'Import failed.' })),
+    );
   }
 
   protected move(prompt: PromptSummary, folderIdValue: string): void {

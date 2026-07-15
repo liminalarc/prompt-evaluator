@@ -37,3 +37,36 @@ test('imports a version’s content from a picked text file', async ({ page, req
   await page.getByTestId('add-version').click();
   await expect(page.getByTestId('versions')).toContainText('claude-sonnet-5');
 });
+
+test('bulk-imports several prompts from a JSON file with a per-row report', async ({
+  page,
+  request,
+}) => {
+  const stamp = Date.now();
+  const alpha = `e2e bulk alpha ${stamp}`;
+  const beta = `e2e bulk beta ${stamp}`;
+  orgId = await createOrg(request, orgName('bulk'));
+
+  const payload = JSON.stringify([
+    { name: alpha, versions: [{ content: 'Alpha: {input}', targetModel: 'claude-sonnet-5' }] },
+    { name: beta },
+  ]);
+
+  await page.goto('/prompts');
+  await page.getByTestId('org-select').selectOption(orgId);
+  await page.getByTestId('toggle-import').click();
+  await page.getByTestId('import-file').setInputFiles({
+    name: 'prompts.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(payload),
+  });
+
+  // Per-row report shows both prompts succeeded…
+  await expect(page.getByTestId('import-results')).toContainText(alpha);
+  await expect(page.getByTestId('import-results')).toContainText(beta);
+  await expect(page.getByTestId('import-ok')).toHaveCount(2);
+
+  // …and both now appear in the current folder's prompt list.
+  await expect(page.getByTestId('prompts')).toContainText(alpha);
+  await expect(page.getByTestId('prompts')).toContainText(beta);
+});
