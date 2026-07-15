@@ -193,6 +193,11 @@ boundary.
   exposes its own `GET /version`. In compose these are on `http://localhost:4241/version`
   (api) and `http://localhost:4242/version` (eval-runner). The build `commit` comes from the
   `GIT_COMMIT` build-arg (`dev` when unset).
+- `GET /api/version` — the flat, SPA-facing payload `{ version, commit, buildTime, environment,
+  channel }` (the web footer build chip + topbar env badge read it). `channel` is the reliable
+  environment signal (`local` / `dev` / `prod`), baked from the `APP_CHANNEL` build-arg — CI
+  derives it from the git-ref (a `v*` tag → `prod`, else `dev`); a plain build is `local`.
+  `environment` (`ASPNETCORE_ENVIRONMENT`) is reported but is *not* the dev/prod discriminator.
 
   **Versioning is git-tag-derived — the git tag is the single source of the app version.**
   There is no version string to bump in the tree. CI computes the version from
