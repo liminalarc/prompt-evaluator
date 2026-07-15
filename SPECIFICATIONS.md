@@ -10,7 +10,6 @@
 - **1.5** Multi-Provider Model Support — `NOT STARTED` — [detail](specs/1.5.md)
 - **1.6** Prompt Import (file / bulk) — `NOT STARTED` — [detail](specs/1.6.md)
 - **1.8** Shared / Cross-Prompt Datasets (cloning) — `NOT STARTED` — [detail](specs/1.8.md)
-- **1.11** Regression flagging — small-sample handling & clearer messaging — `IN PROGRESS` — [detail](specs/1.11.md)
 
 ## Phase 2 — Review & Advisory
 - **2.1** Human Review UI — `NOT STARTED` — [detail](specs/2.1.md)
@@ -26,6 +25,7 @@
 - **4.2** SSO / OAuth Sign-In — `NOT STARTED` — [detail](specs/4.2.md)
 
 ## Archive
+- **1.11** Regression flagging — small-sample handling & clearer messaging — `DONE` — [detail](specs/archive/1.11.md)
 - **1.10** Deletion & lifecycle for registry entities — `DONE` — [detail](specs/archive/1.10.md)
 - **2.5** Eval-loop UI/UX overhaul (dogfood findings) — `DONE` — [detail](specs/archive/2.5.md)
 - **4.1** Authentication & Multi-User Access — `DONE` — [detail](specs/archive/4.1.md)
