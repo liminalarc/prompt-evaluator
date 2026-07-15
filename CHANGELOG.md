@@ -4,6 +4,55 @@ All notable changes to this project are documented here. Versions follow one uni
 SemVer (pre-1.0 `0.x`) across the API, web, and eval-runner. A release is a tagged, verified
 **compose-stack build** — there is no hosted deployment yet (production deploy is spec 3.2).
 
+## [0.7.0] — 2026-07-15
+
+Sharpens the eval loop end-to-end: a cohesive branded UI, deletion/lifecycle for registry
+entities, and clearer regression flagging when a dataset is too small to confirm a drop.
+
+### Added
+
+- **[#2.5] Eval-loop UI/UX overhaul** ([detail](specs/archive/2.5.md)) — a top-to-bottom pass
+  driven by live dogfooding: self-hosted **Inter** (offline woff2, `--sb-font-ui` now resolves),
+  a shared **Card** and layout kit (`.panel--wide`, `.card-grid`, `.form-stack`), brand tables
+  everywhere, and intent variants on every button. A **navy hero topbar** (LiminalArc chrome) with
+  a blaze litmus-drop logo, on-dark controls, and blaze active-nav accent; dashboard prompt cards
+  gain a primary left rail. Eval-run detail now **pretty-prints** model output (fence-stripped) with
+  labeled latency/cost and shows **input/output token counts** (the eval-runner already returned
+  them; now threaded through `PromptExecution` → `FixtureRun`/`EvalRun` → DTO with an EF migration).
+  A **dark-mode toggle** (`ThemeService`, persisted). Redesigned prompts/dataset/eval-run screens;
+  capture form gains an optional expected-output field; Runs list refreshes after a run.
+- **[#1.10] Deletion & lifecycle for registry entities** ([detail](specs/archive/1.10.md)) —
+  `DELETE` for prompt / dataset / folder (org-scoped via `OrgAccess`: 403 non-member, 404 missing,
+  204 ok). Prompt/dataset deletes cascade (datasets/versions/fixtures via FK; eval_runs/
+  scorer_configs explicitly in a transaction); folder delete reparents its children to the parent
+  (org root if top-level). Web: a shared tokenized `ConfirmService`/`ConfirmDialog` and delete
+  affordances on the prompt row/workspace, dataset page, folder tile, and org header.
+- **[#1.11] Unverified (small-sample) regression flagging** ([detail](specs/archive/1.11.md)) —
+  a threshold-clearing drop that lacks statistical significance is no longer discarded but
+  **classified**. New `RegressionConfidence { Confirmed, Unverified }`: `Confirmed` = drop>threshold
+  AND p<alpha (unchanged); `Unverified` = drop>threshold but pValue null (n<2) or p≥alpha. Threaded
+  through the handler and `RegressionFlagResponse`. Web renders unverified drops in a muted "Possible
+  — not enough data to confirm (add more fixtures)" block; the "No regressions" empty state now shows
+  only when there's no threshold-clearing drop at all.
+
+### Fixed
+
+- **[#1.10]** Org delete now also clears its orphan `eval_runs`/`scorer_configs`, completing a
+  pre-existing 1.9 cascade gap.
+- **[#2.5]** Switching org in the topbar didn't rescope `/prompts` (and analytics) — a stale-response
+  race; responses whose `orgId` no longer matches the current org are now dropped.
+
+### Changed
+
+- Content links adopt LiminalArc navy (`--sb-primary`), replacing the browser-default blue/purple.
+
+### Notes
+
+- **New backlog from 2.5's deferral** (reconciled): **[#2.6]** upstreaming the local `--sb-hero-*`
+  stopgap tokens into the shared brand-tokens package (cross-repo) — tracked, not scheduled.
+- Deployable artifact is still the compose stack (local + CI only). CI gates: `backend`,
+  `eval-runner`, `web`, `compose-smoke`. Hosted deployment remains spec 3.2.
+
 ## [0.6.0] — 2026-07-14
 
 Adds authentication and multi-user access: users sign in and their access is scoped to the
