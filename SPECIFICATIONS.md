@@ -17,7 +17,7 @@
 - **2.1** Human Review UI — `NOT STARTED` — [detail](specs/2.1.md)
 - **2.2** Prompt-Engineering Advisory — `NOT STARTED` — [detail](specs/2.2.md)
 - **2.3** Prompt Authoring UX — `NOT STARTED` — [detail](specs/2.3.md)
-- **2.5** Eval-loop UX polish (dogfood findings) — `NOT STARTED` — [detail](specs/2.5.md)
+- **2.5** Eval-loop UI/UX overhaul (dogfood findings) — `IN PROGRESS` — [detail](specs/2.5.md)
 
 ## Phase 3 — Integrations & Ops
 - **3.1** Zatomic-backed Prompt Registry — `NOT STARTED` — [detail](specs/3.1.md)
