@@ -34,19 +34,6 @@
   font-size: var(--sb-type-small-size);
 }
 
-.sb-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.sb-table th,
-.sb-table td {
-  text-align: left;
-  padding: var(--sb-space-sm) var(--sb-space-md);
-  border-bottom: 1px solid var(--sb-border);
-  font-size: var(--sb-type-small-size);
-}
-
 .create,
 .add-version {
   display: flex;

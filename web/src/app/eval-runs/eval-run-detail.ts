@@ -38,10 +38,16 @@ import { EvalRunsApiService } from './eval-runs-api.service';
         <app-error-state [message]="message" />
       } @else if (run(); as r) {
         <app-page-header heading="Eval run" [subtitle]="summary(r)">
-          <a actions class="sb-btn sb-btn--sm" [routerLink]="['/datasets', r.datasetId]"
+          <a
+            actions
+            class="sb-btn sb-btn--sm sb-btn--secondary"
+            [routerLink]="['/datasets', r.datasetId]"
             >View dataset</a
           >
-          <a actions class="sb-btn sb-btn--sm" [routerLink]="['/prompts', r.promptId]"
+          <a
+            actions
+            class="sb-btn sb-btn--sm sb-btn--secondary"
+            [routerLink]="['/prompts', r.promptId]"
             >View prompt</a
           >
         </app-page-header>

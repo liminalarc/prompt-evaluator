@@ -6,4 +6,6 @@ export { EmptyState } from './empty-state';
 export { ErrorState } from './error-state';
 export { StatusBadge } from './status-badge';
 export { Chip } from './chip';
+export { Card, CardFoot } from './card';
+export { ThemeService, type Theme } from './theme.service';
 export { passBadge, originBadge, type BadgeVariant, type BadgeSpec } from './status';

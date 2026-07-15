@@ -98,7 +98,7 @@ const JUDGE_MODELS = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
 
         <div class="toolbar">
           <button
-            class="sb-btn sb-btn--sm"
+            class="sb-btn sb-btn--sm sb-btn--secondary"
             type="button"
             data-testid="toggle-capture"
             (click)="showCapture.set(!showCapture())"
@@ -106,7 +106,7 @@ const JUDGE_MODELS = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
             + Capture fixture
           </button>
           <button
-            class="sb-btn sb-btn--sm"
+            class="sb-btn sb-btn--sm sb-btn--secondary"
             type="button"
             data-testid="toggle-generate"
             (click)="showGenerate.set(!showGenerate())"
@@ -218,7 +218,7 @@ const JUDGE_MODELS = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
         }
         <div class="toolbar">
           <button
-            class="sb-btn sb-btn--sm"
+            class="sb-btn sb-btn--sm sb-btn--secondary"
             type="button"
             data-testid="toggle-add-scorer"
             (click)="showAddScorer.set(!showAddScorer())"

@@ -26,7 +26,7 @@ interface Crumb {
       >
         <button
           actions
-          class="sb-btn"
+          class="sb-btn sb-btn--secondary"
           type="button"
           data-testid="toggle-new-org"
           (click)="showNewOrg.set(!showNewOrg())"
@@ -70,7 +70,7 @@ interface Crumb {
 
         <div class="toolbar">
           <button
-            class="sb-btn"
+            class="sb-btn sb-btn--secondary"
             type="button"
             data-testid="toggle-new-folder"
             (click)="showNewFolder.set(!showNewFolder())"
@@ -78,7 +78,7 @@ interface Crumb {
             + New folder
           </button>
           <button
-            class="sb-btn"
+            class="sb-btn sb-btn--secondary"
             type="button"
             data-testid="toggle-new-prompt"
             (click)="showNewPrompt.set(!showNewPrompt())"

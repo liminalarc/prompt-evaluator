@@ -151,7 +151,7 @@ import { VersionDiff } from './version-diff';
         }
         <div class="toolbar">
           <button
-            class="sb-btn sb-btn--sm"
+            class="sb-btn sb-btn--sm sb-btn--secondary"
             type="button"
             data-testid="toggle-create-dataset"
             (click)="showCreateDataset.set(!showCreateDataset())"
@@ -170,7 +170,9 @@ import { VersionDiff } from './version-diff';
                 (ngModelChange)="datasetName.set($event)"
               />
             </div>
-            <button class="sb-btn" type="submit" data-testid="create-dataset">Add dataset</button>
+            <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-dataset">
+              Add dataset
+            </button>
           </form>
         }
 
@@ -202,7 +204,7 @@ import { VersionDiff } from './version-diff';
 
         <div class="toolbar">
           <button
-            class="sb-btn sb-btn--sm"
+            class="sb-btn sb-btn--sm sb-btn--secondary"
             type="button"
             data-testid="toggle-add-version"
             (click)="showAddVersion.set(!showAddVersion())"
