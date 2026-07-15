@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
@@ -109,35 +109,72 @@ import { BadgeVariant, Card, EmptyState, ErrorState, PageHeader, StatusBadge } f
                   data-testid="no-regressions"
                 />
               } @else {
-                <table class="sb-table" data-testid="regressions">
-                  <thead>
-                    <tr>
-                      <th>Scorer</th>
-                      <th>From → To</th>
-                      <th>Prior</th>
-                      <th>Current</th>
-                      <th>Δ</th>
-                      <th>p-value</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (f of flags; track f.scorer.identity + f.toVersionId) {
-                      <tr data-testid="regression-row">
-                        <td>{{ label(f) }}</td>
-                        <td>v{{ f.fromVersionNumber }} → v{{ f.toVersionNumber }}</td>
-                        <td>{{ f.priorMean | number: '1.3-3' }}</td>
-                        <td>{{ f.currentMean | number: '1.3-3' }}</td>
-                        <td>
-                          <app-status-badge
-                            [variant]="deltaVariant(f.delta)"
-                            [label]="deltaLabel(f.delta)"
-                          />
-                        </td>
-                        <td>{{ f.pValue != null ? (f.pValue | number: '1.4-4') : '—' }}</td>
+                @if (confirmed().length > 0) {
+                  <table class="sb-table" data-testid="regressions">
+                    <thead>
+                      <tr>
+                        <th>Scorer</th>
+                        <th>From → To</th>
+                        <th>Prior</th>
+                        <th>Current</th>
+                        <th>Δ</th>
+                        <th>p-value</th>
                       </tr>
-                    }
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      @for (f of confirmed(); track f.scorer.identity + f.toVersionId) {
+                        <tr data-testid="regression-row">
+                          <td>{{ label(f) }}</td>
+                          <td>v{{ f.fromVersionNumber }} → v{{ f.toVersionNumber }}</td>
+                          <td>{{ f.priorMean | number: '1.3-3' }}</td>
+                          <td>{{ f.currentMean | number: '1.3-3' }}</td>
+                          <td>
+                            <app-status-badge
+                              [variant]="deltaVariant(f.delta)"
+                              [label]="deltaLabel(f.delta)"
+                            />
+                          </td>
+                          <td>{{ f.pValue != null ? (f.pValue | number: '1.4-4') : '—' }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
+
+                @if (unverified().length > 0) {
+                  <div class="unverified" data-testid="regression-unverified">
+                    <p class="unverified__note">
+                      Possible — the drop cleared the threshold but there isn't enough data to
+                      confirm significance. Add more fixtures to confirm.
+                    </p>
+                    <table class="sb-table">
+                      <thead>
+                        <tr>
+                          <th>Scorer</th>
+                          <th>From → To</th>
+                          <th>Prior</th>
+                          <th>Current</th>
+                          <th>Δ</th>
+                          <th>Confidence</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (f of unverified(); track f.scorer.identity + f.toVersionId) {
+                          <tr data-testid="regression-unverified-row">
+                            <td>{{ label(f) }}</td>
+                            <td>v{{ f.fromVersionNumber }} → v{{ f.toVersionNumber }}</td>
+                            <td>{{ f.priorMean | number: '1.3-3' }}</td>
+                            <td>{{ f.currentMean | number: '1.3-3' }}</td>
+                            <td>
+                              <app-status-badge variant="warn" [label]="deltaLabel(f.delta)" />
+                            </td>
+                            <td><app-status-badge variant="warn" label="Possible" /></td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                }
               }
             }
           </app-card>
@@ -207,6 +244,15 @@ export class AnalyticsDashboard {
   protected readonly trends = signal<TrendSeries[]>([]);
   protected readonly regressions = signal<RegressionFlag[] | null>(null);
   protected readonly error = signal<string | null>(null);
+
+  // Split the flags: Confirmed (significant) render prominently; Unverified (threshold-clearing
+  // but not statistically confirmed) render in a distinct, muted "possible" treatment.
+  protected readonly confirmed = computed(() =>
+    (this.regressions() ?? []).filter((f) => f.confidence === 'Confirmed'),
+  );
+  protected readonly unverified = computed(() =>
+    (this.regressions() ?? []).filter((f) => f.confidence === 'Unverified'),
+  );
 
   protected readonly versions = signal<PromptVersion[]>([]);
   protected readonly fromVersionId = signal<string | null>(null);

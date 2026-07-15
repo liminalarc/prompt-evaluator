@@ -120,6 +120,7 @@ describe('AnalyticsDashboard', () => {
         delta: -0.4,
         pValue: 0.001,
         pairedFixtureCount: 4,
+        confidence: 'Confirmed',
       },
     ];
 
@@ -132,6 +133,54 @@ describe('AnalyticsDashboard', () => {
     const rows = el.querySelectorAll('[data-testid="regression-row"]');
     expect(rows.length).toBe(1);
     expect(rows[0].textContent).toContain('LlmJudge');
+    expect(rows[0].textContent).toContain('v1 → v2');
+    // A confirmed flag is not shown in the muted "possible" treatment.
+    expect(el.querySelector('[data-testid="regression-unverified"]')).toBeFalsy();
+  });
+
+  it('renders an unverified drop as a distinct "possible" regression, not the empty state', () => {
+    const fixture = createAndLoadLists();
+    const cmp = fixture.componentInstance as unknown as {
+      promptId: { set(v: string): void };
+      datasetId: { set(v: string): void };
+    };
+    cmp.promptId.set('p1');
+    cmp.datasetId.set('d1');
+    fixture.detectChanges();
+
+    // A single-fixture 1.0 -> 0.0 drop: clears the threshold but n=1 → no significance.
+    const flags: RegressionFlag[] = [
+      {
+        scorer: { identity: 'abc', kind: 'LlmJudge', judgeModel: 'claude-opus-4-8' },
+        fromVersionId: 'v1',
+        fromVersionNumber: 1,
+        fromVersionLabel: null,
+        toVersionId: 'v2',
+        toVersionNumber: 2,
+        toVersionLabel: null,
+        priorMean: 1.0,
+        currentMean: 0.0,
+        delta: -1.0,
+        pValue: null,
+        pairedFixtureCount: 1,
+        confidence: 'Unverified',
+      },
+    ];
+
+    http.expectOne((r) => r.url === '/api/analytics/trends').flush([]);
+    http.expectOne((r) => r.url === '/api/analytics/regressions').flush(flags);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    // Not the misleading empty state, and not the confirmed table.
+    expect(el.querySelector('[data-testid="no-regressions"]')).toBeFalsy();
+    expect(el.querySelector('[data-testid="regressions"]')).toBeFalsy();
+
+    const unverified = el.querySelector('[data-testid="regression-unverified"]');
+    expect(unverified).toBeTruthy();
+    expect(unverified!.textContent).toContain('Possible');
+    const rows = el.querySelectorAll('[data-testid="regression-unverified-row"]');
+    expect(rows.length).toBe(1);
     expect(rows[0].textContent).toContain('v1 → v2');
   });
 

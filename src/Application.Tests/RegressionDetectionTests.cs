@@ -67,6 +67,7 @@ public class RegressionDetectionTests
         Assert.Equal(4, flag.PairedFixtureCount);
         Assert.NotNull(flag.PValue);
         Assert.True(flag.PValue < 0.05, $"expected significant, p={flag.PValue}");
+        Assert.Equal(RegressionConfidence.Confirmed, flag.Confidence);
     }
 
     [Fact]
@@ -79,14 +80,19 @@ public class RegressionDetectionTests
     }
 
     [Fact]
-    public void Large_but_noisy_drop_is_not_flagged_when_not_significant()
+    public void Large_but_noisy_drop_beyond_threshold_is_flagged_as_unverified()
     {
         // Means drop 0.8 -> 0.6 (0.2, beyond threshold) but per-fixture deltas swing wildly,
-        // so the paired test is not significant at alpha=0.05.
+        // so the paired test is not significant at alpha=0.05. The drop cleared the threshold,
+        // so it is surfaced as an unverified (possible) regression rather than discarded.
         var flags = _detector.Detect(Scorer,
             [Version(1, 0.8, 0.8, 0.8, 0.8), Version(2, 0.2, 1.0, 0.2, 1.0)]);
 
-        Assert.Empty(flags);
+        var flag = Assert.Single(flags);
+        Assert.Equal(RegressionConfidence.Unverified, flag.Confidence);
+        Assert.Equal(4, flag.PairedFixtureCount);
+        Assert.NotNull(flag.PValue);
+        Assert.True(flag.PValue >= 0.05, $"expected not significant, p={flag.PValue}");
     }
 
     [Fact]
@@ -99,12 +105,19 @@ public class RegressionDetectionTests
     }
 
     [Fact]
-    public void Single_matched_fixture_cannot_establish_significance_and_is_not_flagged()
+    public void Single_fixture_catastrophic_drop_is_flagged_as_unverified()
     {
+        // The dogfood case: the only labeled fixture flips 1.0 -> 0.0. The drop is total and clears
+        // the threshold, but n=1 means significance can't be established — so it is surfaced as an
+        // unverified (possible) regression instead of being silently hidden.
         var flags = _detector.Detect(Scorer,
-            [Version(1, 0.9), Version(2, 0.4)]); // big drop but n=1 → no significance
+            [Version(1, 1.0), Version(2, 0.0)]);
 
-        Assert.Empty(flags);
+        var flag = Assert.Single(flags);
+        Assert.Equal(RegressionConfidence.Unverified, flag.Confidence);
+        Assert.Equal(1, flag.PairedFixtureCount);
+        Assert.Null(flag.PValue); // n < 2 → significance can't be computed
+        Assert.Equal(-1.0, flag.Delta, 3);
     }
 
     [Fact]
@@ -180,6 +193,33 @@ public class RegressionDetectionTests
         Assert.Equal(2, flag.ToVersionNumber);
         Assert.Equal(ScorerKind.LlmJudge, flag.Scorer.Kind);
         Assert.Equal(4, flag.PairedFixtureCount);
+        Assert.Equal(RegressionConfidence.Confirmed, flag.Confidence);
+    }
+
+    [Fact]
+    public async Task Handler_surfaces_a_single_fixture_drop_as_unverified()
+    {
+        var prompt = Prompt.Create(Guid.NewGuid(), "Summarizer");
+        var v1 = prompt.AddVersion("v1", "claude-opus-4-8", When);
+        var v2 = prompt.AddVersion("v2", "claude-opus-4-8", When.AddDays(1));
+        var datasetId = Guid.NewGuid();
+        var fixture = Guid.NewGuid();
+        var scorer = ScorerDescriptor.LlmJudge("good?", "claude-opus-4-8");
+
+        var promptRepo = new InMemoryPromptRepo();
+        await promptRepo.AddAsync(prompt);
+        var runs = new InMemoryEvalRunRepo();
+        // The single labeled fixture flips 1.0 -> 0.0 (the dogfood catastrophe).
+        await runs.AddAsync(RunFor(prompt.Id, v1.Id, datasetId, scorer, When, [(fixture, 1.0)]));
+        await runs.AddAsync(RunFor(prompt.Id, v2.Id, datasetId, scorer, When.AddDays(1), [(fixture, 0.0)]));
+
+        var handler = new RegressionAnalyticsHandler(runs, promptRepo, new RegressionDetector());
+        var flags = await handler.HandleAsync(prompt.Id, datasetId);
+
+        var flag = Assert.Single(flags!);
+        Assert.Equal(RegressionConfidence.Unverified, flag.Confidence);
+        Assert.Equal(1, flag.PairedFixtureCount);
+        Assert.Null(flag.PValue);
     }
 
     [Fact]

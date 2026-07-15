@@ -68,7 +68,7 @@ public sealed class AnalyticsEndpointTests : IAsyncLifetime
     private sealed record ScorerRefDto(string Identity, string Kind, string? JudgeModel);
     private sealed record TrendPointDto(Guid PromptVersionId, int VersionNumber, string? VersionLabel, Guid RunId, double MeanValue, double? PassRate, int FixtureCount);
     private sealed record TrendSeriesDto(ScorerRefDto Scorer, List<TrendPointDto> Points);
-    private sealed record RegressionFlagDto(ScorerRefDto Scorer, int FromVersionNumber, int ToVersionNumber, double PriorMean, double CurrentMean, double Delta, double? PValue, int PairedFixtureCount);
+    private sealed record RegressionFlagDto(ScorerRefDto Scorer, int FromVersionNumber, int ToVersionNumber, double PriorMean, double CurrentMean, double Delta, double? PValue, int PairedFixtureCount, string Confidence);
     private sealed record FixtureDeltaDto(Guid FixtureId, double? FromValue, double? ToValue, double? Delta);
     private sealed record ScorerComparisonDto(ScorerRefDto Scorer, double? FromMean, double? ToMean, double? Delta, List<FixtureDeltaDto> Fixtures);
     private sealed record ComparisonDto(int FromVersionNumber, int ToVersionNumber, List<ScorerComparisonDto> Scorers);
@@ -137,11 +137,30 @@ public sealed class AnalyticsEndpointTests : IAsyncLifetime
         Assert.Equal(-0.4, flag.Delta, 3);
         Assert.NotNull(flag.PValue);
         Assert.True(flag.PValue < 0.05);
+        Assert.Equal("Confirmed", flag.Confidence);
 
         // A threshold larger than the 0.4 drop suppresses the flag.
         var suppressed = await client.GetFromJsonAsync<List<RegressionFlagDto>>(
             $"/api/analytics/regressions?promptId={promptId}&datasetId={datasetId}&threshold=0.5");
         Assert.Empty(suppressed!);
+    }
+
+    [Fact]
+    public async Task Regressions_surfaces_a_single_fixture_drop_as_unverified()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync();
+        // A one-fixture dataset: the drop clears the threshold but n=1 → significance can't be
+        // established, so the flag is surfaced as Unverified (a possible regression) not discarded.
+        var (promptId, _, _, datasetId) = await SeedTwoVersionsAsync(client, fixtureCount: 1);
+
+        var flags = await client.GetFromJsonAsync<List<RegressionFlagDto>>(
+            $"/api/analytics/regressions?promptId={promptId}&datasetId={datasetId}");
+
+        var flag = Assert.Single(flags!);
+        Assert.Equal("Unverified", flag.Confidence);
+        Assert.Equal(1, flag.PairedFixtureCount);
+        Assert.Null(flag.PValue);
+        Assert.Equal(-0.4, flag.Delta, 3);
     }
 
     [Fact]

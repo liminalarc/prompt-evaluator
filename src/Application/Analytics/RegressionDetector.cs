@@ -4,10 +4,13 @@ namespace Application.Analytics;
 
 /// <summary>
 /// Flags regressions between consecutive prompt versions for a single scorer. A version is flagged
-/// only when <b>both</b> hold vs. the prior version: (a) the mean score dropped by more than
-/// <see cref="DefaultThreshold"/> (configurable), and (b) a paired t-test over the matched
-/// per-fixture deltas finds the drop significant at <see cref="DefaultAlpha"/>. Requiring
-/// significance keeps noisy series (especially LLM-judge) from false-flagging. Pure — no I/O.
+/// whenever the mean score dropped by more than <see cref="DefaultThreshold"/> (configurable) vs.
+/// the prior version. The flag's <see cref="RegressionConfidence"/> then records how sure we are:
+/// <b>Confirmed</b> when a paired t-test over the matched per-fixture deltas also finds the drop
+/// significant at <see cref="DefaultAlpha"/>; <b>Unverified</b> when significance can't be
+/// established (fewer than two matched fixtures) or the test isn't significant — a possible
+/// regression surfaced distinctly rather than hidden. Confirmed-only flagging keeps noisy series
+/// (especially LLM-judge) from false-alarming as regressions. Pure — no I/O.
 /// </summary>
 public sealed class RegressionDetector
 {
@@ -52,16 +55,20 @@ public sealed class RegressionDetector
             if (drop <= threshold)
                 continue;
 
+            // The drop cleared the threshold. If a paired t-test can establish significance, the
+            // flag is Confirmed; otherwise (n < 2, or n ≥ 2 but not significant) it is surfaced as
+            // Unverified — a possible regression — rather than silently dropped.
             var pValue = OneSidedDropPValue(priorValues, currentValues);
-            if (pValue is null || pValue >= alpha)
-                continue;
+            var confidence = pValue is { } p && p < alpha
+                ? RegressionConfidence.Confirmed
+                : RegressionConfidence.Unverified;
 
             flags.Add(new RegressionFlag(
                 scorer,
                 prior.VersionId, prior.VersionNumber, prior.VersionLabel,
                 current.VersionId, current.VersionNumber, current.VersionLabel,
                 priorMean, currentMean, currentMean - priorMean,
-                pValue, priorValues.Count));
+                pValue, priorValues.Count, confidence));
         }
 
         return flags;

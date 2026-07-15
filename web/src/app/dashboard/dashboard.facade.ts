@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, forkJoin, map, of, switchMap } from 'rxjs';
 import { PromptSummary } from '../prompt';
 import { DatasetSummary } from '../dataset';
-import { TrendPoint, scorerLabel } from '../analytics';
+import { RegressionConfidence, TrendPoint, scorerLabel } from '../analytics';
 import { PromptsApiService } from '../prompts/prompts-api.service';
 import { DatasetsApiService } from '../datasets/datasets-api.service';
 import { EvalRunsApiService } from '../eval-runs/eval-runs-api.service';
@@ -76,6 +76,7 @@ export class DashboardFacade {
         fromVersionNumber: number;
         toVersionNumber: number;
         delta: number;
+        confidence: RegressionConfidence;
       }[];
       trends: { points: TrendPoint[] }[];
     }[],
@@ -121,16 +122,20 @@ export class DashboardFacade {
 
     const openRegressions: DashboardRegressionRow[] = perDataset
       .flatMap(({ dataset, regressions }) =>
-        regressions.map((f) => ({
-          promptId: dataset.promptId,
-          promptName: promptById.get(dataset.promptId)?.name ?? '—',
-          datasetId: dataset.id,
-          datasetName: dataset.name,
-          scorer: scorerLabel(f.scorer),
-          fromVersionNumber: f.fromVersionNumber,
-          toVersionNumber: f.toVersionNumber,
-          delta: f.delta,
-        })),
+        // Only confirmed regressions land in the dashboard summary; unverified ("possible") drops
+        // are surfaced with their caveat in the Analytics view, not asserted as open regressions.
+        regressions
+          .filter((f) => f.confidence === 'Confirmed')
+          .map((f) => ({
+            promptId: dataset.promptId,
+            promptName: promptById.get(dataset.promptId)?.name ?? '—',
+            datasetId: dataset.id,
+            datasetName: dataset.name,
+            scorer: scorerLabel(f.scorer),
+            fromVersionNumber: f.fromVersionNumber,
+            toVersionNumber: f.toVersionNumber,
+            delta: f.delta,
+          })),
       )
       .sort((a, b) => a.delta - b.delta) // most negative (worst) first
       .slice(0, REGRESSIONS_LIMIT);

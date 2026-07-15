@@ -109,6 +109,7 @@ const regByDataset: Record<string, any[]> = {
       delta: -0.2,
       pValue: 0.01,
       pairedFixtureCount: 3,
+      confidence: 'Confirmed',
     },
   ],
 };

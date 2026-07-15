@@ -23,6 +23,14 @@ export interface TrendSeries {
   points: TrendPoint[];
 }
 
+/**
+ * How sure we are a threshold-clearing drop is a real regression. `Confirmed` — the drop is also
+ * statistically significant. `Unverified` — the drop cleared the threshold but significance
+ * couldn't be established (too few fixtures) or wasn't significant; a possible regression, shown
+ * distinctly rather than hidden.
+ */
+export type RegressionConfidence = 'Confirmed' | 'Unverified';
+
 /** Mirrors the .NET RegressionFlagResponse DTO. */
 export interface RegressionFlag {
   scorer: ScorerRef;
@@ -37,6 +45,7 @@ export interface RegressionFlag {
   delta: number;
   pValue: number | null;
   pairedFixtureCount: number;
+  confidence: RegressionConfidence;
 }
 
 /** Mirrors the .NET FixtureDeltaResponse DTO. */

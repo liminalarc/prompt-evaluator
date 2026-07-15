@@ -13,11 +13,26 @@ public sealed record VersionScoreSet(
     IReadOnlyDictionary<Guid, double> ScoresByFixture);
 
 /// <summary>
+/// How much confidence we have that a threshold-clearing drop is a real regression.
+/// <see cref="Confirmed"/> — the drop cleared the threshold <b>and</b> a paired t-test found it
+/// significant. <see cref="Unverified"/> — the drop cleared the threshold but significance could
+/// not be established (fewer than two matched fixtures) or the test was not significant; a
+/// <i>possible</i> regression to surface distinctly, not hide.
+/// </summary>
+public enum RegressionConfidence
+{
+    Confirmed,
+    Unverified,
+}
+
+/// <summary>
 /// A detected regression: a version whose mean score for a scorer dropped beyond the configured
-/// threshold vs. the prior version, <b>and</b> where the drop is statistically significant under a
-/// paired t-test over matched per-fixture deltas. <see cref="Delta"/> is
+/// threshold vs. the prior version. When the drop is also statistically significant under a paired
+/// t-test over matched per-fixture deltas the flag is <see cref="RegressionConfidence.Confirmed"/>;
+/// when significance can't be established (n &lt; 2) or the test isn't significant it is
+/// <see cref="RegressionConfidence.Unverified"/> rather than discarded. <see cref="Delta"/> is
 /// <c>CurrentMean − PriorMean</c> (negative for a drop); <see cref="PValue"/> is the one-sided
-/// p-value for the drop.
+/// p-value for the drop (null when it can't be computed).
 /// </summary>
 public sealed record RegressionFlag(
     ScorerRef Scorer,
@@ -31,4 +46,5 @@ public sealed record RegressionFlag(
     double CurrentMean,
     double Delta,
     double? PValue,
-    int PairedFixtureCount);
+    int PairedFixtureCount,
+    RegressionConfidence Confidence);

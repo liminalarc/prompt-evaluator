@@ -10,3 +10,19 @@
   min-width: 220px;
   flex: 1;
 }
+
+/* Unverified ("possible") regressions: a distinct, muted warning treatment — never the prominent
+   confirmed/error styling. Uses the brand warning tokens only. */
+.unverified {
+  margin-top: var(--sb-space-lg);
+  padding: var(--sb-space-md);
+  border: 1px solid var(--sb-warning);
+  border-radius: var(--sb-radius-md);
+  background: var(--sb-warning-surface);
+}
+
+.unverified__note {
+  margin: 0 0 var(--sb-space-sm);
+  color: var(--sb-warning);
+  font-size: var(--sb-type-small-size);
+}

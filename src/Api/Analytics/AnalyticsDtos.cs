@@ -29,13 +29,15 @@ public sealed record RegressionFlagResponse(
     ScorerRefResponse Scorer,
     Guid FromVersionId, int FromVersionNumber, string? FromVersionLabel,
     Guid ToVersionId, int ToVersionNumber, string? ToVersionLabel,
-    double PriorMean, double CurrentMean, double Delta, double? PValue, int PairedFixtureCount)
+    double PriorMean, double CurrentMean, double Delta, double? PValue, int PairedFixtureCount,
+    string Confidence)
 {
     public static RegressionFlagResponse From(RegressionFlag f) => new(
         ScorerRefResponse.From(f.Scorer),
         f.FromVersionId, f.FromVersionNumber, f.FromVersionLabel,
         f.ToVersionId, f.ToVersionNumber, f.ToVersionLabel,
-        f.PriorMean, f.CurrentMean, f.Delta, f.PValue, f.PairedFixtureCount);
+        f.PriorMean, f.CurrentMean, f.Delta, f.PValue, f.PairedFixtureCount,
+        f.Confidence.ToString());
 }
 
 // ---- Comparison ----
