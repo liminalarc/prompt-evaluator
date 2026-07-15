@@ -14,8 +14,12 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /app .
-# Baked-in build metadata surfaced by GET /version.
+# Baked-in build metadata surfaced by GET /version and GET /api/version.
 ARG GIT_COMMIT=dev
 ENV GIT_COMMIT=$GIT_COMMIT
+# Deploy channel — the reliable dev/prod discriminator (3.3). CI sets it from the git-ref
+# (tag -> prod, main -> dev); "local" for a plain local build.
+ARG APP_CHANNEL=local
+ENV DEPLOY_CHANNEL=$APP_CHANNEL
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "Api.dll"]

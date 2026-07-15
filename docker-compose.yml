@@ -44,6 +44,7 @@ services:
       args:
         GIT_COMMIT: ${GIT_COMMIT:-dev}
         APP_VERSION: ${APP_VERSION:-0.0.0-dev}
+        APP_CHANNEL: ${APP_CHANNEL:-local}
     environment:
       ConnectionStrings__Postgres: "Host=db;Port=5432;Database=${POSTGRES_DB:-litmusai};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
       EvalRunner__BaseUrl: "http://eval-runner:8000"
