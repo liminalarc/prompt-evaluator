@@ -9,6 +9,7 @@
 ## Phase 1 — Core Evaluation Loop
 - **1.8** Shared / Cross-Prompt Datasets (cloning) — `NOT STARTED` — [detail](specs/1.8.md)
 - **1.12** Modal SLM provider adapter — `NOT STARTED` — [detail](specs/1.12.md)
+- **1.13** Model Catalog + admin management (droplists, no free-text model ids) — `NOT STARTED` — [detail](specs/1.13.md)
 
 ## Phase 2 — Review & Advisory
 - **2.1** Human Review UI — `NOT STARTED` — [detail](specs/2.1.md)
