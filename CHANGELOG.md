@@ -4,6 +4,32 @@ All notable changes to this project are documented here. Versions follow one uni
 SemVer (pre-1.0 `0.x`) across the API, web, and eval-runner. A release is a tagged, verified
 **compose-stack build** — there is no hosted deployment yet (production deploy is spec 3.2).
 
+## [0.10.0] — 2026-07-16
+
+Makes the eval-runner multi-provider: the judge, synthetic-data generation, and subject execution
+all route by model id, so evaluations can run against OpenAI models alongside the Claude default —
+with the Domain/Application layers staying provider-agnostic.
+
+### Added
+
+- **[#1.5] Multi-Provider Model Support** ([detail](specs/archive/1.5.md)) — a **provider-routing
+  abstraction** in `eval-runner/app/providers.py` (Anthropic default + OpenAI), selected by model id.
+  The **judge and synthetic-data generation** route through the provider registry; **subject
+  execution** runs across providers, with a captured-output path for prompts fed by an upstream
+  model. **Per-provider credentials** are wired via environment (never committed), covered by a
+  config test. `IEvaluationRunner` and the Domain/Application layers remain provider-agnostic.
+- **[#1.6]** ([detail](specs/archive/1.6.md)) — `samples/prompts.json` (+ `samples/README.md`) as a
+  ready-to-use fixture for the bulk prompt importer shipped in 0.9.0.
+
+### Notes
+
+- **[#1.13]** ([detail](specs/1.13.md)) — Model Catalog + admin management (droplists, no free-text
+  model ids) authored as a spec this cycle; backlog only, not yet implemented (`NOT STARTED`).
+- Multi-provider re-homed the Modal SLM adapter to its own spec **1.12** (`NOT STARTED`); the 1.5
+  archive names the split-out.
+- Deployable artifact is still the compose stack (local + CI only). Hosted deployment remains
+  spec 3.2.
+
 ## [0.9.0] — 2026-07-15
 
 Lets prompt owners load prompt content from files instead of hand-pasting — a single file into
