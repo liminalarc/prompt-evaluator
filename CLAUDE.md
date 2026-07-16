@@ -38,9 +38,11 @@ improvements. An advisory layer (prompt-engineering advice) comes later.
   browsing, and the human-review labeling UI.
 - **PostgreSQL** via EF Core (Npgsql). JSONB stores fixtures and raw model outputs; scores
   and run metadata are relational for trend queries.
-- **Claude is the judge + synthetic-data model.** Default to the latest capable models
-  (Opus 4.8 / Sonnet 5). Model ids and API usage: consult the `claude-api` skill — never
-  answer LLM/model questions from memory.
+- **Claude is the *default* judge + synthetic-data model + subject provider.** The eval-runner
+  is multi-provider behind `IEvaluationRunner` (Anthropic default + OpenAI; routed by model id
+  in `eval-runner/app/providers.py` — see spec 1.5). Domain/Application stay provider-agnostic.
+  Default to the latest capable Claude models (Opus 4.8 / Sonnet 5). Model ids and API usage:
+  consult the `claude-api` skill — never answer LLM/model questions from memory.
 
 ## Development Rules
 

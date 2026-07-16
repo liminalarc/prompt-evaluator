@@ -27,6 +27,7 @@ services:
         APP_VERSION: ${APP_VERSION:-0.0.0-dev}
     environment:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     ports:
       - "4242:8000"
     networks:

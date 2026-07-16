@@ -19,7 +19,8 @@ See `CLAUDE.md` for architecture and conventions, `SPECIFICATIONS.md` for the ba
 - **Python** 3.12+ — for the eval-runner service
 - **PostgreSQL** 16+ — locally or via Docker
 - **Anthropic API key** — for LLM-judge scoring and synthetic fixture generation
-  (get one at <https://console.anthropic.com/>)
+  (get one at <https://console.anthropic.com/>). An **OpenAI API key** is optional and only
+  needed to evaluate OpenAI models (see [Model providers](#model-providers)).
 
 ## Environment Variables
 
@@ -27,7 +28,8 @@ See `CLAUDE.md` for architecture and conventions, `SPECIFICATIONS.md` for the ba
 |---|---|---|
 | `ConnectionStrings__Postgres` | `src/Api` | Postgres connection string |
 | `EvalRunner__BaseUrl` | `src/Api` | Base URL of the Python eval-runner (e.g. `http://localhost:8000`) |
-| `ANTHROPIC_API_KEY` | `eval-runner` | Claude API key for judge + synthetic generation |
+| `ANTHROPIC_API_KEY` | `eval-runner` | Claude API key — the **default** provider for judge, synthetic generation, and Claude subject models (`claude-*`) |
+| `OPENAI_API_KEY` | `eval-runner` | Optional. OpenAI API key — enables OpenAI subject/judge/generator models (`gpt-*`, `o*`). A provider is only usable when its key is set; requesting a model whose provider has no key fails clearly (HTTP 400). |
 | `Auth__BootstrapAdmin__Email` / `__Password` | `src/Api` | Optional. When both are set, a bootstrap admin is seeded on startup and granted the Default org (first-run access). `__DisplayName` optional (defaults `Administrator`). No-op when unset. |
 | `Auth__WebBaseUrl` | `src/Api` | Base URL used to build password-reset links (default `http://localhost:4200`). |
 | `EvalRunner__ServiceToken` | `src/Api` | Optional shared secret attached as `X-Service-Token` on eval-runner calls. |
@@ -41,6 +43,30 @@ cd src/Api
 dotnet user-secrets init
 dotnet user-secrets set "ConnectionStrings:Postgres" "Host=localhost;Port=4243;Database=litmusai;Username=postgres;Password=postgres"
 ```
+
+## Model providers
+
+The eval-runner runs and judges prompts against **multiple providers**, selected by the
+model id — subject execution, LLM-judge scoring, and synthetic generation all route the same
+way. Claude stays the default; other providers are additive.
+
+| Model id prefix | Provider | Credential |
+|---|---|---|
+| `claude-*` | Anthropic (default) | `ANTHROPIC_API_KEY` |
+| `gpt-*`, `o1`/`o3`/`o4`, `chatgpt*` | OpenAI | `OPENAI_API_KEY` |
+
+Notes:
+
+- **Missing creds fail clearly.** A provider is registered only when its API key is present;
+  requesting a model whose provider has no key returns `400` with a message naming the model.
+- **Structured output is native per provider** — judge verdicts and guided generation use
+  Anthropic `output_config.format` / OpenAI `response_format` json_schema, never free-text
+  parsing.
+- **Capture-first needs no provider.** A fixture with a captured output is scored as-is with
+  no live model call (and no credentials).
+- Adding a provider (e.g. a Modal-hosted SLM — spec 1.12) is a new adapter + a prefix rule in
+  `eval-runner/app/providers.py`; nothing in the .NET layers changes (the `IEvaluationRunner`
+  seam absorbs it).
 
 ## Quick Start (Docker Compose)
 
