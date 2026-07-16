@@ -1,0 +1,43 @@
+[
+  {
+    "name": "Ticket Summarizer",
+    "description": "Condenses a support ticket thread into a one-paragraph summary.",
+    "versions": [
+      {
+        "content": "Summarize the following support ticket in 2-3 sentences, leading with the customer's core problem:\n\n{input}",
+        "targetModel": "claude-sonnet-5",
+        "label": "v1"
+      },
+      {
+        "content": "You are a support triage assistant. Summarize the ticket below in 2-3 sentences. Lead with the customer's core problem, then note any blockers or deadlines they mention.\n\n{input}",
+        "targetModel": "claude-sonnet-5",
+        "label": "v2 - adds blockers/deadlines"
+      }
+    ]
+  },
+  {
+    "name": "Ticket Classifier",
+    "description": "Buckets an inbound ticket into a routing category.",
+    "versions": [
+      {
+        "content": "Classify the support ticket below into exactly one of: billing, bug, feature-request, how-to, other. Respond with only the category.\n\n{input}",
+        "targetModel": "claude-opus-4-8"
+      }
+    ]
+  },
+  {
+    "name": "Reply Drafter",
+    "description": "Drafts a first-response reply in the company's voice.",
+    "versions": [
+      {
+        "content": "Draft a friendly, concise first-response reply to this customer message. Acknowledge the issue, set expectations, and avoid promising a fix time.\n\n{input}",
+        "targetModel": "claude-sonnet-5",
+        "label": "baseline"
+      }
+    ]
+  },
+  {
+    "name": "Empty Starter",
+    "description": "A prompt shell with no versions yet — you'll add content later."
+  }
+]
