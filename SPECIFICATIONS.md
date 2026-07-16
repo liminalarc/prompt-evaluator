@@ -7,7 +7,6 @@
 - _All specs archived._
 
 ## Phase 1 — Core Evaluation Loop
-- **1.5** Multi-Provider Model Support — `IN PROGRESS` — [detail](specs/1.5.md)
 - **1.8** Shared / Cross-Prompt Datasets (cloning) — `NOT STARTED` — [detail](specs/1.8.md)
 - **1.12** Modal SLM provider adapter — `NOT STARTED` — [detail](specs/1.12.md)
 
@@ -25,6 +24,7 @@
 - **4.2** SSO / OAuth Sign-In — `NOT STARTED` — [detail](specs/4.2.md)
 
 ## Archive
+- **1.5** Multi-Provider Model Support — `DONE` — [detail](specs/archive/1.5.md)
 - **1.6** Prompt Import (file / bulk) — `DONE` — [detail](specs/archive/1.6.md)
 - **3.3** Version display in the web UI + deploy-channel plumbing — `DONE` — [detail](specs/archive/3.3.md)
 - **1.11** Regression flagging — small-sample handling & clearer messaging — `DONE` — [detail](specs/archive/1.11.md)
