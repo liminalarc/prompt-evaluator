@@ -4,6 +4,31 @@ All notable changes to this project are documented here. Versions follow one uni
 SemVer (pre-1.0 `0.x`) across the API, web, and eval-runner. A release is a tagged, verified
 **compose-stack build** — there is no hosted deployment yet (production deploy is spec 3.2).
 
+## [0.9.0] — 2026-07-15
+
+Lets prompt owners load prompt content from files instead of hand-pasting — a single file into
+the add-version form, or many prompts at once from a JSON file.
+
+### Added
+
+- **[#1.6] Prompt Import (file / bulk)** ([detail](specs/archive/1.6.md)) — completes 1.1's split-out
+  "import from a file" deferral. **Single-file import**: a file picker in the add-version form reads a
+  text file (`FileReader`) into the existing content signal and copies it in through the unchanged 1.1
+  POST; a pure `validateImportFile` helper rejects empty / oversized (>1 MB) / non-text files with a
+  clear message. **Bulk import**: an "Import prompts" action on `/prompts` reads a JSON array of prompts
+  (each with an optional description + `versions[]`) and orchestrates the import **client-side** by
+  looping the existing create/add-version POSTs into the org + folder in view — sequential, with a
+  per-row success/error report; a failing row never stops later prompts.
+
+### Notes
+
+- **No API or domain change** — bulk import is client orchestration of the existing 1.1 POSTs; a
+  server-side batch endpoint was considered and rejected (*No premature abstractions*). No `Prompt`
+  aggregate change. Web-only diff; backend and eval-runner are unchanged since 0.8.0.
+- No deferrals — both single-file and bulk were in scope and built.
+- Deployable artifact is still the compose stack (local + CI only). CI gates: `backend`,
+  `eval-runner`, `web`, `compose-smoke`. Hosted deployment remains spec 3.2.
+
 ## [0.8.0] — 2026-07-15
 
 Surfaces the running build in the app: a version badge + build chip in the UI, and an
