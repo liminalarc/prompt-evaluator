@@ -7,8 +7,9 @@
 - _All specs archived._
 
 ## Phase 1 — Core Evaluation Loop
-- **1.5** Multi-Provider Model Support — `NOT STARTED` — [detail](specs/1.5.md)
+- **1.5** Multi-Provider Model Support — `IN PROGRESS` — [detail](specs/1.5.md)
 - **1.8** Shared / Cross-Prompt Datasets (cloning) — `NOT STARTED` — [detail](specs/1.8.md)
+- **1.12** Modal SLM provider adapter — `NOT STARTED` — [detail](specs/1.12.md)
 
 ## Phase 2 — Review & Advisory
 - **2.1** Human Review UI — `NOT STARTED` — [detail](specs/2.1.md)
