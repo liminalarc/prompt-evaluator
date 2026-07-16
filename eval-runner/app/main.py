@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from app.execution import (
     ExecutePromptRequest,
     ExecutePromptResponse,
+    captured_execution,
     execute_prompt,
     stub_execute,
 )
@@ -104,15 +105,6 @@ def echo(request: EchoRequest) -> EchoResponse:
     return EchoResponse(output=request.prompt)
 
 
-def get_anthropic_client() -> Anthropic | None:
-    # Resolves credentials from the environment (ANTHROPIC_API_KEY / profile). Injected as a
-    # dependency so tests can override it with a mock — no live API calls in the suite. Returns
-    # None in stub mode (EVAL_RUNNER_STUB) so the client is never constructed without a key.
-    if os.environ.get("EVAL_RUNNER_STUB"):
-        return None
-    return Anthropic()
-
-
 def get_provider_registry() -> ProviderRegistry | None:
     # Builds the set of configured providers from the environment (composition root). Returns
     # None in stub mode (EVAL_RUNNER_STUB) so no vendor client is constructed. A provider is
@@ -160,11 +152,15 @@ def generate_fixtures_endpoint(
 )
 def execute_prompt_endpoint(
     request: ExecutePromptRequest,
-    client: Annotated[Anthropic | None, Depends(get_anthropic_client)],
+    registry: Annotated[ProviderRegistry | None, Depends(get_provider_registry)],
 ) -> ExecutePromptResponse:
-    if client is None:
+    # Capture-first (1.2): a captured output is scored as-is, no provider call, no creds needed.
+    if request.captured_output is not None:
+        return captured_execution(request)
+    if registry is None:
         return stub_execute(request)
-    return execute_prompt(client, request)
+    provider = registry.for_model(request.model)
+    return execute_prompt(provider, request)
 
 
 @app.post("/judge", response_model=JudgeResponse, dependencies=[Depends(require_service_token)])
