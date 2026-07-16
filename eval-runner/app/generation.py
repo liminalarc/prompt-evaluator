@@ -5,14 +5,17 @@ adversarial targets, constraints), ask Claude to generate additional SLM-*shaped
 fill coverage gaps. Generation is **guided, not fixed**: the operator steers *what* gets
 generated, seeded by the captured distribution so it doesn't drift off-distribution.
 
-The model call uses structured output (never free-text parsing). The Anthropic client is
-injected so tests can mock it at the boundary — no live API calls in the suite.
+The model call uses structured output (never free-text parsing) via the selected provider. The
+provider (Anthropic/OpenAI/…) is resolved from the effective generator model and injected so
+tests can mock it at the boundary — no live API calls in the suite. Claude stays the default
+generator; a request may choose another model/provider (part of Scorer identity, 1.3).
 """
 
-import json
 import os
 
 from pydantic import BaseModel
+
+from app.providers import Provider
 
 # Default to the latest capable model; overridable via env for cost/latency tuning.
 DEFAULT_MODEL = "claude-opus-4-8"
@@ -34,6 +37,8 @@ class GenerateFixturesRequest(BaseModel):
     seed_examples: list[SeedExample]
     guidance: GenerationGuidance = GenerationGuidance()
     count: int = 5
+    # Optional generator model; None falls back to model_name() (Claude by default).
+    model: str | None = None
 
 
 class GeneratedFixture(BaseModel):
@@ -50,6 +55,11 @@ class GenerateFixturesResponse(BaseModel):
 
 def model_name() -> str:
     return os.environ.get("EVAL_RUNNER_MODEL", DEFAULT_MODEL)
+
+
+def effective_model(request: "GenerateFixturesRequest") -> str:
+    """The generator model to route on: the request's choice, else the env/default."""
+    return request.model or model_name()
 
 
 # JSON-schema for structured output. Nullable fields use anyOf (type-arrays and numeric/string
@@ -135,15 +145,14 @@ def stub_fixtures(request: GenerateFixturesRequest) -> GenerateFixturesResponse:
     return GenerateFixturesResponse(fixtures=fixtures)
 
 
-def generate_fixtures(client, request: GenerateFixturesRequest) -> GenerateFixturesResponse:
-    """Call Claude with structured output and return the generated fixtures."""
-    response = client.messages.create(
-        model=model_name(),
+def generate_fixtures(
+    provider: Provider, request: GenerateFixturesRequest
+) -> GenerateFixturesResponse:
+    """Call the provider with structured output and return the generated fixtures."""
+    data = provider.structured(
+        model=effective_model(request),
+        prompt=build_prompt(request),
+        schema=FIXTURES_SCHEMA,
         max_tokens=8192,
-        output_config={"format": {"type": "json_schema", "schema": FIXTURES_SCHEMA}},
-        messages=[{"role": "user", "content": build_prompt(request)}],
     )
-
-    # Structured output guarantees the first text block is JSON matching FIXTURES_SCHEMA.
-    text = next(block.text for block in response.content if block.type == "text")
-    return GenerateFixturesResponse.model_validate(json.loads(text))
+    return GenerateFixturesResponse.model_validate(data)

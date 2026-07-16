@@ -1,40 +1,45 @@
-"""Synthetic fixture generation tests. The Anthropic client is mocked at the boundary —
+"""Synthetic fixture generation tests. The provider registry is mocked at the boundary —
 no live API calls."""
-
-import json
-from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
 from app.generation import (
+    FIXTURES_SCHEMA,
     GenerateFixturesRequest,
     GenerationGuidance,
     SeedExample,
     build_prompt,
 )
-from app.main import app, get_anthropic_client
+from app.main import app, get_provider_registry
 
 
-class FakeMessages:
-    """Records the create() call and returns a canned structured-output response."""
+class FakeProvider:
+    """Records structured() calls and returns canned fixtures."""
+
+    name = "fake"
 
     def __init__(self, fixtures: list[dict]):
         self._fixtures = fixtures
-        self.last_kwargs: dict | None = None
+        self.calls: list[dict] = []
 
-    def create(self, **kwargs):
-        self.last_kwargs = kwargs
-        payload = json.dumps({"fixtures": self._fixtures})
-        return SimpleNamespace(content=[SimpleNamespace(type="text", text=payload)])
+    def structured(self, *, model, prompt, schema, max_tokens):
+        self.calls.append({"model": model, "prompt": prompt, "schema": schema})
+        return {"fixtures": [dict(f) for f in self._fixtures]}
 
-
-class FakeClient:
-    def __init__(self, fixtures: list[dict]):
-        self.messages = FakeMessages(fixtures)
+    def complete(self, **kwargs):  # not used by the generation path
+        raise AssertionError("generation must not call complete()")
 
 
-def client_with(fake: FakeClient) -> TestClient:
-    app.dependency_overrides[get_anthropic_client] = lambda: fake
+class FakeRegistry:
+    def __init__(self, provider):
+        self._provider = provider
+
+    def for_model(self, model):
+        return self._provider
+
+
+def client_with(provider) -> TestClient:
+    app.dependency_overrides[get_provider_registry] = lambda: FakeRegistry(provider)
     return TestClient(app)
 
 
@@ -43,7 +48,7 @@ def teardown_function():
 
 
 def test_generates_slm_shaped_fixtures_tagged_and_linked_to_seeds():
-    fake = FakeClient(
+    provider = FakeProvider(
         [
             {
                 "input": "summarize this other thread",
@@ -53,7 +58,7 @@ def test_generates_slm_shaped_fixtures_tagged_and_linked_to_seeds():
             }
         ]
     )
-    resp = client_with(fake).post(
+    resp = client_with(provider).post(
         "/generate-fixtures",
         json={
             "seed_examples": [
@@ -64,33 +69,28 @@ def test_generates_slm_shaped_fixtures_tagged_and_linked_to_seeds():
     )
 
     assert resp.status_code == 200
-    body = resp.json()
-    fixture = body["fixtures"][0]
+    fixture = resp.json()["fixtures"][0]
     assert fixture["input"] == "summarize this other thread"
     assert fixture["upstream_context"] == "slm-shaped output"
-    # Linked back to the captured seed it was derived from.
     assert fixture["seed_index"] == 0
 
 
-def test_seed_examples_anchor_the_prompt():
-    fake = FakeClient([])
-    client_with(fake).post(
+def test_seed_examples_anchor_the_prompt_and_structured_output_is_requested():
+    provider = FakeProvider([])
+    client_with(provider).post(
         "/generate-fixtures",
-        json={
-            "seed_examples": [{"input": "captured example input"}],
-            "count": 3,
-        },
+        json={"seed_examples": [{"input": "captured example input"}], "count": 3},
     )
 
-    prompt = fake.messages.last_kwargs["messages"][0]["content"]
-    assert "captured example input" in prompt
-    # Structured output is requested, not free-text parsing.
-    assert fake.messages.last_kwargs["output_config"]["format"]["type"] == "json_schema"
+    call = provider.calls[0]
+    assert "captured example input" in call["prompt"]
+    # Structured output is requested (native schema), not free-text parsing.
+    assert call["schema"] == FIXTURES_SCHEMA
 
 
 def test_operator_guidance_is_reflected_in_the_request():
-    fake = FakeClient([])
-    client_with(fake).post(
+    provider = FakeProvider([])
+    client_with(provider).post(
         "/generate-fixtures",
         json={
             "seed_examples": [{"input": "seed"}],
@@ -103,15 +103,30 @@ def test_operator_guidance_is_reflected_in_the_request():
         },
     )
 
-    prompt = fake.messages.last_kwargs["messages"][0]["content"]
+    prompt = provider.calls[0]["prompt"]
     assert "cover multi-language inputs" in prompt
     assert "empty and adversarial prompts" in prompt
     assert "keep under 200 tokens" in prompt
 
 
-def test_stub_mode_returns_deterministic_fixtures_without_a_client(monkeypatch):
+def test_defaults_to_claude_generator_but_honors_a_chosen_model():
+    default_provider = FakeProvider([])
+    client_with(default_provider).post(
+        "/generate-fixtures", json={"seed_examples": [{"input": "seed"}], "count": 1}
+    )
+    assert default_provider.calls[0]["model"] == "claude-opus-4-8"
+
+    chosen_provider = FakeProvider([])
+    client_with(chosen_provider).post(
+        "/generate-fixtures",
+        json={"seed_examples": [{"input": "seed"}], "count": 1, "model": "gpt-4o"},
+    )
+    assert chosen_provider.calls[0]["model"] == "gpt-4o"
+
+
+def test_stub_mode_returns_deterministic_fixtures_without_a_registry(monkeypatch):
     monkeypatch.setenv("EVAL_RUNNER_STUB", "1")
-    app.dependency_overrides.clear()  # exercise the real get_anthropic_client (stub branch)
+    app.dependency_overrides.clear()  # exercise the real get_provider_registry (stub branch)
     resp = TestClient(app).post(
         "/generate-fixtures",
         json={"seed_examples": [{"input": "captured seed"}], "count": 2},

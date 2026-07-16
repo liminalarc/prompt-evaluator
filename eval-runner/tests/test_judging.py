@@ -1,32 +1,38 @@
-"""LLM-judge tests. The Anthropic client is mocked at the boundary — no live API calls."""
-
-import json
-from types import SimpleNamespace
+"""LLM-judge tests. The provider registry is mocked at the boundary — no live API calls."""
 
 from fastapi.testclient import TestClient
 
-from app.main import app, get_anthropic_client
+from app.judging import VERDICT_SCHEMA
+from app.main import app, get_provider_registry
 
 
-class FakeMessages:
+class FakeProvider:
+    """Records structured() calls and returns a canned verdict."""
+
+    name = "fake"
+
     def __init__(self, verdict: dict):
         self._verdict = verdict
-        self.last_kwargs: dict | None = None
+        self.calls: list[dict] = []
 
-    def create(self, **kwargs):
-        self.last_kwargs = kwargs
-        return SimpleNamespace(
-            content=[SimpleNamespace(type="text", text=json.dumps(self._verdict))]
-        )
+    def structured(self, *, model, prompt, schema, max_tokens):
+        self.calls.append({"model": model, "prompt": prompt, "schema": schema})
+        return dict(self._verdict)
 
-
-class FakeClient:
-    def __init__(self, verdict: dict):
-        self.messages = FakeMessages(verdict)
+    def complete(self, **kwargs):  # not used by the judge path
+        raise AssertionError("judge must not call complete()")
 
 
-def client_with(fake: FakeClient) -> TestClient:
-    app.dependency_overrides[get_anthropic_client] = lambda: fake
+class FakeRegistry:
+    def __init__(self, provider):
+        self._provider = provider
+
+    def for_model(self, model):
+        return self._provider
+
+
+def client_with(provider) -> TestClient:
+    app.dependency_overrides[get_provider_registry] = lambda: FakeRegistry(provider)
     return TestClient(app)
 
 
@@ -35,8 +41,8 @@ def teardown_function():
 
 
 def test_returns_structured_verdict():
-    fake = FakeClient({"score": 0.8, "passed": True, "rationale": "mostly accurate"})
-    resp = client_with(fake).post(
+    provider = FakeProvider({"score": 0.8, "passed": True, "rationale": "mostly accurate"})
+    resp = client_with(provider).post(
         "/judge",
         json={
             "rubric": "Is the answer factually correct?",
@@ -48,13 +54,15 @@ def test_returns_structured_verdict():
     )
 
     assert resp.status_code == 200
-    body = resp.json()
-    assert body == {"score": 0.8, "passed": True, "rationale": "mostly accurate"}
+    assert resp.json() == {"score": 0.8, "passed": True, "rationale": "mostly accurate"}
+    # Structured output requested via the provider, using the verdict schema.
+    assert provider.calls[0]["schema"] == VERDICT_SCHEMA
+    assert provider.calls[0]["model"] == "claude-opus-4-8"
 
 
 def test_requests_structured_output_and_includes_rubric_and_io():
-    fake = FakeClient({"score": 1.0, "passed": True, "rationale": "ok"})
-    client_with(fake).post(
+    provider = FakeProvider({"score": 1.0, "passed": True, "rationale": "ok"})
+    client_with(provider).post(
         "/judge",
         json={
             "rubric": "GRADE ON HELPFULNESS",
@@ -64,18 +72,17 @@ def test_requests_structured_output_and_includes_rubric_and_io():
         },
     )
 
-    kwargs = fake.messages.last_kwargs
-    assert kwargs["model"] == "claude-haiku-4-5"
-    assert kwargs["output_config"]["format"]["type"] == "json_schema"
-    prompt = kwargs["messages"][0]["content"]
+    call = provider.calls[0]
+    assert call["model"] == "claude-haiku-4-5"
+    prompt = call["prompt"]
     assert "GRADE ON HELPFULNESS" in prompt
     assert "the question" in prompt
     assert "the answer" in prompt
 
 
 def test_score_is_clamped_into_the_unit_interval():
-    fake = FakeClient({"score": 1.5, "passed": True, "rationale": "over"})
-    resp = client_with(fake).post(
+    provider = FakeProvider({"score": 1.5, "passed": True, "rationale": "over"})
+    resp = client_with(provider).post(
         "/judge",
         json={"rubric": "r", "input": "i", "output": "o", "model": "claude-opus-4-8"},
     )
@@ -83,7 +90,23 @@ def test_score_is_clamped_into_the_unit_interval():
     assert resp.json()["score"] == 1.0
 
 
-def test_stub_mode_judges_without_a_client(monkeypatch):
+def test_defaults_to_claude_judge_model_but_honors_a_chosen_model():
+    # Default judge is Claude (ties to 1.3: model is part of Scorer identity).
+    default_provider = FakeProvider({"score": 1.0, "passed": True, "rationale": "ok"})
+    client_with(default_provider).post(
+        "/judge", json={"rubric": "r", "input": "i", "output": "o"}
+    )
+    assert default_provider.calls[0]["model"] == "claude-opus-4-8"
+
+    # A chosen model flows through verbatim — a distinct model is a distinct series.
+    chosen_provider = FakeProvider({"score": 1.0, "passed": True, "rationale": "ok"})
+    client_with(chosen_provider).post(
+        "/judge", json={"rubric": "r", "input": "i", "output": "o", "model": "gpt-4o"}
+    )
+    assert chosen_provider.calls[0]["model"] == "gpt-4o"
+
+
+def test_stub_mode_judges_without_a_registry(monkeypatch):
     monkeypatch.setenv("EVAL_RUNNER_STUB", "1")
     app.dependency_overrides.clear()
     client = TestClient(app)

@@ -1,14 +1,17 @@
 """LLM-judge scoring — given a rubric plus the fixture input, the model output, and an optional
-expected output, ask Claude to return a structured verdict (score, pass/fail, rationale).
+expected output, ask the judge model to return a structured verdict (score, pass/fail, rationale).
 
-The verdict uses structured output (json_schema) — never free-text parsing. Structured outputs
-don't support numeric range constraints, so the score is clamped to [0, 1] after parsing. The
-Anthropic client is injected so tests can mock it at the boundary — no live API calls in the suite.
+The verdict uses structured output (json_schema) via the selected provider — never free-text
+parsing. Structured outputs don't support numeric range constraints, so the score is clamped to
+[0, 1] after parsing. The provider (Anthropic/OpenAI/…) is resolved from the request's judge
+model and injected so tests can mock it at the boundary — no live API calls in the suite. Claude
+stays the default judge (DEFAULT_JUDGE_MODEL); choosing another model/provider is a distinct
+Scorer series (1.3).
 """
 
-import json
-
 from pydantic import BaseModel
+
+from app.providers import Provider
 
 DEFAULT_JUDGE_MODEL = "claude-opus-4-8"
 
@@ -69,16 +72,13 @@ def stub_judge(request: JudgeRequest) -> JudgeResponse:
     )
 
 
-def judge(client, request: JudgeRequest) -> JudgeResponse:
-    response = client.messages.create(
+def judge(provider: Provider, request: JudgeRequest) -> JudgeResponse:
+    data = provider.structured(
         model=request.model,
+        prompt=build_judge_prompt(request),
+        schema=VERDICT_SCHEMA,
         max_tokens=1024,
-        output_config={"format": {"type": "json_schema", "schema": VERDICT_SCHEMA}},
-        messages=[{"role": "user", "content": build_judge_prompt(request)}],
     )
-
-    text = next(block.text for block in response.content if block.type == "text")
-    data = json.loads(text)
     # Structured outputs can't enforce numeric ranges, so clamp defensively.
     data["score"] = max(0.0, min(1.0, float(data["score"])))
     return JudgeResponse.model_validate(data)

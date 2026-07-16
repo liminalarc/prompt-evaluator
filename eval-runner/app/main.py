@@ -9,7 +9,9 @@ import os
 from typing import Annotated
 
 from anthropic import Anthropic
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
+from fastapi.responses import JSONResponse
+from openai import OpenAI
 from pydantic import BaseModel
 
 from app.execution import (
@@ -21,6 +23,7 @@ from app.execution import (
 from app.generation import (
     GenerateFixturesRequest,
     GenerateFixturesResponse,
+    effective_model,
     generate_fixtures,
     stub_fixtures,
 )
@@ -29,6 +32,15 @@ from app.judging import (
     JudgeResponse,
     judge,
     stub_judge,
+)
+from app.providers import (
+    PROVIDER_ANTHROPIC,
+    PROVIDER_OPENAI,
+    AnthropicProvider,
+    OpenAIProvider,
+    Provider,
+    ProviderRegistry,
+    UnknownProviderError,
 )
 
 SERVICE_NAME = "eval-runner"
@@ -101,6 +113,31 @@ def get_anthropic_client() -> Anthropic | None:
     return Anthropic()
 
 
+def get_provider_registry() -> ProviderRegistry | None:
+    # Builds the set of configured providers from the environment (composition root). Returns
+    # None in stub mode (EVAL_RUNNER_STUB) so no vendor client is constructed. A provider is
+    # registered only when its API key is present, so a request for a model whose provider has
+    # no credentials fails clearly at routing time (UnknownProviderError -> 400) rather than
+    # opaquely at call time. Injected as a dependency so tests mock at the boundary.
+    if os.environ.get("EVAL_RUNNER_STUB"):
+        return None
+    providers: dict[str, Provider] = {}
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+    if anthropic_key:
+        providers[PROVIDER_ANTHROPIC] = AnthropicProvider(Anthropic(api_key=anthropic_key))
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    if openai_key:
+        providers[PROVIDER_OPENAI] = OpenAIProvider(OpenAI(api_key=openai_key))
+    return ProviderRegistry(providers)
+
+
+@app.exception_handler(UnknownProviderError)
+def _unknown_provider_handler(request: Request, exc: UnknownProviderError) -> JSONResponse:
+    # An unroutable model id or an unconfigured provider (missing credentials) is a clear 400,
+    # not an opaque 500. The message names the model/provider and hints at missing credentials.
+    return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content={"detail": str(exc)})
+
+
 @app.post(
     "/generate-fixtures",
     response_model=GenerateFixturesResponse,
@@ -108,11 +145,12 @@ def get_anthropic_client() -> Anthropic | None:
 )
 def generate_fixtures_endpoint(
     request: GenerateFixturesRequest,
-    client: Annotated[Anthropic | None, Depends(get_anthropic_client)],
+    registry: Annotated[ProviderRegistry | None, Depends(get_provider_registry)],
 ) -> GenerateFixturesResponse:
-    if client is None:
+    if registry is None:
         return stub_fixtures(request)
-    return generate_fixtures(client, request)
+    provider = registry.for_model(effective_model(request))
+    return generate_fixtures(provider, request)
 
 
 @app.post(
@@ -132,8 +170,9 @@ def execute_prompt_endpoint(
 @app.post("/judge", response_model=JudgeResponse, dependencies=[Depends(require_service_token)])
 def judge_endpoint(
     request: JudgeRequest,
-    client: Annotated[Anthropic | None, Depends(get_anthropic_client)],
+    registry: Annotated[ProviderRegistry | None, Depends(get_provider_registry)],
 ) -> JudgeResponse:
-    if client is None:
+    if registry is None:
         return stub_judge(request)
-    return judge(client, request)
+    provider = registry.for_model(request.model)
+    return judge(provider, request)
