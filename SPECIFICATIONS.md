@@ -24,6 +24,7 @@
 
 ## Phase 4 — Accounts & Access
 - **4.2** SSO / OAuth Sign-In — `NOT STARTED` — [detail](specs/4.2.md)
+- **4.3** Admin user & access management (admin flag, org membership, passwords — no email) — `NOT STARTED` — [detail](specs/4.3.md)
 
 ## Archive
 - **1.13** Model Catalog + admin management (droplists, no free-text model ids) — `DONE` — [detail](specs/archive/1.13.md)
