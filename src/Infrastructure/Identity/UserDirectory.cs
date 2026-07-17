@@ -86,6 +86,13 @@ public sealed class UserDirectory(UserManager<AppUser> users, AppIdentityDbConte
             .Select(m => m.OrganizationId)
             .ToListAsync(ct);
 
+    public async Task<IReadOnlyList<OrgMembershipInfo>> GetUserMembershipsAsync(
+        Guid userId, CancellationToken ct = default)
+        => await db.OrganizationMemberships
+            .Where(m => m.UserId == userId)
+            .Select(m => new OrgMembershipInfo(m.OrganizationId, m.Role))
+            .ToListAsync(ct);
+
     public Task<bool> IsMemberAsync(Guid userId, Guid organizationId, CancellationToken ct = default)
         => db.OrganizationMemberships.AnyAsync(m => m.UserId == userId && m.OrganizationId == organizationId, ct);
 

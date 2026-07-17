@@ -1,3 +1,4 @@
+using Application.Identity;
 using Application.Ports;
 
 namespace Api.Auth;
@@ -74,6 +75,30 @@ public sealed class OrgAccess(
         => current.UserId is { } uid
             ? (await users.GetAccessibleOrganizationIdsAsync(uid, ct)).ToHashSet()
             : new HashSet<Guid>();
+
+    /// <summary>
+    /// The current user's role in each org they belong to (4.5) — the switcher payload stamps this
+    /// so the client can gate owner-only UI. Empty when signed out / a member of nothing.
+    /// </summary>
+    public async Task<IReadOnlyDictionary<Guid, OrgRole>> MyOrgRolesAsync(CancellationToken ct)
+        => current.UserId is { } uid
+            ? (await users.GetUserMembershipsAsync(uid, ct)).ToDictionary(m => m.OrganizationId, m => m.Role)
+            : new Dictionary<Guid, OrgRole>();
+
+    /// <summary>
+    /// True when the current user may manage <paramref name="orgId"/>'s membership (4.5): a global
+    /// admin, or an <see cref="OrgRole.Owner"/> of that org. This is the owner-or-admin gate distinct
+    /// from 4.4's global-admin-only surface. The organization-content endpoints stay membership-gated.
+    /// </summary>
+    public async Task<bool> CanManageOrgMembersAsync(Guid orgId, CancellationToken ct)
+    {
+        if (current.UserId is not { } uid)
+            return false;
+        if (await users.IsGlobalAdminAsync(uid, ct))
+            return true;
+        var memberships = await users.GetUserMembershipsAsync(uid, ct);
+        return memberships.Any(m => m.OrganizationId == orgId && m.Role == OrgRole.Owner);
+    }
 
     private async Task<ResourceAccess> ResolveAsync(Guid orgId, CancellationToken ct)
         => await CanAccessOrgAsync(orgId, ct) ? ResourceAccess.Allowed : ResourceAccess.Forbidden;

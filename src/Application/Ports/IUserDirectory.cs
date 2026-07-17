@@ -36,6 +36,12 @@ public interface IUserDirectory
     /// <summary>The organizations a user may access — the switcher and authZ read this.</summary>
     Task<IReadOnlyList<Guid>> GetAccessibleOrganizationIdsAsync(Guid userId, CancellationToken ct = default);
 
+    /// <summary>
+    /// A user's memberships with the role held in each (4.5). Backs the caller's per-org role on the
+    /// switcher payload and the owner-or-admin check for member management. Empty when a member of none.
+    /// </summary>
+    Task<IReadOnlyList<OrgMembershipInfo>> GetUserMembershipsAsync(Guid userId, CancellationToken ct = default);
+
     Task<bool> IsMemberAsync(Guid userId, Guid organizationId, CancellationToken ct = default);
 
     /// <summary>

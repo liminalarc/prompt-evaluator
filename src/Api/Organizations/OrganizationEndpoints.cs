@@ -11,12 +11,15 @@ public static class OrganizationEndpoints
     {
         var group = app.MapGroup("/api/organizations").RequireAuthorization();
 
-        // The switcher: only the organizations the current user is a member of (4.1).
+        // The switcher: only the organizations the current user is a member of (4.1), each stamped
+        // with the caller's role in it (4.5) so the client can gate owner-only UI.
         group.MapGet("/", async (IOrganizationRepository repository, OrgAccess access, CancellationToken ct) =>
         {
-            var accessible = await access.AccessibleOrgIdsAsync(ct);
+            var roles = await access.MyOrgRolesAsync(ct);
             var orgs = await repository.ListAsync(ct);
-            return Results.Ok(orgs.Where(o => accessible.Contains(o.Id)).Select(OrganizationResponse.From));
+            return Results.Ok(orgs
+                .Where(o => roles.ContainsKey(o.Id))
+                .Select(o => OrganizationResponse.From(o, roles[o.Id])));
         });
 
         group.MapPost("/", async (CreateOrganizationRequest request, IOrganizationRepository repository,
@@ -31,7 +34,8 @@ public static class OrganizationEndpoints
                 if (current.UserId is { } uid)
                     await users.GrantOrganizationAsync(uid, org.Id, OrgRole.Owner, ct);
 
-                return Results.Created($"/api/organizations/{org.Id}", OrganizationResponse.From(org));
+                return Results.Created($"/api/organizations/{org.Id}",
+                    OrganizationResponse.From(org, OrgRole.Owner));
             }
             catch (ArgumentException ex)
             {
@@ -51,7 +55,8 @@ public static class OrganizationEndpoints
             {
                 org.Rename(request.Name);
                 await repository.SaveChangesAsync(ct);
-                return Results.Ok(OrganizationResponse.From(org));
+                var role = (await access.MyOrgRolesAsync(ct)).TryGetValue(id, out var r) ? r : OrgRole.Member;
+                return Results.Ok(OrganizationResponse.From(org, role));
             }
             catch (ArgumentException ex)
             {
@@ -73,6 +78,99 @@ public static class OrganizationEndpoints
             return Results.NoContent();
         });
 
+        MapMemberEndpoints(group);
         return app;
     }
+
+    /// <summary>
+    /// Owner-facing member management (4.5): list/add-by-email/set-role/remove, gated
+    /// owner-or-admin per org (<see cref="OrgAccess.CanManageOrgMembersAsync"/>) → 403 otherwise.
+    /// A last-owner guard blocks demoting/removing an org's final Owner here; a global admin can
+    /// still fix an org via the 4.4 admin surface (no guard there).
+    /// </summary>
+    private static void MapMemberEndpoints(IEndpointRouteBuilder group)
+    {
+        group.MapGet("/{id:guid}/members", async (
+            Guid id, IOrganizationRepository organizations, IUserDirectory users, OrgAccess access,
+            CancellationToken ct) =>
+        {
+            if (!await access.CanManageOrgMembersAsync(id, ct))
+                return Results.Forbid();
+            if (await organizations.GetByIdAsync(id, ct) is null)
+                return Results.NotFound();
+            var members = await users.ListOrganizationMembersAsync(id, ct);
+            return Results.Ok(members.Select(OrgMemberResponse.From));
+        });
+
+        group.MapPost("/{id:guid}/members", async (
+            Guid id, AddOrgMemberByEmailRequest request, IOrganizationRepository organizations,
+            IUserDirectory users, OrgAccess access, CancellationToken ct) =>
+        {
+            if (!await access.CanManageOrgMembersAsync(id, ct))
+                return Results.Forbid();
+            if (!Enum.TryParse<OrgRole>(request.Role, ignoreCase: true, out var role))
+                return Results.BadRequest(new { error = $"Unknown role '{request.Role}'." });
+            if (await organizations.GetByIdAsync(id, ct) is null)
+                return Results.NotFound();
+
+            var user = string.IsNullOrWhiteSpace(request.Email)
+                ? null
+                : await users.FindByEmailAsync(request.Email.Trim(), ct);
+            if (user is null)
+                return Results.BadRequest(new { error = "No user with that email. Users must register first." });
+
+            await users.GrantOrganizationAsync(user.Id, id, role, ct);
+            return Results.NoContent();
+        });
+
+        group.MapPut("/{id:guid}/members/{userId:guid}", async (
+            Guid id, Guid userId, SetOrgMemberRoleRequest request, IOrganizationRepository organizations,
+            IUserDirectory users, OrgAccess access, CancellationToken ct) =>
+        {
+            if (!await access.CanManageOrgMembersAsync(id, ct))
+                return Results.Forbid();
+            if (!Enum.TryParse<OrgRole>(request.Role, ignoreCase: true, out var role))
+                return Results.BadRequest(new { error = $"Unknown role '{request.Role}'." });
+            if (await organizations.GetByIdAsync(id, ct) is null)
+                return Results.NotFound();
+
+            var members = await users.ListOrganizationMembersAsync(id, ct);
+            var target = members.FirstOrDefault(m => m.UserId == userId);
+            if (target is null)
+                return Results.NotFound();
+
+            // Last-owner guard: don't let the final Owner be demoted out of ownership.
+            if (target.Role == OrgRole.Owner && role != OrgRole.Owner && IsLastOwner(members, userId))
+                return Results.BadRequest(new { error = "An organization must keep at least one owner." });
+
+            await users.GrantOrganizationAsync(userId, id, role, ct);
+            return Results.NoContent();
+        });
+
+        group.MapDelete("/{id:guid}/members/{userId:guid}", async (
+            Guid id, Guid userId, IOrganizationRepository organizations, IUserDirectory users,
+            OrgAccess access, CancellationToken ct) =>
+        {
+            if (!await access.CanManageOrgMembersAsync(id, ct))
+                return Results.Forbid();
+            if (await organizations.GetByIdAsync(id, ct) is null)
+                return Results.NotFound();
+
+            var members = await users.ListOrganizationMembersAsync(id, ct);
+            var target = members.FirstOrDefault(m => m.UserId == userId);
+            if (target is null)
+                return Results.NoContent(); // already not a member — idempotent
+
+            // Last-owner guard: don't strand the org with no owner.
+            if (target.Role == OrgRole.Owner && IsLastOwner(members, userId))
+                return Results.BadRequest(new { error = "An organization must keep at least one owner." });
+
+            await users.RevokeOrganizationAsync(userId, id, ct);
+            return Results.NoContent();
+        });
+    }
+
+    private static bool IsLastOwner(IReadOnlyList<OrgMemberInfo> members, Guid userId)
+        => members.Count(m => m.Role == OrgRole.Owner) == 1
+           && members.Single(m => m.Role == OrgRole.Owner).UserId == userId;
 }
