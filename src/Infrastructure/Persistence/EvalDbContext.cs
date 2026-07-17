@@ -11,6 +11,7 @@ public sealed class EvalDbContext(DbContextOptions<EvalDbContext> options) : DbC
     public DbSet<Prompt> Prompts => Set<Prompt>();
     public DbSet<Dataset> Datasets => Set<Dataset>();
     public DbSet<ScorerConfig> ScorerConfigs => Set<ScorerConfig>();
+    public DbSet<ModelCatalogEntry> ModelCatalogEntries => Set<ModelCatalogEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

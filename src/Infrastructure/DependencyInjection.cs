@@ -44,6 +44,7 @@ public static class DependencyInjection
         services.AddScoped<IPromptRepository, PromptRepository>();
         services.AddScoped<IDatasetRepository, DatasetRepository>();
         services.AddScoped<IScorerConfigRepository, ScorerConfigRepository>();
+        services.AddScoped<IModelCatalogRepository, ModelCatalogRepository>();
         services.AddScoped<ISystemInfo, SystemInfo>();
         services.AddScoped<Application.Scoring.ScorerFactory>();
         services.AddSingleton(TimeProvider.System);
