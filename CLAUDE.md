@@ -32,9 +32,15 @@ improvements. An advisory layer (prompt-engineering advice) comes later.
   (`AppUser.IsAdmin`, read via `IUserDirectory.IsGlobalAdminAsync` / `OrgAccess.IsGlobalAdminAsync`),
   distinct from the per-org `OrgRole`. That flag gates **management only**: a global admin can manage
   any org, but org *content* (prompts/datasets/runs) stays membership-gated — an admin reaches an
-  org's content only by adding themselves as a member. The eval-runner authenticates as an **internal trusted
-  service** (shared `X-Service-Token`), never with user credentials. Password-reset email is an
-  `IEmailSender` seam (dev logs; real provider at deploy — spec 3.2).
+  org's content only by adding themselves as a member. Alongside the global-admin surfaces, an org's
+  own **Owner** manages that org's membership from its own detail page (4.5: `/organizations/{id}`,
+  list/add-by-email/set-role/remove) — an **owner-or-admin, per-org** gate
+  (`OrgAccess.CanManageOrgMembersAsync`) on the member-scoped `/api/organizations/{id}/members`
+  endpoints, distinct from 4.4's global-admin-only `/api/admin/organizations`. A last-owner guard
+  keeps every org with ≥1 Owner (a global admin can still override via the 4.4 surface). The
+  eval-runner authenticates as an **internal trusted service** (shared `X-Service-Token`), never with
+  user credentials. Password-reset email is an `IEmailSender` seam (dev logs; real provider at
+  deploy — spec 3.2).
 - **Capture-first fixtures.** For prompts whose input is an upstream SLM's output, real
   test data is *captured* from the apps (the ground-truth corpus) and *synthetic* data
   only fills coverage gaps — seeded from captured examples so the distribution matches.
