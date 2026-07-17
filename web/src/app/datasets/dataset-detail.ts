@@ -283,7 +283,7 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                     data-testid="judge-model"
                   >
                     @for (m of judgeModels(); track m.modelId) {
-                      <option [value]="m.modelId" [disabled]="!m.available">
+                      <option [value]="m.modelId">
                         {{ m.displayName }}{{ m.available ? '' : ' (unavailable)' }}
                       </option>
                     }

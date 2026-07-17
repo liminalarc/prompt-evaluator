@@ -173,7 +173,7 @@ describe('PromptDetail (unified workspace)', () => {
     expect(values).toContain('gpt-4o-mini');
   });
 
-  it('marks a model whose provider is unavailable as disabled in the target droplist', () => {
+  it('marks a model whose provider is unavailable but keeps it selectable (eval-runner enforces)', () => {
     const fixture = setup();
     const cmp = fixture.componentInstance as unknown as {
       showAddVersion: { set: (v: boolean) => void };
@@ -185,8 +185,8 @@ describe('PromptDetail (unified workspace)', () => {
       '[data-testid="target-model"]',
     ) as HTMLSelectElement;
     const unavailable = Array.from(select.options).find((o) => o.value === 'gpt-unconfigured')!;
-    expect(unavailable.disabled).toBe(true);
-    expect(unavailable.textContent).toContain('unavailable');
+    expect(unavailable.textContent).toContain('unavailable'); // clearly marked
+    expect(unavailable.disabled).toBe(false); // still selectable; the eval-runner returns a clear 400
   });
 
   it('displays a legacy free-text target model on an existing version (backward-compat)', () => {
