@@ -225,10 +225,26 @@ boundary.
   404 for a resource that doesn't exist). Creating an organization grants the creator ownership;
   the org switcher lists only accessible orgs.
 - A workspace-level **global-admin flag** (`AppUser.IsAdmin`, spec 1.13) gates workspace-wide
-  resources (the Model Catalog), distinct from per-org roles. `GET /api/auth/me` and login report
-  `isAdmin` so the SPA can show admin-only UI.
+  resources (the Model Catalog, user management), distinct from per-org roles. `GET /api/auth/me`
+  and login report `isAdmin` so the SPA can show admin-only UI.
 - **First run:** set `Auth__BootstrapAdmin__Email`/`__Password` to seed an admin — granted the
   seeded Default org **and** the global-admin flag; otherwise register the first user via the SPA.
+
+### Admin user & access management (spec 4.3)
+
+Global admins manage users from the **Admin** nav folder (which also holds the Model Catalog). No
+email is involved; users still self-register.
+
+- `GET /api/admin/users` — list users with their admin flag and org memberships (global-admin only).
+- `POST /api/admin/users/{id}/admin` `{ isAdmin }` — grant/revoke global-admin. The **last** global
+  admin cannot be demoted (400), so the workspace can't be locked out.
+- `POST /api/admin/users/{id}/organizations` `{ organizationId, role }` (Owner/Member) and
+  `DELETE /api/admin/users/{id}/organizations/{orgId}` — manage a user's org membership.
+- `POST /api/admin/users/{id}/password` `{ newPassword }` — admin-set a user's password directly.
+- `POST /api/auth/change-password` `{ currentPassword, newPassword }` — **self-service** password
+  change for any signed-in user (from the `/account` page). All password writes go through Identity
+  (policy-checked, security-stamp rotated); no email. Managing the organizations *themselves*
+  (rename/delete/list-all) is spec 4.4.
 
 ### Ops endpoints
 
