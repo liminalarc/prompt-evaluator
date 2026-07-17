@@ -46,3 +46,6 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Local-only compose overrides (dev convenience; never committed)
+docker-compose.override.yml

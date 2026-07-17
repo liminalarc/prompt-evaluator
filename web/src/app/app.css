@@ -91,6 +91,46 @@
   border-radius: var(--sb-radius-xs);
 }
 
+/* Admin folder — a native disclosure grouping the admin-only surfaces (Models, Users). */
+.nav__admin {
+  position: relative;
+}
+
+.nav__admin-summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.nav__admin-summary::-webkit-details-marker {
+  display: none;
+}
+
+.nav__admin-summary::after {
+  content: ' ▾';
+  opacity: 0.7;
+}
+
+.nav__admin-menu {
+  position: absolute;
+  top: calc(100% + var(--sb-space-md));
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sb-space-sm);
+  min-width: 9rem;
+  padding: var(--sb-space-md);
+  background: var(--sb-surface);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--sb-radius-md, 8px);
+  box-shadow: var(--sb-shadow-md, 0 6px 20px rgb(0 0 0 / 0.18));
+}
+
+.nav__admin-menu .nav__link {
+  color: var(--sb-text);
+  opacity: 0.9;
+}
+
 .topbar__right {
   margin-left: auto;
   display: flex;
@@ -114,6 +154,12 @@
   color: var(--sb-on-dark);
   opacity: 0.9;
   font-size: var(--sb-type-small-size);
+  text-decoration: none;
+}
+
+.topbar__user-name:hover {
+  opacity: 1;
+  text-decoration: underline;
 }
 
 .topbar__org-label {

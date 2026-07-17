@@ -69,6 +69,15 @@ export class AuthService {
       .pipe(tap(() => this._currentUser.set(null)));
   }
 
+  /** Self-service change-password (4.3): current + new, no email. */
+  changePassword(currentPassword: string, newPassword: string): Observable<void> {
+    return this.http.post<void>(
+      '/api/auth/change-password',
+      { currentPassword, newPassword },
+      { withCredentials: true },
+    );
+  }
+
   forgotPassword(email: string): Observable<void> {
     return this.http.post<void>('/api/auth/forgot-password', { email }, { withCredentials: true });
   }

@@ -107,18 +107,34 @@ describe('App shell', () => {
     expect(el.querySelector('[data-testid="logout"]')).toBeTruthy();
   });
 
-  it('shows the admin Models link for a global admin', () => {
+  it('shows the Admin folder with Models and Users for a global admin', () => {
     configure(fakeAuth({ id: 'u1', email: 'a@b.co', displayName: 'Ada', isAdmin: true }));
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('[data-testid="nav-admin-models"]')).toBeTruthy();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="nav-admin"]')).toBeTruthy();
+    expect(el.querySelector('[data-testid="nav-admin-models"]')).toBeTruthy();
+    expect(el.querySelector('[data-testid="nav-admin-users"]')).toBeTruthy();
   });
 
-  it('hides the admin Models link for a non-admin', () => {
+  it('hides the Admin folder for a non-admin', () => {
     configure(); // default user isAdmin: false
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('[data-testid="nav-admin-models"]')).toBeFalsy();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="nav-admin"]')).toBeFalsy();
+    expect(el.querySelector('[data-testid="nav-admin-models"]')).toBeFalsy();
+    expect(el.querySelector('[data-testid="nav-admin-users"]')).toBeFalsy();
+  });
+
+  it('links the user chip to the account page', () => {
+    configure();
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    const link = fixture.nativeElement.querySelector(
+      '[data-testid="current-user"]',
+    ) as HTMLAnchorElement;
+    expect(link.getAttribute('href')).toContain('/account');
   });
 
   it('hides the nav, switcher and user chrome when not authenticated', () => {

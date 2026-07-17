@@ -35,13 +35,25 @@
         >Analytics</a
       >
       @if (auth.currentUser()?.isAdmin) {
-        <a
-          routerLink="/admin/models"
-          routerLinkActive="nav__link--active"
-          class="nav__link"
-          data-testid="nav-admin-models"
-          >Models</a
-        >
+        <details class="nav__admin" data-testid="nav-admin">
+          <summary class="nav__link nav__admin-summary">Admin</summary>
+          <div class="nav__admin-menu">
+            <a
+              routerLink="/admin/models"
+              routerLinkActive="nav__link--active"
+              class="nav__link"
+              data-testid="nav-admin-models"
+              >Models</a
+            >
+            <a
+              routerLink="/admin/users"
+              routerLinkActive="nav__link--active"
+              class="nav__link"
+              data-testid="nav-admin-users"
+              >Users</a
+            >
+          </div>
+        </details>
       }
     </nav>
   }
@@ -66,9 +78,13 @@
       }
 
       <div class="topbar__user">
-        <span class="topbar__user-name" data-testid="current-user">{{
-          auth.currentUser()?.displayName || auth.currentUser()?.email
-        }}</span>
+        <a
+          routerLink="/account"
+          class="topbar__user-name"
+          data-testid="current-user"
+          title="Account settings"
+          >{{ auth.currentUser()?.displayName || auth.currentUser()?.email }}</a
+        >
         <button
           class="sb-btn sb-btn--sm sb-btn--secondary"
           type="button"
