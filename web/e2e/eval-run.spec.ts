@@ -39,7 +39,7 @@ test('runs a prompt version over a dataset and shows per-fixture scores', async 
   await expect(page.getByRole('heading', { name: promptName })).toBeVisible();
   await page.getByTestId('toggle-add-version').click();
   await page.fill('#content', 'You summarize text.');
-  await page.fill('#targetModel', 'claude-opus-4-8');
+  await page.selectOption('#targetModel', 'claude-opus-4-8');
   await page.getByTestId('add-version').click();
   await expect(page.getByTestId('versions').locator('tbody tr')).toHaveCount(1);
 

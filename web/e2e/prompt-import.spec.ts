@@ -33,7 +33,7 @@ test('imports a version’s content from a picked text file', async ({ page, req
   });
   await expect(page.locator('#content')).toHaveValue('Imported prompt: {input}');
 
-  await page.fill('#targetModel', 'claude-sonnet-5');
+  await page.selectOption('#targetModel', 'claude-sonnet-5');
   await page.getByTestId('add-version').click();
   await expect(page.getByTestId('versions')).toContainText('claude-sonnet-5');
 });

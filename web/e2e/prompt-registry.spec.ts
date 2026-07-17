@@ -33,13 +33,13 @@ test('registers a prompt, records versions, and diffs them', async ({ page, requ
   // Add first version.
   await page.getByTestId('toggle-add-version').click();
   await page.fill('#content', 'Summarize: {input}');
-  await page.fill('#targetModel', 'claude-sonnet-5');
+  await page.selectOption('#targetModel', 'claude-sonnet-5');
   await page.getByTestId('add-version').click();
   await expect(page.getByTestId('versions')).toContainText('claude-sonnet-5');
 
   // Add second version.
   await page.fill('#content', 'Summarize concisely: {input}');
-  await page.fill('#targetModel', 'claude-opus-4-8');
+  await page.selectOption('#targetModel', 'claude-opus-4-8');
   await page.getByTestId('add-version').click();
   await expect(page.getByTestId('versions')).toContainText('claude-opus-4-8');
 

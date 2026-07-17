@@ -30,7 +30,7 @@ test('a prompt workspace shows its versions, datasets, and analytics together', 
   // Versions live here.
   await page.getByTestId('toggle-add-version').click();
   await page.fill('#content', 'Summarize: {input}');
-  await page.fill('#targetModel', 'claude-sonnet-5');
+  await page.selectOption('#targetModel', 'claude-sonnet-5');
   await page.getByTestId('add-version').click();
   await expect(page.getByTestId('versions')).toContainText('claude-sonnet-5');
 

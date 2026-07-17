@@ -40,11 +40,11 @@ test('shows a score trend across versions and the regression section on the dash
   await expect(page.getByRole('heading', { name: promptName })).toBeVisible();
   await page.getByTestId('toggle-add-version').click();
   await page.fill('#content', 'good summarizer');
-  await page.fill('#targetModel', 'claude-opus-4-8');
+  await page.selectOption('#targetModel', 'claude-opus-4-8');
   await page.getByTestId('add-version').click();
   await expect(page.getByTestId('versions').locator('tbody tr')).toHaveCount(1);
   await page.fill('#content', 'bad summarizer');
-  await page.fill('#targetModel', 'claude-opus-4-8');
+  await page.selectOption('#targetModel', 'claude-opus-4-8');
   await page.getByTestId('add-version').click();
   await expect(page.getByTestId('versions').locator('tbody tr')).toHaveCount(2);
 
