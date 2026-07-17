@@ -21,6 +21,9 @@ public sealed class AnalyticsEndpointTests : IAsyncLifetime
     private sealed class VersionSensitiveRunner : IEvaluationRunner
     {
         public Task<string> EchoAsync(string prompt, CancellationToken ct = default) => Task.FromResult(prompt);
+        public Task<IReadOnlyList<string>?> GetConfiguredProvidersAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<string>?>(null);
+
         public Task<Application.ServiceVersion?> GetVersionAsync(CancellationToken ct = default)
             => Task.FromResult<Application.ServiceVersion?>(null);
         public Task<IReadOnlyList<GeneratedFixtureData>> GenerateSyntheticFixturesAsync(

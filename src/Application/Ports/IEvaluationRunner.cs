@@ -13,6 +13,13 @@ public interface IEvaluationRunner
     Task<ServiceVersion?> GetVersionAsync(CancellationToken ct = default);
 
     /// <summary>
+    /// The provider names the eval-runner has configured credentials for (spec 1.13) — the
+    /// authority the Model Catalog reflects as availability. <c>null</c> when the eval-runner is
+    /// unreachable: availability is then unknown, so models are not hidden.
+    /// </summary>
+    Task<IReadOnlyList<string>?> GetConfiguredProvidersAsync(CancellationToken ct = default);
+
+    /// <summary>
     /// Generates <paramref name="count"/> SLM-shaped fixtures, seeded from the captured
     /// <paramref name="seeds"/> so the distribution matches, steered by operator
     /// <paramref name="guidance"/>. Python is an execution detail behind this seam.

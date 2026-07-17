@@ -165,6 +165,9 @@ public class DatasetHandlersTests
         public int Count { get; private set; }
 
         public Task<string> EchoAsync(string prompt, CancellationToken ct = default) => Task.FromResult(prompt);
+        public Task<IReadOnlyList<string>?> GetConfiguredProvidersAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<string>?>(null);
+
         public Task<Application.ServiceVersion?> GetVersionAsync(CancellationToken ct = default)
             => Task.FromResult<Application.ServiceVersion?>(null);
 

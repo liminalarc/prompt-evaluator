@@ -283,7 +283,9 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                     data-testid="judge-model"
                   >
                     @for (m of judgeModels(); track m.modelId) {
-                      <option [value]="m.modelId">{{ m.displayName }}</option>
+                      <option [value]="m.modelId" [disabled]="!m.available">
+                        {{ m.displayName }}{{ m.available ? '' : ' (unavailable)' }}
+                      </option>
                     }
                   </select>
                 </div>
@@ -479,7 +481,7 @@ export class DatasetDetail implements OnInit {
         this.models.set(m);
         // Default the judge selection to the first judge-capable model, so the LlmJudge scorer
         // form is valid without the user having to open and touch the dropdown.
-        const firstJudge = this.judgeModels()[0];
+        const firstJudge = this.judgeModels().find((m) => m.available) ?? this.judgeModels()[0];
         if (!this.judgeModel() && firstJudge) {
           this.judgeModel.set(firstJudge.modelId);
         }

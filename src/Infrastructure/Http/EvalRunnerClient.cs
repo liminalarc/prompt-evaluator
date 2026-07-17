@@ -26,6 +26,20 @@ public sealed class EvalRunnerClient(HttpClient http) : IEvaluationRunner
         return body is null ? null : new ServiceVersion(body.Service, body.Version, body.Commit);
     }
 
+    public async Task<IReadOnlyList<string>?> GetConfiguredProvidersAsync(CancellationToken ct = default)
+    {
+        // Unreachable eval-runner -> null (availability unknown, so the catalog hides nothing).
+        try
+        {
+            var body = await http.GetFromJsonAsync<ProvidersDto>("/providers", ct);
+            return body?.Providers;
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
+    }
+
     public async Task<IReadOnlyList<GeneratedFixtureData>> GenerateSyntheticFixturesAsync(
         IReadOnlyList<SeedExampleData> seeds,
         GenerationGuidanceData guidance,
@@ -77,6 +91,8 @@ public sealed class EvalRunnerClient(HttpClient http) : IEvaluationRunner
     private sealed record EchoResponse(string Output);
 
     private sealed record VersionDto(string Service, string Version, string Commit);
+
+    private sealed record ProvidersDto(string[] Providers);
 
     // The generation contract with eval-runner is snake_case (Pydantic-native); these DTOs
     // pin the wire names explicitly since the web-default camelCase would not match.

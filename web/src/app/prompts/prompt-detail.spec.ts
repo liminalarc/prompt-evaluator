@@ -36,6 +36,7 @@ describe('PromptDetail (unified workspace)', () => {
       inputPricePerMTokUsd: 3,
       outputPricePerMTokUsd: 15,
       isActive: true,
+      available: true,
     },
     {
       id: 'm2',
@@ -46,6 +47,18 @@ describe('PromptDetail (unified workspace)', () => {
       inputPricePerMTokUsd: null,
       outputPricePerMTokUsd: null,
       isActive: true,
+      available: true,
+    },
+    {
+      id: 'm3',
+      modelId: 'gpt-unconfigured',
+      displayName: 'GPT (no key)',
+      provider: 'OpenAi',
+      roles: ['subject'],
+      inputPricePerMTokUsd: null,
+      outputPricePerMTokUsd: null,
+      isActive: true,
+      available: false,
     },
   ];
   const datasets = [
@@ -158,6 +171,22 @@ describe('PromptDetail (unified workspace)', () => {
     const values = Array.from(select.options).map((o) => o.value);
     expect(values).toContain('claude-sonnet-5');
     expect(values).toContain('gpt-4o-mini');
+  });
+
+  it('marks a model whose provider is unavailable as disabled in the target droplist', () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance as unknown as {
+      showAddVersion: { set: (v: boolean) => void };
+    };
+    cmp.showAddVersion.set(true);
+    fixture.detectChanges();
+
+    const select = fixture.nativeElement.querySelector(
+      '[data-testid="target-model"]',
+    ) as HTMLSelectElement;
+    const unavailable = Array.from(select.options).find((o) => o.value === 'gpt-unconfigured')!;
+    expect(unavailable.disabled).toBe(true);
+    expect(unavailable.textContent).toContain('unavailable');
   });
 
   it('displays a legacy free-text target model on an existing version (backward-compat)', () => {

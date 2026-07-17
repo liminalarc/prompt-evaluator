@@ -46,6 +46,7 @@ const models = [
     inputPricePerMTokUsd: 5,
     outputPricePerMTokUsd: 25,
     isActive: true,
+    available: true,
   },
   {
     id: 'm2',
@@ -56,6 +57,7 @@ const models = [
     inputPricePerMTokUsd: null,
     outputPricePerMTokUsd: null,
     isActive: true,
+    available: true,
   },
 ];
 

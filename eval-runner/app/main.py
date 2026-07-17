@@ -66,6 +66,32 @@ class VersionResponse(BaseModel):
     commit: str
 
 
+class ProvidersResponse(BaseModel):
+    providers: list[str]
+
+
+# The providers the eval-runner knows how to route to (spec 1.5). New providers (e.g. a Modal SLM,
+# spec 1.12) are added alongside their adapter.
+KNOWN_PROVIDERS = (PROVIDER_ANTHROPIC, PROVIDER_OPENAI)
+
+
+def configured_providers() -> list[str]:
+    """The providers with usable credentials — the authority .NET reflects in the catalog (1.13).
+
+    In stub mode execution is model-free (no vendor client is built), so report every known
+    provider; otherwise dev/e2e runs with no keys would mark every catalog model unavailable. When
+    not stubbed, a provider is configured only when its API key is present (mirrors the registry).
+    """
+    if os.environ.get("EVAL_RUNNER_STUB"):
+        return list(KNOWN_PROVIDERS)
+    providers: list[str] = []
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        providers.append(PROVIDER_ANTHROPIC)
+    if os.environ.get("OPENAI_API_KEY"):
+        providers.append(PROVIDER_OPENAI)
+    return providers
+
+
 def require_service_token(
     x_service_token: Annotated[str | None, Header()] = None,
 ) -> None:
@@ -97,6 +123,15 @@ def version() -> VersionResponse:
         version=VERSION,
         commit=os.environ.get("GIT_COMMIT", "dev"),
     )
+
+
+@app.get(
+    "/providers",
+    response_model=ProvidersResponse,
+    dependencies=[Depends(require_service_token)],
+)
+def providers() -> ProvidersResponse:
+    return ProvidersResponse(providers=configured_providers())
 
 
 @app.post("/echo", response_model=EchoResponse, dependencies=[Depends(require_service_token)])

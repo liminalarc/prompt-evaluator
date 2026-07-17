@@ -133,7 +133,9 @@ import { validateImportFile } from './import-file';
                   data-testid="target-model"
                 >
                   @for (m of subjectModels(); track m.modelId) {
-                    <option [value]="m.modelId">{{ m.displayName }}</option>
+                    <option [value]="m.modelId" [disabled]="!m.available">
+                      {{ m.displayName }}{{ m.available ? '' : ' (unavailable)' }}
+                    </option>
                   }
                 </select>
               </div>

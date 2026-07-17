@@ -11,4 +11,6 @@ export interface ModelCatalogEntry {
   inputPricePerMTokUsd: number | null;
   outputPricePerMTokUsd: number | null;
   isActive: boolean;
+  /** Whether the eval-runner has configured credentials for this model's provider (1.13). */
+  available: boolean;
 }
