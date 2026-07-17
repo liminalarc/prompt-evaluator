@@ -1,3 +1,4 @@
+using Api.Admin;
 using Api.Analytics;
 using Api.Auth;
 using Api.Datasets;
@@ -93,6 +94,7 @@ app.MapEchoEndpoints();
 app.MapOrganizationEndpoints();
 app.MapPromptEndpoints();
 app.MapModelEndpoints();
+app.MapAdminUserEndpoints();
 app.MapFolderEndpoints();
 app.MapDatasetEndpoints();
 app.MapEvalHarnessEndpoints();

@@ -1,0 +1,10 @@
+# Local-only dev override (untracked). Promotes an existing account to global admin so the Model
+# Catalog admin page (/admin/models, spec 1.13) is reachable. The bootstrap seeder finds the user
+# by email and sets the admin flag; the password here is a placeholder and is NOT applied to an
+# already-existing account. Compose auto-merges this on `docker compose up`.
+services:
+  api:
+    environment:
+      Auth__BootstrapAdmin__Email: "todd.hurley@liminalarc.co"
+      Auth__BootstrapAdmin__Password: "Placeholder-Local-9"
+      Auth__BootstrapAdmin__DisplayName: "Todd Hurley"

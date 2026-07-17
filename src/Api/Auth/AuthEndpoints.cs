@@ -86,6 +86,16 @@ public static class AuthEndpoints
             return Results.NoContent();
         }).RequireAuthorization();
 
+        // Self-service change-password (4.3): a signed-in user rotates their own password by proving
+        // the current one. No email; a wrong current password is a 400.
+        group.MapPost("/change-password", async (
+            ChangePasswordRequest req, ICurrentUser current, IUserDirectory users, CancellationToken ct) =>
+        {
+            var result = await users.ChangePasswordAsync(
+                current.UserId!.Value, req.CurrentPassword, req.NewPassword, ct);
+            return result.Succeeded ? Results.NoContent() : Results.BadRequest(new { errors = result.Errors });
+        }).RequireAuthorization();
+
         group.MapGet("/me", async (ICurrentUser current, IUserDirectory users, HttpContext http, CancellationToken ct) =>
             Results.Ok(new UserResponse(
                 current.UserId!.Value,
@@ -119,5 +129,7 @@ public sealed record LoginRequest(string Email, string Password);
 public sealed record ForgotPasswordRequest(string Email);
 
 public sealed record ResetPasswordRequest(string Email, string Token, string NewPassword);
+
+public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 
 public sealed record UserResponse(Guid Id, string Email, string DisplayName, bool IsAdmin);

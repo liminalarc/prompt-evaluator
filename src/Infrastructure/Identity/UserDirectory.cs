@@ -104,6 +104,65 @@ public sealed class UserDirectory(UserManager<AppUser> users, AppIdentityDbConte
         await users.UpdateAsync(user);
     }
 
+    public async Task<IReadOnlyList<UserAccountDetail>> ListUsersAsync(CancellationToken ct = default)
+    {
+        var all = await users.Users.OrderBy(u => u.Email).ToListAsync(ct);
+        var byUser = (await db.OrganizationMemberships.ToListAsync(ct))
+            .GroupBy(m => m.UserId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        return all.Select(u => new UserAccountDetail(
+            u.Id,
+            u.Email ?? "",
+            u.DisplayName,
+            u.IsAdmin,
+            (byUser.TryGetValue(u.Id, out var ms) ? ms : [])
+                .Select(m => new OrgMembershipInfo(m.OrganizationId, m.Role))
+                .ToList())).ToList();
+    }
+
+    public async Task RevokeOrganizationAsync(Guid userId, Guid organizationId, CancellationToken ct = default)
+    {
+        var existing = await db.OrganizationMemberships
+            .SingleOrDefaultAsync(m => m.UserId == userId && m.OrganizationId == organizationId, ct);
+        if (existing is null)
+            return;
+        db.OrganizationMemberships.Remove(existing);
+        await db.SaveChangesAsync(ct);
+    }
+
+    public Task<int> CountGlobalAdminsAsync(CancellationToken ct = default)
+        => users.Users.CountAsync(u => u.IsAdmin, ct);
+
+    public async Task<PasswordResetResult> SetPasswordAsync(
+        Guid userId, string newPassword, CancellationToken ct = default)
+    {
+        var user = await users.FindByIdAsync(userId.ToString());
+        if (user is null)
+            return PasswordResetResult.Failure(["User not found."]);
+
+        // No email: generate and consume a reset token server-side so Identity's password policy
+        // and security-stamp rotation still apply.
+        var token = await users.GeneratePasswordResetTokenAsync(user);
+        var result = await users.ResetPasswordAsync(user, token, newPassword);
+        return result.Succeeded
+            ? PasswordResetResult.Success()
+            : PasswordResetResult.Failure(result.Errors.Select(e => e.Description).ToList());
+    }
+
+    public async Task<PasswordResetResult> ChangePasswordAsync(
+        Guid userId, string currentPassword, string newPassword, CancellationToken ct = default)
+    {
+        var user = await users.FindByIdAsync(userId.ToString());
+        if (user is null)
+            return PasswordResetResult.Failure(["User not found."]);
+
+        var result = await users.ChangePasswordAsync(user, currentPassword, newPassword);
+        return result.Succeeded
+            ? PasswordResetResult.Success()
+            : PasswordResetResult.Failure(result.Errors.Select(e => e.Description).ToList());
+    }
+
     private static UserAccount? Project(AppUser? user)
         => user is null ? null : new UserAccount(user.Id, user.Email ?? "", user.DisplayName);
 }

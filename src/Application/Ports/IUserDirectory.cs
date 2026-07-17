@@ -46,7 +46,30 @@ public interface IUserDirectory
 
     /// <summary>Set (or clear) a user's global-admin flag. Used by the bootstrap-admin seeder.</summary>
     Task SetGlobalAdminAsync(Guid userId, bool isAdmin, CancellationToken ct = default);
+
+    /// <summary>All users with their admin flag and org memberships — the admin user-management view (4.3).</summary>
+    Task<IReadOnlyList<UserAccountDetail>> ListUsersAsync(CancellationToken ct = default);
+
+    /// <summary>Remove a user's membership of an organization (4.3). No-op if not a member.</summary>
+    Task RevokeOrganizationAsync(Guid userId, Guid organizationId, CancellationToken ct = default);
+
+    /// <summary>How many users hold the global-admin flag — backs the last-admin lockout guard (4.3).</summary>
+    Task<int> CountGlobalAdminsAsync(CancellationToken ct = default);
+
+    /// <summary>Admin-set a user's password directly, no email/token round-trip (4.3). Policy still applies.</summary>
+    Task<PasswordResetResult> SetPasswordAsync(Guid userId, string newPassword, CancellationToken ct = default);
+
+    /// <summary>Change a user's own password after verifying the current one (4.3, self-service).</summary>
+    Task<PasswordResetResult> ChangePasswordAsync(
+        Guid userId, string currentPassword, string newPassword, CancellationToken ct = default);
 }
+
+/// <summary>A user projected with their admin flag and org memberships — the admin list view (4.3).</summary>
+public sealed record UserAccountDetail(
+    Guid Id, string Email, string DisplayName, bool IsAdmin, IReadOnlyList<OrgMembershipInfo> Memberships);
+
+/// <summary>One org membership of a user: the org id and the role held there.</summary>
+public sealed record OrgMembershipInfo(Guid OrganizationId, OrgRole Role);
 
 /// <summary>A user projected free of any identity-framework types.</summary>
 public sealed record UserAccount(Guid Id, string Email, string DisplayName);
