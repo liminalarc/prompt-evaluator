@@ -9,6 +9,7 @@ import { EvalRunDetail } from './eval-runs/eval-run-detail';
 import { AnalyticsDashboard } from './analytics/analytics-dashboard';
 import { ModelAdmin } from './models/model-admin';
 import { UserAdmin } from './users/user-admin';
+import { OrgAdmin } from './organizations/org-admin';
 import { Account } from './account/account';
 import { authGuard } from './auth/auth.guard';
 import { adminGuard } from './auth/admin.guard';
@@ -35,6 +36,7 @@ export const routes: Routes = [
   // Workspace-admin (under the Admin folder), gated to global admins.
   { path: 'admin/models', component: ModelAdmin, canActivate: [authGuard, adminGuard] },
   { path: 'admin/users', component: UserAdmin, canActivate: [authGuard, adminGuard] },
+  { path: 'admin/organizations', component: OrgAdmin, canActivate: [authGuard, adminGuard] },
   // Any signed-in user's own account (self-service change-password, 4.3).
   { path: 'account', component: Account, canActivate: [authGuard] },
   // The 0.1 walking-skeleton round-trip, kept off the primary path as a wiring smoke test only.
