@@ -4,6 +4,34 @@ All notable changes to this project are documented here. Versions follow one uni
 SemVer (pre-1.0 `0.x`) across the API, web, and eval-runner. A release is a tagged, verified
 **compose-stack build** — there is no hosted deployment yet (production deploy is spec 3.2).
 
+## [0.11.0] — 2026-07-16
+
+Adds a managed **Model Catalog** that drives the target/judge model droplists (no more free-text
+ids), and an **admin surface for user & access management** — introducing the app's first
+role-based gate: a workspace-level global-admin flag.
+
+### Added
+
+- **[#1.13] Model Catalog + admin management** ([detail](specs/archive/1.13.md)) — a workspace-wide
+  Model Catalog (Postgres/EF, seeded with the supported Claude + GPT models; provider, roles, and
+  display-only pricing) served by `GET /api/models`. The **target-model** (prompt-detail) and
+  **judge-model** (dataset-detail) inputs become catalog-fed droplists filtered by role; the
+  eval-runner's `GET /providers` drives per-model **availability** (unavailable models are marked,
+  not offered). A global-admin-gated page (`/admin/models`) adds/edits/deactivates entries. Legacy
+  free-text target models still display and run.
+- **[#4.3] Admin user & access management** ([detail](specs/archive/4.3.md)) — an **Admin** nav
+  folder (Users + Models) gated by a new workspace-level **global-admin flag** (`AppUser.IsAdmin`,
+  the app's first role-based gate). `/admin/users` lists users and manages their admin flag, org
+  membership + role, and passwords; the **last admin cannot be demoted**. Any signed-in user can
+  change their own password from `/account`. No email; account creation stays self-service.
+
+### Notes
+
+- Org-entity management (list-all / create / rename / delete orgs) split to spec **4.4**; live model
+  discovery and per-org catalogs re-homed to **1.14** / **1.15** (all `NOT STARTED`).
+- Deployable artifact is still the compose stack (local + CI only). Hosted deployment remains
+  spec 3.2 — a release is a tagged, verified build, not a deploy.
+
 ## [0.10.0] — 2026-07-16
 
 Makes the eval-runner multi-provider: the judge, synthetic-data generation, and subject execution
