@@ -4,6 +4,34 @@ All notable changes to this project are documented here. Versions follow one uni
 SemVer (pre-1.0 `0.x`) across the API, web, and eval-runner. A release is a tagged, verified
 **compose-stack build** — there is no hosted deployment yet (production deploy is spec 3.2).
 
+## [0.12.0] — 2026-07-17
+
+Rounds out organization management: a global-admin surface to manage the orgs themselves, and an
+owner-facing surface so an org's own Owner can manage its membership — without the workspace-admin
+flag.
+
+### Added
+
+- **[#4.4] Organization management (admin)** ([detail](specs/archive/4.4.md)) — an admin
+  **Organizations** page (`/admin/organizations`, global-admin gated) that lists every org with
+  member counts and supports create / rename / delete (delete cascades folders/prompts/datasets/runs
+  behind a type-the-org-name-to-confirm dialog), plus a drill-in to manage any org's members. Backed
+  by admin-gated `/api/admin/organizations` endpoints. The global-admin flag gates **management
+  only** — org *content* stays membership-gated.
+- **[#4.5] Org-owner member management** ([detail](specs/archive/4.5.md)) — an owner-facing org
+  detail page (`/organizations/:id`, reached via a topbar **Manage** link) where an org's **Owner**
+  (or a global admin) lists members, adds by email, sets roles, and removes them — an
+  **owner-or-admin, per-org** gate on the member-scoped `/api/organizations/{id}/members` endpoints,
+  distinct from 4.4's global-admin-only surface. A **last-owner guard** keeps every org with at least
+  one owner. The switcher payload now carries the caller's per-org role for UI-gating.
+
+### Notes
+
+- Members are added **by email** (users self-register — an owner can't enumerate the admin-gated
+  user directory). Inviting non-existent users / email delivery and SSO remain out of scope (4.2).
+- Deployable artifact is still the compose stack (local + CI only). Hosted deployment remains
+  spec 3.2 — a release is a tagged, verified build, not a deploy.
+
 ## [0.11.0] — 2026-07-16
 
 Adds a managed **Model Catalog** that drives the target/judge model droplists (no more free-text
