@@ -2,6 +2,23 @@ using Domain;
 
 namespace Api.Models;
 
+/// <summary>Admin create payload (1.13). Provider/roles are strings, parsed to enums server-side.</summary>
+public sealed record CreateModelRequest(
+    string ModelId,
+    string DisplayName,
+    string Provider,
+    IReadOnlyList<string> Roles,
+    decimal? InputPricePerMTokUsd,
+    decimal? OutputPricePerMTokUsd);
+
+/// <summary>Admin edit payload (1.13). The model id is immutable, so it is not part of the body.</summary>
+public sealed record UpdateModelRequest(
+    string DisplayName,
+    string Provider,
+    IReadOnlyList<string> Roles,
+    decimal? InputPricePerMTokUsd,
+    decimal? OutputPricePerMTokUsd);
+
 /// <summary>
 /// A catalog model as seen by the SPA (spec 1.13). Roles are lowercase strings
 /// (<c>subject</c>/<c>judge</c>/<c>generator</c>) so the web can filter droplists by role.

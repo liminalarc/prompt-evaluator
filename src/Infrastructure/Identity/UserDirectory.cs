@@ -89,6 +89,21 @@ public sealed class UserDirectory(UserManager<AppUser> users, AppIdentityDbConte
     public Task<bool> IsMemberAsync(Guid userId, Guid organizationId, CancellationToken ct = default)
         => db.OrganizationMemberships.AnyAsync(m => m.UserId == userId && m.OrganizationId == organizationId, ct);
 
+    public async Task<bool> IsGlobalAdminAsync(Guid userId, CancellationToken ct = default)
+    {
+        var user = await users.FindByIdAsync(userId.ToString());
+        return user?.IsAdmin ?? false;
+    }
+
+    public async Task SetGlobalAdminAsync(Guid userId, bool isAdmin, CancellationToken ct = default)
+    {
+        var user = await users.FindByIdAsync(userId.ToString());
+        if (user is null || user.IsAdmin == isAdmin)
+            return;
+        user.IsAdmin = isAdmin;
+        await users.UpdateAsync(user);
+    }
+
     private static UserAccount? Project(AppUser? user)
         => user is null ? null : new UserAccount(user.Id, user.Email ?? "", user.DisplayName);
 }

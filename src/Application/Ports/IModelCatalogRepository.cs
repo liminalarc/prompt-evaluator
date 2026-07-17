@@ -15,5 +15,8 @@ public interface IModelCatalogRepository
     /// <summary>The catalog, ordered by display name. Active entries only unless <paramref name="includeInactive"/>.</summary>
     Task<IReadOnlyList<ModelCatalogEntry>> ListAsync(bool includeInactive = false, CancellationToken ct = default);
 
+    /// <summary>Whether an entry with this (unique) model id already exists — guards create.</summary>
+    Task<bool> ModelIdExistsAsync(string modelId, CancellationToken ct = default);
+
     Task SaveChangesAsync(CancellationToken ct = default);
 }

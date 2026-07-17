@@ -4,7 +4,12 @@ import { provideHttpClient } from '@angular/common/http';
 import { AuthService } from './auth.service';
 import { AuthUser } from './user';
 
-const user: AuthUser = { id: 'u1', email: 'ada@example.com', displayName: 'Ada' };
+const user: AuthUser = {
+  id: 'u1',
+  email: 'ada@example.com',
+  displayName: 'Ada',
+  isAdmin: false,
+};
 
 describe('AuthService', () => {
   let service: AuthService;

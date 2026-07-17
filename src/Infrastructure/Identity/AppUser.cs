@@ -11,4 +11,11 @@ namespace Infrastructure.Identity;
 public sealed class AppUser : IdentityUser<Guid>
 {
     public string DisplayName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Workspace-level global admin (spec 1.13) — distinct from the per-organization
+    /// <see cref="Application.Identity.OrgRole"/>. Gates management of workspace-wide resources like
+    /// the Model Catalog. The bootstrap admin is seeded with this set.
+    /// </summary>
+    public bool IsAdmin { get; set; }
 }

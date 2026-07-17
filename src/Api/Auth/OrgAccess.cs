@@ -62,6 +62,13 @@ public sealed class OrgAccess(
         return run is null ? ResourceAccess.NotFound : await CanAccessPromptAsync(run.PromptId, ct);
     }
 
+    /// <summary>
+    /// True when the current user is a workspace-level global admin (1.13) — the gate for managing
+    /// workspace-wide resources like the Model Catalog. Distinct from org membership.
+    /// </summary>
+    public async Task<bool> IsGlobalAdminAsync(CancellationToken ct)
+        => current.UserId is { } uid && await users.IsGlobalAdminAsync(uid, ct);
+
     /// <summary>The set of org ids the current user may access — the list endpoints filter on this.</summary>
     public async Task<IReadOnlySet<Guid>> AccessibleOrgIdsAsync(CancellationToken ct)
         => current.UserId is { } uid

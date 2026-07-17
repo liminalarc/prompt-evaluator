@@ -24,6 +24,9 @@ public sealed class ModelCatalogRepository(EvalDbContext db) : IModelCatalogRepo
         return await query.OrderBy(e => e.DisplayName).ToListAsync(ct);
     }
 
+    public Task<bool> ModelIdExistsAsync(string modelId, CancellationToken ct = default)
+        => db.ModelCatalogEntries.AnyAsync(e => e.ModelId == modelId, ct);
+
     public Task SaveChangesAsync(CancellationToken ct = default)
         => db.SaveChangesAsync(ct);
 }

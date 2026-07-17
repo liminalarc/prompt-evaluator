@@ -27,9 +27,9 @@ public static class AuthEndpoints
             if (!result.Succeeded)
                 return Results.BadRequest(new { errors = result.Errors });
 
-            // Registration signs the new user in immediately.
+            // Registration signs the new user in immediately. New users are never global admins.
             await SignInAsync(http, result.UserId, req.Email, req.DisplayName);
-            return Results.Ok(new UserResponse(result.UserId, req.Email, req.DisplayName));
+            return Results.Ok(new UserResponse(result.UserId, req.Email, req.DisplayName, IsAdmin: false));
         });
 
         group.MapPost("/login", async (LoginRequest req, IUserDirectory users, HttpContext http, CancellationToken ct) =>
@@ -40,7 +40,8 @@ public static class AuthEndpoints
 
             var account = await users.FindByEmailAsync(req.Email, ct);
             await SignInAsync(http, userId.Value, account!.Email, account.DisplayName);
-            return Results.Ok(new UserResponse(userId.Value, account.Email, account.DisplayName));
+            var isAdmin = await users.IsGlobalAdminAsync(userId.Value, ct);
+            return Results.Ok(new UserResponse(userId.Value, account.Email, account.DisplayName, isAdmin));
         });
 
         // Always returns 200 with no hint whether the email exists (enumeration resistance). When it
@@ -85,11 +86,12 @@ public static class AuthEndpoints
             return Results.NoContent();
         }).RequireAuthorization();
 
-        group.MapGet("/me", (ICurrentUser current, HttpContext http) =>
+        group.MapGet("/me", async (ICurrentUser current, IUserDirectory users, HttpContext http, CancellationToken ct) =>
             Results.Ok(new UserResponse(
                 current.UserId!.Value,
                 http.User.FindFirstValue(ClaimTypes.Email) ?? "",
-                http.User.FindFirstValue(DisplayNameClaim) ?? "")))
+                http.User.FindFirstValue(DisplayNameClaim) ?? "",
+                await users.IsGlobalAdminAsync(current.UserId!.Value, ct))))
             .RequireAuthorization();
 
         return app;
@@ -118,4 +120,4 @@ public sealed record ForgotPasswordRequest(string Email);
 
 public sealed record ResetPasswordRequest(string Email, string Token, string NewPassword);
 
-public sealed record UserResponse(Guid Id, string Email, string DisplayName);
+public sealed record UserResponse(Guid Id, string Email, string DisplayName, bool IsAdmin);

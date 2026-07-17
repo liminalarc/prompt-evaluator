@@ -37,6 +37,15 @@ public interface IUserDirectory
     Task<IReadOnlyList<Guid>> GetAccessibleOrganizationIdsAsync(Guid userId, CancellationToken ct = default);
 
     Task<bool> IsMemberAsync(Guid userId, Guid organizationId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Whether the user is a workspace-level global admin (spec 1.13) — the gate for managing
+    /// workspace-wide resources like the Model Catalog. Distinct from per-org membership/role.
+    /// </summary>
+    Task<bool> IsGlobalAdminAsync(Guid userId, CancellationToken ct = default);
+
+    /// <summary>Set (or clear) a user's global-admin flag. Used by the bootstrap-admin seeder.</summary>
+    Task SetGlobalAdminAsync(Guid userId, bool isAdmin, CancellationToken ct = default);
 }
 
 /// <summary>A user projected free of any identity-framework types.</summary>

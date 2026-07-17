@@ -13,7 +13,9 @@ import { OrgContextStore } from './shared/org-context.store';
 import { VersionService } from './shared';
 
 /** A minimal signals-based stand-in for AuthService — authenticated by default. */
-function fakeAuth(user: AuthUser | null = { id: 'u1', email: 'a@b.co', displayName: 'Ada' }) {
+function fakeAuth(
+  user: AuthUser | null = { id: 'u1', email: 'a@b.co', displayName: 'Ada', isAdmin: false },
+) {
   const currentUser = signal<AuthUser | null>(user);
   return {
     currentUser,
@@ -103,6 +105,20 @@ describe('App shell', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('[data-testid="current-user"]')?.textContent).toContain('Ada');
     expect(el.querySelector('[data-testid="logout"]')).toBeTruthy();
+  });
+
+  it('shows the admin Models link for a global admin', () => {
+    configure(fakeAuth({ id: 'u1', email: 'a@b.co', displayName: 'Ada', isAdmin: true }));
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="nav-admin-models"]')).toBeTruthy();
+  });
+
+  it('hides the admin Models link for a non-admin', () => {
+    configure(); // default user isAdmin: false
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="nav-admin-models"]')).toBeFalsy();
   });
 
   it('hides the nav, switcher and user chrome when not authenticated', () => {

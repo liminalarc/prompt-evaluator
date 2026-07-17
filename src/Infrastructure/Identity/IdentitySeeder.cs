@@ -40,5 +40,9 @@ public static class IdentitySeeder
         }
 
         await users.GrantOrganizationAsync(userId, orgId, OrgRole.Owner, ct);
+
+        // The bootstrap admin is a workspace-level global admin (1.13) so it can manage the Model
+        // Catalog on a freshly deployed app. Idempotent (no-op when already set).
+        await users.SetGlobalAdminAsync(userId, true, ct);
     }
 }
