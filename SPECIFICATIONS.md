@@ -9,7 +9,8 @@
 ## Phase 1 — Core Evaluation Loop
 - **1.8** Shared / Cross-Prompt Datasets (cloning) — `NOT STARTED` — [detail](specs/1.8.md)
 - **1.12** Modal SLM provider adapter — `NOT STARTED` — [detail](specs/1.12.md)
-- **1.13** Model Catalog + admin management (droplists, no free-text model ids) — `IN PROGRESS` — [detail](specs/1.13.md)
+- **1.14** Live model discovery (auto-sync the catalog from provider APIs) — `NOT STARTED` — [detail](specs/1.14.md)
+- **1.15** Per-org model catalogs (per-organization customization) — `NOT STARTED` — [detail](specs/1.15.md)
 
 ## Phase 2 — Review & Advisory
 - **2.1** Human Review UI — `NOT STARTED` — [detail](specs/2.1.md)
@@ -25,6 +26,7 @@
 - **4.2** SSO / OAuth Sign-In — `NOT STARTED` — [detail](specs/4.2.md)
 
 ## Archive
+- **1.13** Model Catalog + admin management (droplists, no free-text model ids) — `DONE` — [detail](specs/archive/1.13.md)
 - **1.5** Multi-Provider Model Support — `DONE` — [detail](specs/archive/1.5.md)
 - **1.6** Prompt Import (file / bulk) — `DONE` — [detail](specs/archive/1.6.md)
 - **3.3** Version display in the web UI + deploy-channel plumbing — `DONE` — [detail](specs/archive/3.3.md)

@@ -191,6 +191,22 @@ Each version contributes a point from its **latest** run (a re-run supersedes ea
 In the UI, `/analytics` picks a prompt + dataset and shows the score-trend chart, the regression
 list, and a version-vs-version comparison (defaulting to the two latest versions).
 
+### Model catalog (spec 1.13)
+
+A workspace-wide **Model Catalog** is the single source of truth for the models offered in the
+target- and judge-model droplists (no free-text ids). It's seeded with the supported models
+(Claude Opus 4.8 / Sonnet 5 / Haiku 4.5, GPT-4o / GPT-4o-mini) and carries each model's provider,
+the roles it can serve (subject / judge / generator), and display-only pricing.
+
+- `GET /api/models` — the active catalog feeding the droplists (any signed-in user). Each entry is
+  annotated `available`, reflecting whether the eval-runner has configured credentials for its
+  provider (`GET /providers` on the eval-runner); unavailable models are marked, not offered.
+- **Admin management** (global admins only — 403 otherwise): `POST /api/models` (create),
+  `PUT /api/models/{id}` (edit), `POST /api/models/{id}/{deactivate|activate}`, and
+  `GET /api/models?includeInactive=true`. In the UI, admins get a **Models** nav link → `/admin/models`.
+- Legacy prompt versions carrying an arbitrary target-model string still display and run — the
+  catalog is additive.
+
 ### Authentication & multi-user access (spec 4.1)
 
 LitmusAI is multi-user: people sign in and their access is scoped to the **organizations**
@@ -208,8 +224,11 @@ boundary.
 - All data endpoints require the auth cookie and enforce org membership (403 for a non-member,
   404 for a resource that doesn't exist). Creating an organization grants the creator ownership;
   the org switcher lists only accessible orgs.
-- **First run:** set `Auth__BootstrapAdmin__Email`/`__Password` to seed an admin with access to
-  the seeded Default org; otherwise register the first user via the SPA.
+- A workspace-level **global-admin flag** (`AppUser.IsAdmin`, spec 1.13) gates workspace-wide
+  resources (the Model Catalog), distinct from per-org roles. `GET /api/auth/me` and login report
+  `isAdmin` so the SPA can show admin-only UI.
+- **First run:** set `Auth__BootstrapAdmin__Email`/`__Password` to seed an admin — granted the
+  seeded Default org **and** the global-admin flag; otherwise register the first user via the SPA.
 
 ### Ops endpoints
 
