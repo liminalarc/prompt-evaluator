@@ -25,10 +25,14 @@ improvements. An advisory layer (prompt-engineering advice) comes later.
   org-membership grants) and `ICurrentUser` — so `Domain` stays framework-free and the identity
   store is a separate `AppIdentityDbContext` (its own migration history) on the same Postgres. The
   **organization is the permission boundary**: access is a user↔org membership resolved from
-  `Prompt.OrganizationId`, enforced on every data endpoint. The **one exception is workspace-wide
-  resources** (the Model Catalog — 1.13): those are gated by a workspace-level **global-admin flag**
+  `Prompt.OrganizationId`, enforced on every data endpoint. The **exceptions are workspace-wide
+  management surfaces** — the Model Catalog (1.13), the admin user surface (4.3), and org-entity
+  management (4.4: list-all/create/rename/delete orgs + manage any org's members) — all gated by a
+  workspace-level **global-admin flag**
   (`AppUser.IsAdmin`, read via `IUserDirectory.IsGlobalAdminAsync` / `OrgAccess.IsGlobalAdminAsync`),
-  distinct from the per-org `OrgRole`. The eval-runner authenticates as an **internal trusted
+  distinct from the per-org `OrgRole`. That flag gates **management only**: a global admin can manage
+  any org, but org *content* (prompts/datasets/runs) stays membership-gated — an admin reaches an
+  org's content only by adding themselves as a member. The eval-runner authenticates as an **internal trusted
   service** (shared `X-Service-Token`), never with user credentials. Password-reset email is an
   `IEmailSender` seam (dev logs; real provider at deploy — spec 3.2).
 - **Capture-first fixtures.** For prompts whose input is an upstream SLM's output, real
