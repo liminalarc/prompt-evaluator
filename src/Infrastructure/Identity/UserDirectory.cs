@@ -134,6 +134,31 @@ public sealed class UserDirectory(UserManager<AppUser> users, AppIdentityDbConte
     public Task<int> CountGlobalAdminsAsync(CancellationToken ct = default)
         => users.Users.CountAsync(u => u.IsAdmin, ct);
 
+    public async Task<IReadOnlyDictionary<Guid, int>> CountMembersByOrganizationAsync(CancellationToken ct = default)
+        => await db.OrganizationMemberships
+            .GroupBy(m => m.OrganizationId)
+            .Select(g => new { OrganizationId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.OrganizationId, x => x.Count, ct);
+
+    public async Task<IReadOnlyList<OrgMemberInfo>> ListOrganizationMembersAsync(
+        Guid organizationId, CancellationToken ct = default)
+    {
+        var memberships = await db.OrganizationMemberships
+            .Where(m => m.OrganizationId == organizationId)
+            .ToListAsync(ct);
+        var userIds = memberships.Select(m => m.UserId).ToList();
+        var usersById = await users.Users
+            .Where(u => userIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, ct);
+
+        return memberships
+            .Where(m => usersById.ContainsKey(m.UserId))
+            .Select(m => new OrgMemberInfo(
+                m.UserId, usersById[m.UserId].Email ?? "", usersById[m.UserId].DisplayName, m.Role))
+            .OrderBy(m => m.Email)
+            .ToList();
+    }
+
     public async Task<PasswordResetResult> SetPasswordAsync(
         Guid userId, string newPassword, CancellationToken ct = default)
     {

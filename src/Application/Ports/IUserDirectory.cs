@@ -56,6 +56,12 @@ public interface IUserDirectory
     /// <summary>How many users hold the global-admin flag — backs the last-admin lockout guard (4.3).</summary>
     Task<int> CountGlobalAdminsAsync(CancellationToken ct = default);
 
+    /// <summary>Member count keyed by organization id — backs the admin Organizations list (4.4). Orgs with no members are absent.</summary>
+    Task<IReadOnlyDictionary<Guid, int>> CountMembersByOrganizationAsync(CancellationToken ct = default);
+
+    /// <summary>The members of one organization with their role — the admin org drill-in (4.4).</summary>
+    Task<IReadOnlyList<OrgMemberInfo>> ListOrganizationMembersAsync(Guid organizationId, CancellationToken ct = default);
+
     /// <summary>Admin-set a user's password directly, no email/token round-trip (4.3). Policy still applies.</summary>
     Task<PasswordResetResult> SetPasswordAsync(Guid userId, string newPassword, CancellationToken ct = default);
 
@@ -70,6 +76,9 @@ public sealed record UserAccountDetail(
 
 /// <summary>One org membership of a user: the org id and the role held there.</summary>
 public sealed record OrgMembershipInfo(Guid OrganizationId, OrgRole Role);
+
+/// <summary>One member of an organization, projected with their email/name and role — the admin org drill-in (4.4).</summary>
+public sealed record OrgMemberInfo(Guid UserId, string Email, string DisplayName, OrgRole Role);
 
 /// <summary>A user projected free of any identity-framework types.</summary>
 public sealed record UserAccount(Guid Id, string Email, string DisplayName);

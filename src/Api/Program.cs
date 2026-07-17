@@ -95,6 +95,7 @@ app.MapOrganizationEndpoints();
 app.MapPromptEndpoints();
 app.MapModelEndpoints();
 app.MapAdminUserEndpoints();
+app.MapAdminOrganizationEndpoints();
 app.MapFolderEndpoints();
 app.MapDatasetEndpoints();
 app.MapEvalHarnessEndpoints();
