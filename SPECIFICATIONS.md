@@ -24,7 +24,7 @@
 
 ## Phase 4 — Accounts & Access
 - **4.2** SSO / OAuth Sign-In — `NOT STARTED` — [detail](specs/4.2.md)
-- **4.5** Org-owner member management on the org page (owner-scoped) — `NOT STARTED` — [detail](specs/4.5.md)
+- **4.5** Org-owner member management on the org page (owner-or-admin, member-scoped) — `IN PROGRESS` — [detail](specs/4.5.md)
 
 ## Archive
 - **4.4** Organization management (admin) — list / create / rename / delete orgs — `DONE` — [detail](specs/archive/4.4.md)
