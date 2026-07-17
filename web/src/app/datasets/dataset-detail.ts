@@ -4,7 +4,9 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Dataset } from '../dataset';
 import { EvalRunSummary, SCORER_KINDS, ScorerConfig, ScorerKind } from '../eval-run';
 import { Prompt, PromptSummary, PromptVersion } from '../prompt';
+import { ModelCatalogEntry } from '../model';
 import { EvalRunsApiService } from '../eval-runs/eval-runs-api.service';
+import { ModelsApiService } from '../models/models-api.service';
 import { PromptsApiService } from '../prompts/prompts-api.service';
 import {
   Breadcrumb,
@@ -23,8 +25,6 @@ import {
 import { DatasetsApiService } from './datasets-api.service';
 
 type OriginFilter = 'all' | 'Captured' | 'Synthetic';
-
-const JUDGE_MODELS = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
 
 @Component({
   selector: 'app-dataset-detail',
@@ -282,8 +282,8 @@ const JUDGE_MODELS = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
                     (ngModelChange)="judgeModel.set($event)"
                     data-testid="judge-model"
                   >
-                    @for (m of judgeModels; track m) {
-                      <option [value]="m">{{ m }}</option>
+                    @for (m of judgeModels(); track m.modelId) {
+                      <option [value]="m.modelId">{{ m.displayName }}</option>
                     }
                   </select>
                 </div>
@@ -399,13 +399,19 @@ const JUDGE_MODELS = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
 export class DatasetDetail implements OnInit {
   private readonly api = inject(DatasetsApiService);
   private readonly evalApi = inject(EvalRunsApiService);
+  private readonly modelsApi = inject(ModelsApiService);
   private readonly promptsApi = inject(PromptsApiService);
   private readonly confirm = inject(ConfirmService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
   protected readonly scorerKinds = SCORER_KINDS;
-  protected readonly judgeModels = JUDGE_MODELS;
+
+  // Judge-model droplist, sourced from the catalog (1.13) — judge-capable models across providers.
+  protected readonly models = signal<ModelCatalogEntry[]>([]);
+  protected readonly judgeModels = computed(() =>
+    this.models().filter((m) => m.roles.includes('judge')),
+  );
 
   protected readonly dataset = signal<Dataset | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -431,7 +437,7 @@ export class DatasetDetail implements OnInit {
   protected readonly scorers = signal<ScorerConfig[]>([]);
   protected readonly scorerKind = signal<ScorerKind>('Regex');
   protected readonly scorerConfig = signal('');
-  protected readonly judgeModel = signal(JUDGE_MODELS[0]);
+  protected readonly judgeModel = signal('');
 
   protected readonly prompts = signal<PromptSummary[]>([]);
   protected readonly versions = signal<PromptVersion[]>([]);
@@ -468,6 +474,17 @@ export class DatasetDetail implements OnInit {
     this.loadScorers();
     this.loadRuns();
     this.promptsApi.listPrompts().subscribe({ next: (p) => this.prompts.set(p) });
+    this.modelsApi.listModels().subscribe({
+      next: (m) => {
+        this.models.set(m);
+        // Default the judge selection to the first judge-capable model, so the LlmJudge scorer
+        // form is valid without the user having to open and touch the dropdown.
+        const firstJudge = this.judgeModels()[0];
+        if (!this.judgeModel() && firstJudge) {
+          this.judgeModel.set(firstJudge.modelId);
+        }
+      },
+    });
   }
 
   private load(): void {

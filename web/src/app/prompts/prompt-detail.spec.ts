@@ -8,7 +8,46 @@ import { PromptDetail } from './prompt-detail';
 describe('PromptDetail (unified workspace)', () => {
   let httpMock: HttpTestingController;
 
-  const prompt = { id: 'p1', folderId: null, name: 'Summarizer', description: null, versions: [] };
+  // One version carries a legacy free-text target model (not in the catalog) — it must still display.
+  const prompt = {
+    id: 'p1',
+    folderId: null,
+    name: 'Summarizer',
+    description: null,
+    versions: [
+      {
+        id: 'v1',
+        versionNumber: 1,
+        content: 'Summarize: {input}',
+        targetModel: 'legacy-model-x',
+        label: null,
+        sourceApp: null,
+        createdAt: '2026-07-12T00:00:00Z',
+      },
+    ],
+  };
+  const models = [
+    {
+      id: 'm1',
+      modelId: 'claude-sonnet-5',
+      displayName: 'Claude Sonnet 5',
+      provider: 'Anthropic',
+      roles: ['subject', 'judge', 'generator'],
+      inputPricePerMTokUsd: 3,
+      outputPricePerMTokUsd: 15,
+      isActive: true,
+    },
+    {
+      id: 'm2',
+      modelId: 'gpt-4o-mini',
+      displayName: 'GPT-4o mini',
+      provider: 'OpenAi',
+      roles: ['subject', 'judge'],
+      inputPricePerMTokUsd: null,
+      outputPricePerMTokUsd: null,
+      isActive: true,
+    },
+  ];
   const datasets = [
     {
       id: 'd1',
@@ -37,6 +76,7 @@ describe('PromptDetail (unified workspace)', () => {
     fixture.detectChanges(); // ngOnInit → load prompt + its datasets
     httpMock.expectOne('/api/prompts/p1').flush(prompt);
     httpMock.expectOne('/api/prompts/p1/datasets').flush(datasets);
+    httpMock.expectOne('/api/models').flush(models);
     fixture.detectChanges();
     return fixture;
   }
@@ -101,6 +141,29 @@ describe('PromptDetail (unified workspace)', () => {
 
     expect(cmp.error()).toContain('text file');
     expect(cmp.content()).toBe('');
+  });
+
+  it('offers target models from the catalog, including a non-Claude model (no free-text)', () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance as unknown as {
+      showAddVersion: { set: (v: boolean) => void };
+    };
+    cmp.showAddVersion.set(true);
+    fixture.detectChanges();
+
+    const select = fixture.nativeElement.querySelector(
+      '[data-testid="target-model"]',
+    ) as HTMLSelectElement;
+    expect(select.tagName).toBe('SELECT'); // a droplist, not a free-text input
+    const values = Array.from(select.options).map((o) => o.value);
+    expect(values).toContain('claude-sonnet-5');
+    expect(values).toContain('gpt-4o-mini');
+  });
+
+  it('displays a legacy free-text target model on an existing version (backward-compat)', () => {
+    const fixture = setup();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-testid="versions"]')?.textContent).toContain('legacy-model-x');
   });
 
   it('loads analytics for a selected dataset', () => {

@@ -3,7 +3,9 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Prompt } from '../prompt';
 import { DatasetSummary } from '../dataset';
+import { ModelCatalogEntry } from '../model';
 import { TrendSeries } from '../analytics';
+import { ModelsApiService } from '../models/models-api.service';
 import { DatasetsApiService } from '../datasets/datasets-api.service';
 import { AnalyticsApiService } from '../analytics/analytics-api.service';
 import { TrendChart } from '../analytics/trend-chart';
@@ -123,12 +125,17 @@ import { validateImportFile } from './import-file';
               </div>
               <div class="sb-field">
                 <label for="targetModel">Target model</label>
-                <input
+                <select
                   id="targetModel"
                   name="targetModel"
                   [ngModel]="targetModel()"
                   (ngModelChange)="targetModel.set($event)"
-                />
+                  data-testid="target-model"
+                >
+                  @for (m of subjectModels(); track m.modelId) {
+                    <option [value]="m.modelId">{{ m.displayName }}</option>
+                  }
+                </select>
               </div>
               <div class="sb-field">
                 <label for="label">Label (optional)</label>
@@ -310,6 +317,7 @@ import { validateImportFile } from './import-file';
 export class PromptDetail implements OnInit {
   private readonly api = inject(PromptsApiService);
   private readonly datasetsApi = inject(DatasetsApiService);
+  private readonly modelsApi = inject(ModelsApiService);
   private readonly analyticsApi = inject(AnalyticsApiService);
   private readonly confirm = inject(ConfirmService);
   private readonly route = inject(ActivatedRoute);
@@ -332,6 +340,12 @@ export class PromptDetail implements OnInit {
   protected readonly targetModel = signal('claude-sonnet-5');
   protected readonly label = signal('');
 
+  // Target-model droplist, sourced from the catalog (1.13) — subject-capable models only, no typing.
+  protected readonly models = signal<ModelCatalogEntry[]>([]);
+  protected readonly subjectModels = computed(() =>
+    this.models().filter((m) => m.roles.includes('subject')),
+  );
+
   // Progressive disclosure: the version history + datasets stay visible; the create forms reveal.
   protected readonly showAddVersion = signal(false);
   protected readonly showCreateDataset = signal(false);
@@ -351,6 +365,7 @@ export class PromptDetail implements OnInit {
     this.id = this.route.snapshot.paramMap.get('id') ?? '';
     this.load();
     this.loadDatasets();
+    this.modelsApi.listModels().subscribe({ next: (m) => this.models.set(m) });
   }
 
   private load(): void {
