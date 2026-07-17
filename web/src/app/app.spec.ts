@@ -8,6 +8,7 @@ import { App } from './app';
 import { routes } from './app.routes';
 import { AuthService } from './auth/auth.service';
 import { AuthUser } from './auth/user';
+import { Organization } from './organization';
 import { OrganizationsApiService } from './organizations/organizations-api.service';
 import { OrgContextStore } from './shared/org-context.store';
 import { VersionService } from './shared';
@@ -31,12 +32,12 @@ function fakeVersion(envBadge: string | null = null, buildLabel: string | null =
 }
 
 describe('App shell', () => {
-  const orgs = [
+  const orgs: Organization[] = [
     { id: 'o1', name: 'Acme' },
     { id: 'o2', name: 'Globex' },
   ];
 
-  function configure(auth = fakeAuth(), version = fakeVersion()) {
+  function configure(auth = fakeAuth(), version = fakeVersion(), orgList = orgs) {
     localStorage.clear();
     TestBed.configureTestingModule({
       imports: [App],
@@ -45,7 +46,7 @@ describe('App shell', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: AuthService, useValue: auth },
-        { provide: OrganizationsApiService, useValue: { listOrganizations: () => of(orgs) } },
+        { provide: OrganizationsApiService, useValue: { listOrganizations: () => of(orgList) } },
         { provide: VersionService, useValue: version },
       ],
     });
@@ -96,6 +97,20 @@ describe('App shell', () => {
     fixture.detectChanges();
 
     expect(store.currentOrgId()).toBe('o2');
+  });
+
+  it('shows the Manage link when the current org’s role is Owner (4.5)', () => {
+    configure(fakeAuth(), fakeVersion(), [{ id: 'o1', name: 'Acme', role: 'Owner' }]);
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="manage-org"]')).toBeTruthy();
+  });
+
+  it('hides the Manage link for a plain member who is not an admin (4.5)', () => {
+    configure(fakeAuth(), fakeVersion(), [{ id: 'o1', name: 'Acme', role: 'Member' }]);
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="manage-org"]')).toBeFalsy();
   });
 
   it('shows the signed-in user and a logout button when authenticated', () => {

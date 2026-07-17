@@ -192,6 +192,19 @@
   color: var(--sb-text);
 }
 
+/* The 4.5 "Manage" link sits beside the switcher for an org owner (or admin). */
+.topbar__org-manage {
+  color: var(--sb-on-dark);
+  opacity: 0.8;
+  font-size: var(--sb-type-small-size);
+  text-decoration: none;
+}
+
+.topbar__org-manage:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
 /* The Logout (secondary) and theme-toggle (ghost) buttons default to light-bar colors; retint
    their text/borders/hover for the navy without touching the shared .sb-btn shape. */
 .topbar .sb-btn--secondary {

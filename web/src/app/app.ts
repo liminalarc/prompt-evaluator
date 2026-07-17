@@ -1,4 +1,4 @@
-import { Component, effect, inject } from '@angular/core';
+import { Component, computed, effect, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from './auth/auth.service';
@@ -17,6 +17,11 @@ export class App {
   protected readonly theme = inject(ThemeService);
   protected readonly version = inject(VersionService);
   private readonly router = inject(Router);
+
+  /** The Manage link shows for the current org's Owner (or a workspace admin) — 4.5 gate. */
+  protected readonly canManageCurrentOrg = computed(
+    () => this.org.currentOrg()?.role === 'Owner' || !!this.auth.currentUser()?.isAdmin,
+  );
 
   constructor() {
     // The org context (and its access-filtered switcher) only makes sense once signed in — load

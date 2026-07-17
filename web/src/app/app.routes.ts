@@ -10,6 +10,7 @@ import { AnalyticsDashboard } from './analytics/analytics-dashboard';
 import { ModelAdmin } from './models/model-admin';
 import { UserAdmin } from './users/user-admin';
 import { OrgAdmin } from './organizations/org-admin';
+import { OrgDetail } from './organizations/org-detail';
 import { Account } from './account/account';
 import { authGuard } from './auth/auth.guard';
 import { adminGuard } from './auth/admin.guard';
@@ -33,6 +34,8 @@ export const routes: Routes = [
   { path: 'datasets/:id', component: DatasetDetail, canActivate: [authGuard] },
   { path: 'eval-runs/:id', component: EvalRunDetail, canActivate: [authGuard] },
   { path: 'analytics', component: AnalyticsDashboard, canActivate: [authGuard] },
+  // Owner-facing org member management (4.5) — the page + endpoints are owner-or-admin gated.
+  { path: 'organizations/:id', component: OrgDetail, canActivate: [authGuard] },
   // Workspace-admin (under the Admin folder), gated to global admins.
   { path: 'admin/models', component: ModelAdmin, canActivate: [authGuard, adminGuard] },
   { path: 'admin/users', component: UserAdmin, canActivate: [authGuard, adminGuard] },

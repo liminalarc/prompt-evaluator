@@ -81,6 +81,15 @@
               <option [value]="o.id">{{ o.name }}</option>
             }
           </select>
+          @if (canManageCurrentOrg() && org.currentOrgId(); as orgId) {
+            <a
+              class="topbar__org-manage"
+              data-testid="manage-org"
+              [routerLink]="['/organizations', orgId]"
+              title="Manage members"
+              >Manage</a
+            >
+          }
         </div>
       }
 
