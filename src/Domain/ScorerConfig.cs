@@ -35,4 +35,15 @@ public sealed class ScorerConfig
 
         return new ScorerConfig(Guid.NewGuid(), datasetId, scorer, createdAt);
     }
+
+    /// <summary>
+    /// Replaces the scorer descriptor (U9 — edit a configured scorer in place). The descriptor is
+    /// the scorer's identity, so changing it starts a new score series for future runs; runs
+    /// already recorded keep their own scorer identity (append-only history is untouched).
+    /// </summary>
+    public void Reconfigure(ScorerDescriptor scorer)
+    {
+        ArgumentNullException.ThrowIfNull(scorer);
+        Scorer = scorer;
+    }
 }

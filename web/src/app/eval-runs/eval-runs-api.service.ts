@@ -25,6 +25,20 @@ export class EvalRunsApiService {
     return this.http.post<ScorerConfig>(`/api/datasets/${datasetId}/scorers`, body);
   }
 
+  /** Edits a configured scorer in place — replaces its descriptor (U9). */
+  reconfigureScorer(
+    datasetId: string,
+    scorerId: string,
+    body: ConfigureScorerBody,
+  ): Observable<ScorerConfig> {
+    return this.http.put<ScorerConfig>(`/api/datasets/${datasetId}/scorers/${scorerId}`, body);
+  }
+
+  /** Removes a scorer from a dataset's set (U9). */
+  deleteScorer(datasetId: string, scorerId: string): Observable<void> {
+    return this.http.delete<void>(`/api/datasets/${datasetId}/scorers/${scorerId}`);
+  }
+
   listRuns(datasetId: string): Observable<EvalRunSummary[]> {
     return this.http.get<EvalRunSummary[]>(`/api/datasets/${datasetId}/eval-runs`);
   }

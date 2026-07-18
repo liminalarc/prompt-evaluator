@@ -297,6 +297,50 @@ describe('DatasetDetail run form + scorer config', () => {
     expect(patched).toEqual(jasmine.objectContaining({ fixtureId: 'f1', label: 'renamed' }));
   });
 
+  it('expands a scorer row to edit (reconfigure) or remove it [U9]', () => {
+    let reconfigured: { scorerId: string; body: { config: string | null } } | null = null;
+    const scorer = {
+      id: 's1',
+      kind: 'Regex',
+      config: '^a',
+      judgeModel: null,
+      identity: 'h1',
+      createdAt: '2026-07-12T00:00:00Z',
+    };
+    const fixture = render();
+    const evalApi = TestBed.inject(EvalRunsApiService) as unknown as {
+      listScorers: () => unknown;
+      reconfigureScorer: (id: string, scorerId: string, body: unknown) => unknown;
+    };
+    evalApi.listScorers = () => of([scorer]);
+    evalApi.reconfigureScorer = (_id: string, scorerId: string, body: unknown) => {
+      reconfigured = { scorerId, body: body as { config: string | null } };
+      return of(scorer);
+    };
+    const cmp = fixture.componentInstance as unknown as {
+      loadScorersForTest?: () => void;
+      scorers: { set: (v: unknown[]) => void };
+      toggleScorer: (s: unknown) => void;
+      editScorerConfig: { set: (v: string) => void };
+      saveScorer: (e: Event, id: string) => void;
+    };
+    cmp.scorers.set([scorer]);
+    fixture.detectChanges();
+
+    cmp.toggleScorer(scorer);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="scorer-detail"]')).not.toBeNull();
+
+    cmp.editScorerConfig.set('^b');
+    cmp.saveScorer(new Event('submit'), 's1');
+    expect(reconfigured).toEqual(
+      jasmine.objectContaining({
+        scorerId: 's1',
+        body: jasmine.objectContaining({ kind: 'Regex', config: '^b' }),
+      }),
+    );
+  });
+
   it('surfaces the server error message when a run fails [B2]', () => {
     const fixture = render({
       triggerRun: () =>

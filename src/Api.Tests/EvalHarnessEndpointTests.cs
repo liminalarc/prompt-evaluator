@@ -174,6 +174,58 @@ public sealed class EvalHarnessEndpointTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Edit_a_scorer_replaces_its_descriptor()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync();
+        var (_, _, datasetId) = await SeedAsync(client);
+        var add = await client.PostAsJsonAsync($"/api/datasets/{datasetId}/scorers",
+            new { kind = "Regex", config = "^a", judgeModel = (string?)null });
+        var scorer = (await add.Content.ReadFromJsonAsync<ScorerDto>())!;
+
+        var edit = await client.PutAsJsonAsync($"/api/datasets/{datasetId}/scorers/{scorer.Id}",
+            new { kind = "Regex", config = "^b", judgeModel = (string?)null });
+        Assert.Equal(HttpStatusCode.OK, edit.StatusCode);
+
+        var scorers = await client.GetFromJsonAsync<List<ScorerDto>>($"/api/datasets/{datasetId}/scorers");
+        var only = Assert.Single(scorers!);
+        Assert.Equal(scorer.Id, only.Id); // same config row…
+        Assert.NotEqual(scorer.Identity, only.Identity); // …new descriptor → new identity hash
+    }
+
+    [Fact]
+    public async Task Editing_a_required_config_scorer_to_blank_is_400()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync();
+        var (_, _, datasetId) = await SeedAsync(client);
+        var add = await client.PostAsJsonAsync($"/api/datasets/{datasetId}/scorers",
+            new { kind = "Regex", config = "^a", judgeModel = (string?)null });
+        var scorer = (await add.Content.ReadFromJsonAsync<ScorerDto>())!;
+
+        var edit = await client.PutAsJsonAsync($"/api/datasets/{datasetId}/scorers/{scorer.Id}",
+            new { kind = "Regex", config = (string?)null, judgeModel = (string?)null });
+        Assert.Equal(HttpStatusCode.BadRequest, edit.StatusCode);
+    }
+
+    [Fact]
+    public async Task Remove_a_scorer_from_the_dataset_set()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync();
+        var (_, _, datasetId) = await SeedAsync(client);
+        var add = await client.PostAsJsonAsync($"/api/datasets/{datasetId}/scorers",
+            new { kind = "ExactMatch", config = (string?)null, judgeModel = (string?)null });
+        var scorer = (await add.Content.ReadFromJsonAsync<ScorerDto>())!;
+
+        var del = await client.DeleteAsync($"/api/datasets/{datasetId}/scorers/{scorer.Id}");
+        Assert.Equal(HttpStatusCode.NoContent, del.StatusCode);
+
+        var scorers = await client.GetFromJsonAsync<List<ScorerDto>>($"/api/datasets/{datasetId}/scorers");
+        Assert.Empty(scorers!);
+
+        var delAgain = await client.DeleteAsync($"/api/datasets/{datasetId}/scorers/{scorer.Id}");
+        Assert.Equal(HttpStatusCode.NotFound, delAgain.StatusCode);
+    }
+
+    [Fact]
     public async Task Configuring_a_scorer_on_an_unknown_dataset_is_404()
     {
         var client = await _factory.CreateAuthenticatedClientAsync();

@@ -17,4 +17,13 @@ public sealed class ScorerConfigRepository(EvalDbContext db) : IScorerConfigRepo
             .Where(c => c.DatasetId == datasetId)
             .OrderBy(c => c.CreatedAt)
             .ToListAsync(ct);
+
+    public Task<ScorerConfig?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        => db.ScorerConfigs.SingleOrDefaultAsync(c => c.Id == id, ct);
+
+    public Task SaveChangesAsync(CancellationToken ct = default)
+        => db.SaveChangesAsync(ct);
+
+    public async Task RemoveAsync(Guid id, CancellationToken ct = default)
+        => await db.ScorerConfigs.Where(c => c.Id == id).ExecuteDeleteAsync(ct);
 }

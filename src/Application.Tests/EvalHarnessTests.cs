@@ -80,9 +80,14 @@ public class EvalHarnessTests
     private sealed class InMemoryScorerConfigRepo : IScorerConfigRepository
     {
         public readonly List<ScorerConfig> Saved = [];
+        public int SaveChangesCalls { get; private set; }
         public Task AddAsync(ScorerConfig config, CancellationToken ct = default) { Saved.Add(config); return Task.CompletedTask; }
         public Task<IReadOnlyList<ScorerConfig>> ListByDatasetAsync(Guid datasetId, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<ScorerConfig>>(Saved.Where(c => c.DatasetId == datasetId).ToList());
+        public Task<ScorerConfig?> GetByIdAsync(Guid id, CancellationToken ct = default)
+            => Task.FromResult(Saved.SingleOrDefault(c => c.Id == id));
+        public Task SaveChangesAsync(CancellationToken ct = default) { SaveChangesCalls++; return Task.CompletedTask; }
+        public Task RemoveAsync(Guid id, CancellationToken ct = default) { Saved.RemoveAll(c => c.Id == id); return Task.CompletedTask; }
     }
 
     private sealed class InMemoryEvalRunRepo : IEvalRunRepository
@@ -282,5 +287,54 @@ public class EvalHarnessTests
 
         Assert.Null(result);
         Assert.Empty(scorerRepo.Saved);
+    }
+
+    [Fact]
+    public async Task ReconfigureScorer_replaces_the_descriptor_and_saves()
+    {
+        var datasetRepo = new InMemoryDatasetRepo();
+        var scorerRepo = new InMemoryScorerConfigRepo();
+        var dataset = Dataset.Create(Guid.NewGuid(), "DS");
+        await datasetRepo.AddAsync(dataset);
+        var handler = new ConfigureDatasetScorersHandler(datasetRepo, scorerRepo, new FixedTime(When));
+        var added = await handler.HandleAsync(dataset.Id, ScorerDescriptor.Deterministic(ScorerKind.Regex, "^a"));
+
+        var updated = await handler.ReconfigureAsync(
+            dataset.Id, added!.Id, ScorerDescriptor.Deterministic(ScorerKind.Regex, "^b"));
+
+        Assert.NotNull(updated);
+        Assert.Equal("^b", updated!.Scorer.Config);
+        Assert.Equal(1, scorerRepo.SaveChangesCalls);
+    }
+
+    [Fact]
+    public async Task ReconfigureScorer_returns_null_when_it_belongs_to_another_dataset()
+    {
+        var datasetRepo = new InMemoryDatasetRepo();
+        var scorerRepo = new InMemoryScorerConfigRepo();
+        var dataset = Dataset.Create(Guid.NewGuid(), "DS");
+        await datasetRepo.AddAsync(dataset);
+        var handler = new ConfigureDatasetScorersHandler(datasetRepo, scorerRepo, new FixedTime(When));
+        var added = await handler.HandleAsync(dataset.Id, ScorerDescriptor.Deterministic(ScorerKind.Regex, "^a"));
+
+        var result = await handler.ReconfigureAsync(
+            Guid.NewGuid(), added!.Id, ScorerDescriptor.Deterministic(ScorerKind.Regex, "^b"));
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task RemoveScorer_deletes_it_from_the_dataset_set()
+    {
+        var datasetRepo = new InMemoryDatasetRepo();
+        var scorerRepo = new InMemoryScorerConfigRepo();
+        var dataset = Dataset.Create(Guid.NewGuid(), "DS");
+        await datasetRepo.AddAsync(dataset);
+        var handler = new ConfigureDatasetScorersHandler(datasetRepo, scorerRepo, new FixedTime(When));
+        var added = await handler.HandleAsync(dataset.Id, ScorerDescriptor.Deterministic(ScorerKind.ExactMatch));
+
+        Assert.True(await handler.RemoveAsync(dataset.Id, added!.Id));
+        Assert.Empty(await handler.ListAsync(dataset.Id));
+        Assert.False(await handler.RemoveAsync(dataset.Id, Guid.NewGuid()));
     }
 }

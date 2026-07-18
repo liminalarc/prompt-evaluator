@@ -26,25 +26,35 @@ public static class EvalHarnessEndpoints
             {
                 if ((await access.CanAccessDatasetAsync(id, ct)).ToProblem() is { } problem)
                     return problem;
-                if (!Enum.TryParse<ScorerKind>(request.Kind, ignoreCase: true, out var kind))
-                    return Results.BadRequest(new { error = $"Unknown scorer kind '{request.Kind}'." });
+                if (!TryBuildDescriptor(request, out var descriptor, out var error))
+                    return Results.BadRequest(new { error });
 
-                ScorerDescriptor descriptor;
-                try
-                {
-                    descriptor = kind == ScorerKind.LlmJudge
-                        ? ScorerDescriptor.LlmJudge(request.Config ?? "", request.JudgeModel ?? "")
-                        : ScorerDescriptor.Deterministic(kind, request.Config);
-                }
-                catch (ArgumentException ex)
-                {
-                    return Results.BadRequest(new { error = ex.Message });
-                }
-
-                var config = await handler.HandleAsync(id, descriptor, ct);
+                var config = await handler.HandleAsync(id, descriptor!, ct);
                 return config is null
                     ? Results.NotFound()
                     : Results.Created($"/api/datasets/{id}/scorers", ScorerConfigResponse.From(config));
+            }).RequireAuthorization();
+
+        // Edit a configured scorer in place (U9) — replaces its descriptor.
+        app.MapPut("/api/datasets/{id:guid}/scorers/{scorerId:guid}",
+            async (Guid id, Guid scorerId, ConfigureScorerRequest request, ConfigureDatasetScorersHandler handler, OrgAccess access, CancellationToken ct) =>
+            {
+                if ((await access.CanAccessDatasetAsync(id, ct)).ToProblem() is { } problem)
+                    return problem;
+                if (!TryBuildDescriptor(request, out var descriptor, out var error))
+                    return Results.BadRequest(new { error });
+
+                var config = await handler.ReconfigureAsync(id, scorerId, descriptor!, ct);
+                return config is null ? Results.NotFound() : Results.Ok(ScorerConfigResponse.From(config));
+            }).RequireAuthorization();
+
+        // Remove a scorer from a dataset's set (U9).
+        app.MapDelete("/api/datasets/{id:guid}/scorers/{scorerId:guid}",
+            async (Guid id, Guid scorerId, ConfigureDatasetScorersHandler handler, OrgAccess access, CancellationToken ct) =>
+            {
+                if ((await access.CanAccessDatasetAsync(id, ct)).ToProblem() is { } problem)
+                    return problem;
+                return await handler.RemoveAsync(id, scorerId, ct) ? Results.NoContent() : Results.NotFound();
             }).RequireAuthorization();
 
         // ---- Eval runs ----
@@ -89,5 +99,30 @@ public static class EvalHarnessEndpoints
             }).RequireAuthorization();
 
         return app;
+    }
+
+    // Builds a scorer descriptor from the request, or reports why it is invalid (unknown kind, or a
+    // required config/rubric/judge model missing). Shared by create (POST) and edit (PUT).
+    private static bool TryBuildDescriptor(ConfigureScorerRequest request, out ScorerDescriptor? descriptor, out string? error)
+    {
+        descriptor = null;
+        error = null;
+        if (!Enum.TryParse<ScorerKind>(request.Kind, ignoreCase: true, out var kind))
+        {
+            error = $"Unknown scorer kind '{request.Kind}'.";
+            return false;
+        }
+        try
+        {
+            descriptor = kind == ScorerKind.LlmJudge
+                ? ScorerDescriptor.LlmJudge(request.Config ?? "", request.JudgeModel ?? "")
+                : ScorerDescriptor.Deterministic(kind, request.Config);
+            return true;
+        }
+        catch (ArgumentException ex)
+        {
+            error = ex.Message;
+            return false;
+        }
     }
 }

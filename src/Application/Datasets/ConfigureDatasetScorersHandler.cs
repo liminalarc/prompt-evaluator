@@ -27,4 +27,34 @@ public sealed class ConfigureDatasetScorersHandler(
 
     public Task<IReadOnlyList<ScorerConfig>> ListAsync(Guid datasetId, CancellationToken ct = default)
         => scorerConfigs.ListByDatasetAsync(datasetId, ct);
+
+    /// <summary>
+    /// Replaces a scorer's descriptor in place (U9 edit). Returns null when the scorer does not
+    /// exist or does not belong to <paramref name="datasetId"/> (Api → 404).
+    /// </summary>
+    public async Task<ScorerConfig?> ReconfigureAsync(
+        Guid datasetId, Guid scorerId, ScorerDescriptor descriptor, CancellationToken ct = default)
+    {
+        var config = await scorerConfigs.GetByIdAsync(scorerId, ct);
+        if (config is null || config.DatasetId != datasetId)
+            return null;
+
+        config.Reconfigure(descriptor);
+        await scorerConfigs.SaveChangesAsync(ct);
+        return config;
+    }
+
+    /// <summary>
+    /// Removes a scorer from a dataset's set (U9). Returns false when it does not exist or does not
+    /// belong to <paramref name="datasetId"/> (Api → 404).
+    /// </summary>
+    public async Task<bool> RemoveAsync(Guid datasetId, Guid scorerId, CancellationToken ct = default)
+    {
+        var config = await scorerConfigs.GetByIdAsync(scorerId, ct);
+        if (config is null || config.DatasetId != datasetId)
+            return false;
+
+        await scorerConfigs.RemoveAsync(scorerId, ct);
+        return true;
+    }
 }

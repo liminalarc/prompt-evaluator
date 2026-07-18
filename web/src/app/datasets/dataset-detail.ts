@@ -304,6 +304,7 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
           @if (scorers().length === 0) {
             <app-empty-state message="No scorers configured yet." data-testid="no-scorers" />
           } @else {
+            <p class="subtitle">Select a scorer to edit or remove it.</p>
             <table class="sb-table" data-testid="scorers">
               <thead>
                 <tr>
@@ -314,7 +315,13 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
               </thead>
               <tbody>
                 @for (s of scorers(); track s.id) {
-                  <tr [attr.data-scorer]="s.kind">
+                  <tr
+                    class="scorer-row"
+                    [attr.data-scorer]="s.kind"
+                    [class.scorer-row--open]="expandedScorerId() === s.id"
+                    (click)="toggleScorer(s)"
+                    data-testid="scorer-row"
+                  >
                     <td><app-chip [label]="s.kind" /></td>
                     <td>{{ s.config || '—' }}</td>
                     <td>
@@ -325,6 +332,75 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                       }
                     </td>
                   </tr>
+                  @if (expandedScorerId() === s.id) {
+                    <tr class="scorer-detail" data-testid="scorer-detail">
+                      <td colspan="3">
+                        <form class="form-stack" (submit)="saveScorer($event, s.id)">
+                          <div class="sb-field">
+                            <label [attr.for]="'ekind-' + s.id">Scorer</label>
+                            <select
+                              [attr.id]="'ekind-' + s.id"
+                              [ngModel]="editScorerKind()"
+                              (ngModelChange)="editScorerKind.set($event)"
+                              [ngModelOptions]="{ standalone: true }"
+                              data-testid="edit-scorer-kind"
+                            >
+                              @for (k of scorerKinds; track k) {
+                                <option [value]="k">{{ k }}</option>
+                              }
+                            </select>
+                          </div>
+                          <div class="sb-field">
+                            <label [attr.for]="'econfig-' + s.id">{{ editConfigLabel() }}</label>
+                            <textarea
+                              [attr.id]="'econfig-' + s.id"
+                              rows="3"
+                              [ngModel]="editScorerConfig()"
+                              (ngModelChange)="editScorerConfig.set($event)"
+                              [ngModelOptions]="{ standalone: true }"
+                              data-testid="edit-scorer-config"
+                            ></textarea>
+                          </div>
+                          @if (editIsJudge()) {
+                            <div class="sb-field">
+                              <label [attr.for]="'ejudge-' + s.id">Judge model</label>
+                              <select
+                                [attr.id]="'ejudge-' + s.id"
+                                [ngModel]="editJudgeModel()"
+                                (ngModelChange)="editJudgeModel.set($event)"
+                                [ngModelOptions]="{ standalone: true }"
+                                data-testid="edit-judge-model"
+                              >
+                                @for (m of judgeModels(); track m.modelId) {
+                                  <option [value]="m.modelId">
+                                    {{ m.displayName }}{{ m.available ? '' : ' (unavailable)' }}
+                                  </option>
+                                }
+                              </select>
+                            </div>
+                          }
+                          <div class="toolbar">
+                            <button
+                              class="sb-btn sb-btn--primary sb-btn--sm"
+                              type="submit"
+                              data-testid="save-scorer"
+                              [disabled]="!editConfigValid()"
+                            >
+                              Save
+                            </button>
+                            <button
+                              class="sb-btn sb-btn--danger sb-btn--sm"
+                              type="button"
+                              data-testid="remove-scorer"
+                              (click)="removeScorer(s.id)"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </form>
+                      </td>
+                    </tr>
+                  }
                 }
               </tbody>
             </table>
@@ -480,10 +556,12 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
         margin: 0;
         font-weight: 600;
       }
-      .fixture-row {
+      .fixture-row,
+      .scorer-row {
         cursor: pointer;
       }
-      .fixture-row--open {
+      .fixture-row--open,
+      .scorer-row--open {
         background: var(--sb-surface-raised);
       }
       .cell-truncate {
@@ -559,6 +637,12 @@ export class DatasetDetail implements OnInit {
   protected readonly scorerConfig = signal('');
   protected readonly judgeModel = signal('');
 
+  // Scorer rows expand to an inline edit form (U9): reconfigure the descriptor or remove the scorer.
+  protected readonly expandedScorerId = signal<string | null>(null);
+  protected readonly editScorerKind = signal<ScorerKind>('Regex');
+  protected readonly editScorerConfig = signal('');
+  protected readonly editJudgeModel = signal('');
+
   // The run form is fixed to the dataset's owning prompt (B3): its versions load with the dataset
   // and the operator picks a version only — no free (cross-org) prompt choice.
   protected readonly versions = signal<PromptVersion[]>([]);
@@ -590,6 +674,20 @@ export class DatasetDetail implements OnInit {
   protected readonly configLabel = computed(() => {
     if (this.isJudge()) return 'Rubric';
     return this.requiresConfig() ? 'Config (required)' : 'Config (optional)';
+  });
+
+  // Same validation/labelling for the inline scorer edit form (U9).
+  protected readonly editIsJudge = computed(() => this.editScorerKind() === 'LlmJudge');
+  protected readonly editRequiresConfig = computed(() => {
+    const k = this.editScorerKind();
+    return k === 'Regex' || k === 'JsonSchema' || k === 'LlmJudge';
+  });
+  protected readonly editConfigValid = computed(
+    () => !this.editRequiresConfig() || this.editScorerConfig().trim().length > 0,
+  );
+  protected readonly editConfigLabel = computed(() => {
+    if (this.editIsJudge()) return 'Rubric';
+    return this.editRequiresConfig() ? 'Config (required)' : 'Config (optional)';
   });
 
   // A dataset lives with a prompt (1.7) — the trail leads back through its owning prompt workspace.
@@ -769,6 +867,61 @@ export class DatasetDetail implements OnInit {
         error: (err) =>
           this.error.set(this.serverError(err) ?? 'Could not add the scorer — check the config.'),
       });
+  }
+
+  // Expand/collapse a scorer row; on expand, seed the edit form from that scorer (U9).
+  protected toggleScorer(scorer: ScorerConfig): void {
+    if (this.expandedScorerId() === scorer.id) {
+      this.expandedScorerId.set(null);
+      return;
+    }
+    this.editScorerKind.set(scorer.kind as ScorerKind);
+    this.editScorerConfig.set(scorer.config ?? '');
+    this.editJudgeModel.set(scorer.judgeModel ?? '');
+    this.expandedScorerId.set(scorer.id);
+  }
+
+  protected saveScorer(event: Event, scorerId: string): void {
+    event.preventDefault();
+    if (!this.editConfigValid()) {
+      this.error.set(
+        `Scorer '${this.editScorerKind()}' requires a ${this.editIsJudge() ? 'rubric' : 'config'}.`,
+      );
+      return;
+    }
+    this.error.set(null);
+    const isJudge = this.editIsJudge();
+    this.evalApi
+      .reconfigureScorer(this.id, scorerId, {
+        kind: this.editScorerKind(),
+        config: this.editScorerConfig().trim() || null,
+        judgeModel: isJudge ? this.editJudgeModel() : null,
+      })
+      .subscribe({
+        next: () => {
+          this.expandedScorerId.set(null);
+          this.loadScorers();
+        },
+        error: (err) => this.error.set(this.serverError(err) ?? 'Could not update the scorer.'),
+      });
+  }
+
+  protected async removeScorer(scorerId: string): Promise<void> {
+    const ok = await this.confirm.ask({
+      title: 'Remove scorer',
+      message:
+        'Removes this scorer from the dataset. Past runs keep their scores; future runs stop using it.',
+      confirmLabel: 'Remove scorer',
+    });
+    if (!ok) return;
+    this.error.set(null);
+    this.evalApi.deleteScorer(this.id, scorerId).subscribe({
+      next: () => {
+        this.expandedScorerId.set(null);
+        this.loadScorers();
+      },
+      error: (err) => this.error.set(this.serverError(err) ?? 'Could not remove the scorer.'),
+    });
   }
 
   // Surface the API's {error} message (e.g. "eval-runner: … not configured") when present, so a
