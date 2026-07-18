@@ -24,6 +24,9 @@
 ## Phase 4 — Accounts & Access
 - **4.2** SSO / OAuth Sign-In — `NOT STARTED` — [detail](specs/4.2.md)
 
+## Phase 5 — Dogfooding & Real-World Adoption
+- **5.1** Adopt LitmusAI across Cortex Golf & Stormboard (discover → onboard → improve every prompt) — `NOT STARTED` — [detail](specs/5.1/5.1.md)
+
 ## Archive
 - **4.6** Admin-created users (create user, no email) — `DONE` — [detail](specs/archive/4.6.md)
 - **3.2** Production Deployment (AWS App Runner/ECR/RDS dev env, Prism-modeled) — `DONE` — [detail](specs/archive/3.2.md)
