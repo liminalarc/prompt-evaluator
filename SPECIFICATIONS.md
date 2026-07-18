@@ -23,6 +23,7 @@
 
 ## Phase 4 — Accounts & Access
 - **4.2** SSO / OAuth Sign-In — `NOT STARTED` — [detail](specs/4.2.md)
+- **4.6** Admin-created users (create user, no email) — `IN PROGRESS` — [detail](specs/4.6.md)
 
 ## Archive
 - **3.2** Production Deployment (AWS App Runner/ECR/RDS dev env, Prism-modeled) — `DONE` — [detail](specs/archive/3.2.md)
