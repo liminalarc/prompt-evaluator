@@ -132,6 +132,23 @@ describe('App shell', () => {
     expect(el.querySelector('[data-testid="nav-admin-users"]')).toBeTruthy();
   });
 
+  it('closes the Admin menu on an outside click (does not stick open)', () => {
+    configure(fakeAuth({ id: 'u1', email: 'a@b.co', displayName: 'Ada', isAdmin: true }));
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    const details = fixture.nativeElement.querySelector(
+      '[data-testid="nav-admin"]',
+    ) as HTMLDetailsElement;
+
+    details.open = true;
+    fixture.detectChanges();
+    expect(details.open).toBeTrue();
+
+    document.body.click(); // click anywhere outside the disclosure
+    fixture.detectChanges();
+    expect(details.open).toBeFalse();
+  });
+
   it('hides the Admin folder for a non-admin', () => {
     configure(); // default user isAdmin: false
     const fixture = TestBed.createComponent(App);

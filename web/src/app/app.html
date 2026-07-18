@@ -35,7 +35,7 @@
         >Analytics</a
       >
       @if (auth.currentUser()?.isAdmin) {
-        <details class="nav__admin" data-testid="nav-admin">
+        <details class="nav__admin" data-testid="nav-admin" #adminMenu>
           <summary class="nav__link nav__admin-summary">Admin</summary>
           <div class="nav__admin-menu">
             <a
@@ -43,6 +43,7 @@
               routerLinkActive="nav__link--active"
               class="nav__link"
               data-testid="nav-admin-models"
+              (click)="adminMenu.open = false"
               >Models</a
             >
             <a
@@ -50,6 +51,7 @@
               routerLinkActive="nav__link--active"
               class="nav__link"
               data-testid="nav-admin-users"
+              (click)="adminMenu.open = false"
               >Users</a
             >
             <a
@@ -57,6 +59,7 @@
               routerLinkActive="nav__link--active"
               class="nav__link"
               data-testid="nav-admin-orgs"
+              (click)="adminMenu.open = false"
               >Organizations</a
             >
           </div>

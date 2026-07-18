@@ -1,4 +1,12 @@
-import { Component, computed, effect, inject } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  computed,
+  effect,
+  inject,
+  viewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from './auth/auth.service';
@@ -22,6 +30,27 @@ export class App {
   protected readonly canManageCurrentOrg = computed(
     () => this.org.currentOrg()?.role === 'Owner' || !!this.auth.currentUser()?.isAdmin,
   );
+
+  /** The Admin disclosure (a native <details>); referenced so we can auto-close it. */
+  private readonly adminMenu = viewChild<ElementRef<HTMLDetailsElement>>('adminMenu');
+
+  // A native <details> only toggles via its own summary, so it "sticks" open on an outside click or
+  // after picking an item. Close it on any click outside the disclosure, and on Escape.
+  @HostListener('document:click', ['$event'])
+  protected closeAdminOnOutsideClick(event: MouseEvent): void {
+    const el = this.adminMenu()?.nativeElement;
+    if (el?.open && !el.contains(event.target as Node)) {
+      el.open = false;
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  protected closeAdminOnEscape(): void {
+    const el = this.adminMenu()?.nativeElement;
+    if (el?.open) {
+      el.open = false;
+    }
+  }
 
   constructor() {
     // The org context (and its access-filtered switcher) only makes sense once signed in — load

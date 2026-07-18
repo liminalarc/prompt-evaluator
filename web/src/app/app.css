@@ -150,16 +150,20 @@
   gap: var(--sb-space-sm);
 }
 
-.topbar__user-name {
+/* Account link + Manage: on-dark control chips so they read clearly in both themes (plain dimmed
+   text on the teal bar was too low-contrast). Shared shape here; Manage adds a border below. */
+.topbar__user-name,
+.topbar__org-manage {
   color: var(--sb-on-dark);
-  opacity: 0.9;
   font-size: var(--sb-type-small-size);
   text-decoration: none;
+  padding: var(--sb-space-xs) var(--sb-space-sm);
+  border-radius: var(--sb-radius-sm);
 }
 
-.topbar__user-name:hover {
-  opacity: 1;
-  text-decoration: underline;
+.topbar__user-name:hover,
+.topbar__org-manage:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .topbar__org-label {
@@ -192,17 +196,14 @@
   color: var(--sb-text);
 }
 
-/* The 4.5 "Manage" link sits beside the switcher for an org owner (or admin). */
+/* The 4.5 "Manage" link (org owner/admin) gets a border on top of the shared chip shape so it reads
+   as an actionable control beside the switcher (matching the switcher/Logout border language). */
 .topbar__org-manage {
-  color: var(--sb-on-dark);
-  opacity: 0.8;
-  font-size: var(--sb-type-small-size);
-  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.35);
 }
 
 .topbar__org-manage:hover {
-  opacity: 1;
-  text-decoration: underline;
+  border-color: rgba(255, 255, 255, 0.6);
 }
 
 /* The Logout (secondary) and theme-toggle (ghost) buttons default to light-bar colors; retint
