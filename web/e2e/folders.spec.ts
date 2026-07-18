@@ -44,13 +44,17 @@ test('creates an org and folder, files a prompt into it, and navigates by folder
   await card.click();
   await expect(page.getByTestId('breadcrumb')).toContainText(folder);
 
-  // A prompt created while inside the folder is filed there.
+  // A prompt created while inside the folder is filed there; create-prompt lands on its workspace (U1).
   await page.getByTestId('toggle-new-prompt').click();
   await page.fill('#name', prompt);
   await page.getByTestId('create-prompt').click();
-  await expect(page.getByTestId('prompts').getByText(prompt)).toBeVisible();
+  await expect(page.getByRole('heading', { name: prompt })).toBeVisible();
 
-  // Back at the org root (breadcrumb), the prompt is not listed — it's scoped to the folder.
-  await page.getByTestId('breadcrumb').getByRole('button').first().click();
+  // Back at the org root, the prompt is not listed — it's scoped to the folder.
+  await page.goto('/prompts');
   await expect(page.getByTestId('prompts').getByText(prompt)).toHaveCount(0);
+
+  // Descend into the folder again — the prompt is filed there.
+  await page.getByTestId('subfolders').getByText(folder).click();
+  await expect(page.getByTestId('prompts').getByText(prompt)).toBeVisible();
 });

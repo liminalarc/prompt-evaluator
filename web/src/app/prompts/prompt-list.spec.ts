@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { OrganizationsApiService } from '../organizations/organizations-api.service';
 import { OrgContextStore } from '../shared/org-context.store';
@@ -69,6 +69,29 @@ describe('PromptList (org + folder navigation)', () => {
   }
 
   afterEach(() => httpMock.verify());
+
+  it('navigates to the new prompt’s workspace after create [U1]', () => {
+    const fixture = setup();
+    const navSpy = spyOn(TestBed.inject(Router), 'navigate');
+    const cmp = fixture.componentInstance as unknown as {
+      name: { set: (v: string) => void };
+      createPrompt: (e: Event) => void;
+    };
+    cmp.name.set('Brand new prompt');
+    cmp.createPrompt(new Event('submit'));
+
+    const create = httpMock.expectOne('/api/organizations/o1/prompts');
+    expect(create.request.method).toBe('POST');
+    create.flush({
+      id: 'p9',
+      folderId: null,
+      name: 'Brand new prompt',
+      description: null,
+      versions: [],
+    });
+
+    expect(navSpy).toHaveBeenCalledWith(['/prompts', 'p9']);
+  });
 
   it('shows the current folder’s subfolders and prompts (org root by default)', () => {
     const fixture = setup();

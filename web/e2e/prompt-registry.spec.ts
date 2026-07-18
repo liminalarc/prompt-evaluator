@@ -23,11 +23,7 @@ test('registers a prompt, records versions, and diffs them', async ({ page, requ
   await page.fill('#description', 'created by e2e');
   await page.getByTestId('create-prompt').click();
 
-  // The new prompt appears in the list; open it.
-  const row = page.getByTestId('prompts').getByRole('link', { name });
-  await expect(row).toBeVisible();
-  await row.click();
-
+  // Create-prompt lands on the new prompt's workspace (U1).
   await expect(page.getByRole('heading', { name })).toBeVisible();
 
   // Add first version.

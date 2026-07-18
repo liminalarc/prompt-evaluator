@@ -30,6 +30,9 @@ test('the topbar org switcher scopes prompts and analytics and persists across n
   await page.getByTestId('toggle-new-prompt').click();
   await page.fill('#name', alpha);
   await page.getByTestId('create-prompt').click();
+  // Create-prompt lands on the new prompt's workspace (U1); return to the list to check scoping.
+  await expect(page.getByRole('heading', { name: alpha })).toBeVisible();
+  await page.goto('/prompts');
   await expect(page.getByTestId('prompts').getByRole('link', { name: alpha })).toBeVisible();
   await expect(page).toHaveURL(/[?&]org=/); // selection reflected in the url
 
@@ -38,6 +41,8 @@ test('the topbar org switcher scopes prompts and analytics and persists across n
   await page.getByTestId('toggle-new-prompt').click();
   await page.fill('#name', beta);
   await page.getByTestId('create-prompt').click();
+  await expect(page.getByRole('heading', { name: beta })).toBeVisible();
+  await page.goto('/prompts');
   await expect(page.getByTestId('prompts').getByRole('link', { name: beta })).toBeVisible();
   // org A's prompt is no longer listed — the list is scoped to the active org
   await expect(page.getByTestId('prompts').getByRole('link', { name: alpha })).toHaveCount(0);

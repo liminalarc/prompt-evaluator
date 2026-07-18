@@ -1,6 +1,6 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Observable, catchError, concatMap, forkJoin, from, map, of, toArray } from 'rxjs';
 import { Folder } from '../folder';
 import { PromptSummary } from '../prompt';
@@ -381,6 +381,7 @@ export class PromptList {
   private readonly orgsApi = inject(OrganizationsApiService);
   private readonly orgStore = inject(OrgContextStore);
   private readonly confirm = inject(ConfirmService);
+  private readonly router = inject(Router);
 
   protected readonly folders = signal<Folder[]>([]);
   protected readonly prompts = signal<PromptSummary[]>([]);
@@ -518,13 +519,15 @@ export class PromptList {
         this.name.set('');
         this.description.set('');
         this.showNewPrompt.set(false);
+        // Navigate to the thing you just made (U1) — the new prompt's workspace. File it into the
+        // current folder first when one is active, so the workspace opens already filed.
         if (targetFolder) {
           this.api.movePrompt(created.id, targetFolder).subscribe({
-            next: () => this.loadOrgData(orgId),
+            next: () => void this.router.navigate(['/prompts', created.id]),
             error: () => this.error.set('Prompt created, but could not file it into the folder.'),
           });
         } else {
-          this.loadOrgData(orgId);
+          void this.router.navigate(['/prompts', created.id]);
         }
       },
       error: () => this.error.set('Could not create the prompt.'),

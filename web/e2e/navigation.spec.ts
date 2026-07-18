@@ -25,7 +25,8 @@ test('dashboard landing, topbar IA, and breadcrumb navigation form a coherent lo
   await page.getByTestId('toggle-new-prompt').click();
   await page.fill('#name', promptName);
   await page.getByTestId('create-prompt').click();
-  await expect(page.getByTestId('prompts').getByRole('link', { name: promptName })).toBeVisible();
+  // Create-prompt lands on the new prompt's workspace (U1).
+  await expect(page.getByRole('heading', { name: promptName })).toBeVisible();
 
   // Topbar IA: Dashboard/Prompts/Analytics present; Datasets demoted off the primary nav.
   const nav = page.locator('.nav');

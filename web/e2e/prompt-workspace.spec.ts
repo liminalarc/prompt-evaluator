@@ -24,7 +24,7 @@ test('a prompt workspace shows its versions, datasets, and analytics together', 
   await page.getByTestId('toggle-new-prompt').click();
   await page.fill('#name', promptName);
   await page.getByTestId('create-prompt').click();
-  await page.getByTestId('prompts').getByRole('link', { name: promptName }).click();
+  // Create-prompt lands on the new prompt's workspace (U1).
   await expect(page.getByRole('heading', { name: promptName })).toBeVisible();
 
   // Versions live here.

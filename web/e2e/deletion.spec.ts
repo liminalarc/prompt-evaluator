@@ -27,6 +27,9 @@ test('deletes a prompt behind a confirmation, then deletes the organization', as
   await page.getByTestId('toggle-new-prompt').click();
   await page.fill('#name', promptName);
   await page.getByTestId('create-prompt').click();
+  // Create-prompt lands on the new prompt's workspace (U1); return to the list to delete from there.
+  await expect(page.getByRole('heading', { name: promptName })).toBeVisible();
+  await page.goto('/prompts');
   await expect(page.getByTestId('prompts').getByRole('link', { name: promptName })).toBeVisible();
 
   // Delete it — a confirmation appears first and names what will be removed.

@@ -36,7 +36,7 @@ test('shows a score trend across versions and the regression section on the dash
   await page.getByTestId('toggle-new-prompt').click();
   await page.fill('#name', promptName);
   await page.getByTestId('create-prompt').click();
-  await page.getByTestId('prompts').getByRole('link', { name: promptName }).click();
+  // Create-prompt lands on the new prompt's workspace (U1).
   await expect(page.getByRole('heading', { name: promptName })).toBeVisible();
   await page.getByTestId('toggle-add-version').click();
   await page.fill('#content', 'good summarizer');
