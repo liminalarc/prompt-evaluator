@@ -3,6 +3,9 @@
 > Findings surfaced while walking prompts through LitmusAI (per 5.1's "findings feed the backlog"
 > rule). Each has a **type** and a **proposed home**; homes are confirmed with the user, then
 > re-homed into a spec. First batch: the `daily-briefing` T2 shakeout (2026-07-18).
+>
+> **Status (2026-07-18): B1–B7 + U1–U14 all shipped in [2.8] (archived — `specs/archive/2.8.md`).**
+> D1 = decision logged (no spec, revisit when a non-fitting prompt appears); O1 → [3.2] / infra runbook.
 
 ## Bugs
 - **B1 — Run 500s with no clear error on a missing provider key.** First eval on dev returned a bare

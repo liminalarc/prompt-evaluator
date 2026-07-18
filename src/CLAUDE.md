@@ -43,6 +43,10 @@ Additive to root `CLAUDE.md`. Only layer-specific rules here.
   `Infrastructure.Tests`). Domain tests are pure/fast; Infrastructure tests use a real
   Postgres via Testcontainers (or a disposable local db) — no mocking the DbContext.
 - Migrations live in Infrastructure; never edit an applied migration — add a new one.
+- **Eval-runner failures are loud, not opaque (2.8).** `EvalRunnerClient` maps a non-success
+  eval-runner response (e.g. a provider with no configured credentials) to an `EvalRunnerException`
+  (in `Application.Ports`) carrying the service's `detail`; the eval-run endpoint catches it and
+  returns `502 {error}` so a failed run names its reason instead of surfacing a bare 500.
 
 ## Testing the ports
 

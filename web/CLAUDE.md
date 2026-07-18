@@ -114,6 +114,23 @@ The operator-facing UI:
   `toggle-add-scorer`, `toggle-add-version`, `toggle-create-dataset`) that stay open after submit.
   e2e opens a form once before driving it.
 
+## Row-level disclosure, loud errors & run scoping (from 2.8)
+
+- **The 2.4 toggle pattern extends to data _rows_.** Version history, fixtures, and scorers render
+  as summary rows that expand to an inline editor (`version-row`/`fixture-row`/`scorer-row` →
+  `*-detail`); eval-run fixtures collapse to a summary row (`fixture-run-summary`) that expands to
+  the full output. Editable = metadata only: version **label**, fixture **label/description**,
+  scorer **reconfigure/remove** — content/target-model (versions) and input/origin/seed (fixtures)
+  stay immutable, matching the domain.
+- **Loud failures.** API errors surface the server `{error}` body (e.g. `eval-runner: … not
+  configured`) via a shared `serverError(err)` helper, not a generic string. A failed run is a
+  banner, never a silent no-op.
+- **The dataset run form is fixed to the dataset's owning prompt** (`Dataset.PromptId`) — version
+  pick only, no cross-org prompt droplist. Runs can also be triggered from the prompt workspace
+  ("+ Run a version"). Create-prompt navigates to the new prompt's workspace. Page headers are
+  **type-prefixed** (`Prompt:` / `Dataset:`); `getByRole('heading', { name })` still matches by
+  substring, so e2e heading assertions are unaffected.
+
 ## E2e that needs a model (from 1.2)
 
 - An e2e that would trigger a live model call (synthetic generation) runs against a **stubbed
