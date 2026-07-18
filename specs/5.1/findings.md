@@ -69,14 +69,24 @@
   logged; spec only when needed*
 
 ## Feature (new capability)
-- **F1 — No "deployed / current" version marker.** LitmusAI tracks `Prompt × Version` but has no concept of
-  *which version the source app is actually running*. After a backport, that state lives only in 5.1's fill
-  sheets — invisible inside the tool. Two costs: (a) on **re-onboarding** a prompt, the true baseline is the
-  deployed version (e.g. `daily-briefing` v2), not v1, and nothing surfaces that; (b) you can't tell "won in
-  the harness" from "shipped to the app." Proposal: a per-prompt **deployed-version pointer** (mark a version
-  Current/Deployed; optional backport commit SHA + timestamp). Overlaps the **registry's** job of tracking
-  version/deployment state. → *home: candidate **3.1** (Zatomic-backed registry) or its own LitmusAI spec —
-  **user to confirm**. Not built in 5.1 (use what exists).*
+- **F1 — "Backport-pending" signal (deployed-version marker) — LitmusAI signals, never executes.**
+  LitmusAI tracks `Prompt × Version` but has no concept of *which version the source app is actually
+  running*. After a backport, that state lives only in 5.1's fill sheets — invisible inside the tool. Two
+  costs: (a) on **re-onboarding** a prompt, the true baseline is the deployed version (e.g. `daily-briefing`
+  v2), not v1, and nothing surfaces that; (b) you can't tell "won in the harness" from "shipped to the app."
+  **Design stance (2026-07-18, user):** LitmusAI must **not** be a backport *executor* — it never edits a
+  source repo. Its role is a **signal**: mark a version **Deployed** (with optional commit SHA + timestamp),
+  and when the deployed version ≠ the best-scoring version, raise a **"backport pending"** flag. The actual
+  backport is a human action in the source app's *own* process — which **may not be our flow/spec system at
+  all**, so the signal and its "done" state (a manual *mark-deployed*) must stand entirely inside LitmusAI,
+  assuming nothing about the source system. Overlaps the **registry's** job of tracking version/deployment
+  state. → *home: candidate **3.1** (Zatomic-backed registry) or its own LitmusAI spec — **user to confirm**.
+  Not built in 5.1 (use what exists).*
+- **Corollary (process, not a feature):** we do **not** create backport specs in source repos as a rule —
+  can't assume a source app is on our process. The backport *process* is defined in 5.1 (playbook step 9:
+  manual commit, or decline with reason); the *record* is the fill sheet + T3/T4 tick + source git history.
+  Exception: the 2 Stormboard inline-prompt extractions (`wizard-prompts`, `asset-mapping`) are a structural
+  refactor Stormboard may choose to track in its own system — its call, not ours to impose (see T4).
 
 ## Ops / infra
 - **O1 — Dev deployed without the Anthropic key set.** Provisioning shipped the secret as a placeholder;
