@@ -1,9 +1,10 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Dataset } from '../dataset';
 import { EvalRunSummary, SCORER_KINDS, ScorerConfig, ScorerKind } from '../eval-run';
-import { Prompt, PromptSummary, PromptVersion } from '../prompt';
+import { PromptVersion } from '../prompt';
 import { ModelCatalogEntry } from '../model';
 import { EvalRunsApiService } from '../eval-runs/eval-runs-api.service';
 import { ModelsApiService } from '../models/models-api.service';
@@ -263,14 +264,15 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                 </select>
               </div>
               <div class="sb-field">
-                <label for="scorerConfig">{{ isJudge() ? 'Rubric' : 'Config (optional)' }}</label>
-                <input
+                <label for="scorerConfig">{{ configLabel() }}</label>
+                <textarea
                   id="scorerConfig"
                   name="scorerConfig"
+                  rows="3"
                   [ngModel]="scorerConfig()"
                   (ngModelChange)="scorerConfig.set($event)"
                   data-testid="scorer-config"
-                />
+                ></textarea>
               </div>
               @if (isJudge()) {
                 <div class="sb-field">
@@ -290,7 +292,12 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                   </select>
                 </div>
               }
-              <button class="sb-btn sb-btn--primary" type="submit" data-testid="add-scorer">
+              <button
+                class="sb-btn sb-btn--primary"
+                type="submit"
+                data-testid="add-scorer"
+                [disabled]="!configValid()"
+              >
                 Add scorer
               </button>
             </form>
@@ -311,19 +318,10 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
           <app-card heading="Run evaluation">
             <form class="form-stack" (submit)="triggerRun($event)">
               <div class="sb-field">
-                <label for="promptSelect">Prompt</label>
-                <select
-                  id="promptSelect"
-                  name="promptSelect"
-                  [ngModel]="selectedPromptId()"
-                  (ngModelChange)="onPromptChange($event)"
-                  data-testid="prompt-select"
-                >
-                  <option value="">Select a prompt…</option>
-                  @for (p of prompts(); track p.id) {
-                    <option [value]="p.id">{{ p.name }}</option>
-                  }
-                </select>
+                <label>Prompt</label>
+                <!-- A dataset belongs to one prompt (1.7); the run form is fixed to it — pick a
+                     version only. Removes the cross-org prompt leak (B3). -->
+                <p class="fixed-value" data-testid="run-prompt">{{ promptName() ?? '—' }}</p>
               </div>
               @if (versions().length > 0) {
                 <div class="sb-field">
@@ -395,6 +393,10 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
         padding-top: var(--sb-space-lg);
         border-top: 1px solid var(--sb-border);
       }
+      .fixed-value {
+        margin: 0;
+        font-weight: 600;
+      }
     `,
   ],
 })
@@ -441,7 +443,8 @@ export class DatasetDetail implements OnInit {
   protected readonly scorerConfig = signal('');
   protected readonly judgeModel = signal('');
 
-  protected readonly prompts = signal<PromptSummary[]>([]);
+  // The run form is fixed to the dataset's owning prompt (B3): its versions load with the dataset
+  // and the operator picks a version only — no free (cross-org) prompt choice.
   protected readonly versions = signal<PromptVersion[]>([]);
   protected readonly selectedPromptId = signal('');
   protected readonly selectedVersionId = signal('');
@@ -459,6 +462,20 @@ export class DatasetDetail implements OnInit {
 
   protected readonly isJudge = computed(() => this.scorerKind() === 'LlmJudge');
 
+  // Config is mandatory for Regex/JsonSchema (the pattern/schema) and for LlmJudge (the rubric);
+  // other deterministic kinds treat it as optional. Mirrors Domain.ScorerDescriptor (B5).
+  protected readonly requiresConfig = computed(() => {
+    const k = this.scorerKind();
+    return k === 'Regex' || k === 'JsonSchema' || k === 'LlmJudge';
+  });
+  protected readonly configValid = computed(
+    () => !this.requiresConfig() || this.scorerConfig().trim().length > 0,
+  );
+  protected readonly configLabel = computed(() => {
+    if (this.isJudge()) return 'Rubric';
+    return this.requiresConfig() ? 'Config (required)' : 'Config (optional)';
+  });
+
   // A dataset lives with a prompt (1.7) — the trail leads back through its owning prompt workspace.
   protected readonly crumbs = computed<Crumb[]>(() => {
     const d = this.dataset();
@@ -475,7 +492,6 @@ export class DatasetDetail implements OnInit {
     this.load();
     this.loadScorers();
     this.loadRuns();
-    this.promptsApi.listPrompts().subscribe({ next: (p) => this.prompts.set(p) });
     this.modelsApi.listModels().subscribe({
       next: (m) => {
         this.models.set(m);
@@ -494,9 +510,18 @@ export class DatasetDetail implements OnInit {
       next: (d) => {
         this.dataset.set(d);
         this.loading.set(false);
-        this.promptsApi
-          .getPrompt(d.promptId)
-          .subscribe({ next: (p) => this.promptName.set(p.name) });
+        this.selectedPromptId.set(d.promptId);
+        // Load the owning prompt's versions for the run form (fixed to this prompt — B3) and
+        // default to the latest so a run is one click away.
+        this.promptsApi.getPrompt(d.promptId).subscribe({
+          next: (p) => {
+            this.promptName.set(p.name);
+            this.versions.set(p.versions);
+            if (p.versions.length > 0) {
+              this.selectedVersionId.set(p.versions[p.versions.length - 1].id);
+            }
+          },
+        });
       },
       error: () => {
         this.error.set('Could not load the dataset.');
@@ -569,6 +594,12 @@ export class DatasetDetail implements OnInit {
 
   protected addScorer(event: Event): void {
     event.preventDefault();
+    if (!this.configValid()) {
+      this.error.set(
+        `Scorer '${this.scorerKind()}' requires a ${this.isJudge() ? 'rubric' : 'config'}.`,
+      );
+      return;
+    }
     this.error.set(null);
     const isJudge = this.isJudge();
     this.evalApi
@@ -582,20 +613,16 @@ export class DatasetDetail implements OnInit {
           this.scorerConfig.set('');
           this.loadScorers();
         },
-        error: () => this.error.set('Could not add the scorer — check the config.'),
+        error: (err) =>
+          this.error.set(this.serverError(err) ?? 'Could not add the scorer — check the config.'),
       });
   }
 
-  protected onPromptChange(promptId: string): void {
-    this.selectedPromptId.set(promptId);
-    this.selectedVersionId.set('');
-    this.versions.set([]);
-    if (!promptId) {
-      return;
-    }
-    this.promptsApi.getPrompt(promptId).subscribe({
-      next: (p: Prompt) => this.versions.set(p.versions),
-    });
+  // Surface the API's {error} message (e.g. "eval-runner: … not configured") when present, so a
+  // failed operation fails loudly with the real reason (B2/B5), not a generic line.
+  private serverError(err: unknown): string | null {
+    const body = (err as HttpErrorResponse)?.error;
+    return body && typeof body.error === 'string' ? body.error : null;
   }
 
   protected async deleteDataset(dataset: Dataset): Promise<void> {
@@ -632,8 +659,8 @@ export class DatasetDetail implements OnInit {
         this.loadRuns();
         this.router.navigate(['/eval-runs', run.id]);
       },
-      error: () => {
-        this.error.set('Could not run the evaluation.');
+      error: (err) => {
+        this.error.set(this.serverError(err) ?? 'Could not run the evaluation.');
         this.running.set(false);
       },
     });

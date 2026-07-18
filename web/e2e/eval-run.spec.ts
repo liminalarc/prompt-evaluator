@@ -63,8 +63,8 @@ test('runs a prompt version over a dataset and shows per-fixture scores', async 
   await page.getByTestId('add-scorer').click();
   await expect(page.getByTestId('scorers').locator('tbody tr')).toHaveCount(1);
 
-  // 5. Run the evaluation: pick the owning prompt + version, then run.
-  await page.getByTestId('prompt-select').selectOption({ label: promptName });
+  // 5. Run the evaluation: the prompt is fixed to the dataset's owner (B3) — pick a version, run.
+  await expect(page.getByTestId('run-prompt')).toContainText(promptName);
   await page.getByTestId('version-select').selectOption({ index: 0 });
   await page.getByTestId('run').click();
 

@@ -70,14 +70,12 @@ test('shows a score trend across versions and the regression section on the dash
   await page.getByTestId('add-scorer').click();
   await expect(page.getByTestId('scorers').locator('tbody tr')).toHaveCount(1);
 
-  // 4. Run each version.
-  await page.getByTestId('prompt-select').selectOption({ label: promptName });
+  // 4. Run each version (prompt is fixed to the dataset's owner — B3; pick a version).
   await page.getByTestId('version-select').selectOption({ index: 0 });
   await page.getByTestId('run').click();
   await expect(page).toHaveURL(/\/eval-runs\//);
 
   await page.goto(datasetUrl);
-  await page.getByTestId('prompt-select').selectOption({ label: promptName });
   await page.getByTestId('version-select').selectOption({ index: 1 });
   await page.getByTestId('run').click();
   await expect(page).toHaveURL(/\/eval-runs\//);
