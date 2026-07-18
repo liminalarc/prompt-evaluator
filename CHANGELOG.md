@@ -5,6 +5,43 @@ SemVer (pre-1.0 `0.x`) across the API, web, and eval-runner. A release is a tagg
 as of `0.13.0` it also deploys to a hosted **dev** environment on every push to `main` (spec 3.2).
 There is no prod target yet.
 
+## [0.14.0] — 2026-07-18
+
+Round 2 of the eval-loop UX, driven by the 5.1 dogfood findings: the loop now fails **loudly**, stays
+**org-scoped**, and offers a **consistent add/edit-with-metadata** surface across versions, datasets,
+fixtures, and scorers.
+
+### Added
+
+- **[#2.8] Eval-loop UX round 2** ([detail](specs/archive/2.8.md)):
+  - **Loud failures** — a failed run surfaces the eval-runner's reason (e.g. `eval-runner: Anthropic
+    not configured`) as a `502 {error}` banner instead of a bare 500; run/scorer errors show the
+    server message.
+  - **Run scoping** — the dataset run form is fixed to the dataset's owning prompt (pick a version
+    only), removing the cross-org prompt leak; runs can also be triggered from the prompt workspace.
+  - **Editable metadata, inline** — version **label**, fixture **label/description**, and scorers
+    (reconfigure / remove) edit via expand-to-edit rows; content + target model (versions) and
+    input/origin/seed (fixtures) stay immutable. Adds `Fixture.Label`/`Description` (migration).
+  - **Progressive disclosure** — version history, fixtures, scorers, and eval-run results collapse to
+    summary rows that expand to detail; the runs table shows version · model · scorers and the compare
+    table labels fixtures by scenario (not GUID); type-prefixed headers (`Prompt:` / `Dataset:`).
+  - **Fixtures & forms** — manual entry can be marked **Synthetic**; create-dataset gains a
+    Description field; new-version seeds from the latest; create-prompt lands on the new workspace.
+
+### Fixed
+
+- **[#2.8]** LLM-judge no longer 500s on thinking-on-by-default judge models (Sonnet 5 / Fable 5) —
+  the judge's output budget is sized so the verdict JSON isn't truncated (B6).
+- **[#2.8]** Fixture redactor no longer scrubs ISO dates as phone numbers — `2026-07-12` survives
+  ingest intact; the phone matcher now requires ≥10 digits (B7).
+
+### Notes
+
+- Also landed on `main` since 0.13.0, **docs only (no app code)**: backlog spec drafts **[#2.7]**
+  (AI Prompt Authoring Assistant, [detail](specs/2.7.md)) and **[#2.9]** (Weighted composite scoring,
+  [detail](specs/2.9.md)), and **[#5.1]** dogfooding logs (prompt inventory, run book, T2 shakeout —
+  [detail](specs/5.1/5.1.md)). Those specs remain open.
+
 ## [0.13.0] — 2026-07-18
 
 Ships the first hosted deployment: LitmusAI now runs on an AWS **dev** environment, deployed
