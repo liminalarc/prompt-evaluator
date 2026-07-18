@@ -74,6 +74,61 @@ public sealed class AdminUsersEndpointTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Admin_can_create_a_user_who_appears_in_the_list_and_can_log_in()
+    {
+        var admin = await AdminClientAsync();
+
+        var create = await admin.PostAsJsonAsync("/api/admin/users",
+            new { email = "created@test.local", displayName = "Created", password = "Created-Pass-1" });
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+        var created = (await create.Content.ReadFromJsonAsync<UserDetailDto>())!;
+        Assert.Equal("created@test.local", created.Email);
+        Assert.False(created.IsAdmin);
+        Assert.Empty(created.Memberships);
+
+        Assert.Contains(await ListAsync(admin), u => u.Email == "created@test.local");
+
+        var login = await _factory.CreateClient().PostAsJsonAsync("/api/auth/login",
+            new { email = "created@test.local", password = "Created-Pass-1" });
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+    }
+
+    [Fact]
+    public async Task Non_admin_cannot_create_a_user()
+    {
+        var member = await _factory.CreateAuthenticatedClientAsync("member@test.local");
+
+        var res = await member.PostAsJsonAsync("/api/admin/users",
+            new { email = "nope@test.local", displayName = "Nope", password = "Created-Pass-1" });
+
+        Assert.Equal(HttpStatusCode.Forbidden, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task Creating_a_user_with_a_duplicate_email_is_rejected()
+    {
+        var admin = await AdminClientAsync();
+        await admin.PostAsJsonAsync("/api/admin/users",
+            new { email = "dupe@test.local", displayName = "Dupe", password = "Created-Pass-1" });
+
+        var again = await admin.PostAsJsonAsync("/api/admin/users",
+            new { email = "dupe@test.local", displayName = "Dupe Two", password = "Created-Pass-1" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, again.StatusCode);
+    }
+
+    [Fact]
+    public async Task Creating_a_user_with_a_weak_password_is_rejected()
+    {
+        var admin = await AdminClientAsync();
+
+        var res = await admin.PostAsJsonAsync("/api/admin/users",
+            new { email = "weak@test.local", displayName = "Weak", password = "short" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+    }
+
+    [Fact]
     public async Task Non_admin_cannot_list_users()
     {
         var member = await _factory.CreateAuthenticatedClientAsync("member@test.local");

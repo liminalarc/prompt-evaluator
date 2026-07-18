@@ -20,6 +20,8 @@ public sealed record UserDetailResponse(
         new(u.Id, u.Email, u.DisplayName, u.IsAdmin, u.Memberships.Select(MembershipResponse.From).ToList());
 }
 
+public sealed record CreateUserRequest(string Email, string DisplayName, string Password);
+
 public sealed record SetAdminRequest(bool IsAdmin);
 
 public sealed record GrantMembershipRequest(Guid OrganizationId, string Role);

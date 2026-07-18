@@ -23,6 +23,24 @@ public static class AdminUserEndpoints
             return Results.Ok(list.Select(UserDetailResponse.From));
         });
 
+        // Admin-created users (4.6): create an account directly (no email, no self-registration). The
+        // new user is a plain member of nothing — org/role + admin are granted afterward with the
+        // per-user controls below. Reuses the same RegisterAsync the self-serve /register path uses.
+        group.MapPost("/", async (
+            CreateUserRequest request, IUserDirectory users, OrgAccess access, CancellationToken ct) =>
+        {
+            if (!await access.IsGlobalAdminAsync(ct))
+                return Results.Forbid();
+
+            var result = await users.RegisterAsync(request.Email, request.DisplayName, request.Password, ct);
+            if (!result.Succeeded)
+                return Results.BadRequest(new { errors = result.Errors });
+
+            var created = new UserDetailResponse(
+                result.UserId, request.Email, request.DisplayName, IsAdmin: false, []);
+            return Results.Created($"/api/admin/users/{result.UserId}", created);
+        });
+
         group.MapPost("/{id:guid}/admin", async (
             Guid id, SetAdminRequest request, IUserDirectory users, OrgAccess access, CancellationToken ct) =>
         {
