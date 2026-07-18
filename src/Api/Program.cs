@@ -19,6 +19,7 @@ using Application.Prompts;
 using Infrastructure;
 using Infrastructure.Identity;
 using Infrastructure.Persistence;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -32,9 +33,30 @@ var evalRunnerServiceToken = builder.Configuration["EvalRunner:ServiceToken"];
 
 builder.Services.AddInfrastructure(postgres, evalRunnerBaseUrl, evalRunnerServiceToken);
 
-// Identity token providers (for password-reset tokens) live in the ASP.NET Core shared framework,
-// so they're added here at the composition root rather than in the (framework-light) Infrastructure.
-new IdentityBuilder(typeof(AppUser), builder.Services).AddDefaultTokenProviders();
+// Identity token providers (password-reset tokens) and the SignInManager live in the ASP.NET Core
+// shared framework, so they're added here at the composition root rather than in the (framework-light)
+// Infrastructure. SignInManager (3.2) issues the auth cookie with a security-stamp claim.
+new IdentityBuilder(typeof(AppUser), builder.Services)
+    .AddDefaultTokenProviders()
+    .AddSignInManager();
+
+// The cookie principal also carries email + display-name claims (3.2 / 4.1 /me).
+builder.Services.AddScoped<IUserClaimsPrincipalFactory<AppUser>, AppUserClaimsPrincipalFactory>();
+
+// Live-session invalidation on password reset (3.2): the SecurityStampValidator re-checks the user's
+// security stamp on every request (ValidationInterval = Zero), so a reset — which rotates the stamp —
+// rejects still-held cookies immediately.
+builder.Services.AddScoped<ISecurityStampValidator, SecurityStampValidator<AppUser>>();
+builder.Services.Configure<SecurityStampValidatorOptions>(o => o.ValidationInterval = TimeSpan.Zero);
+
+// Data-Protection keys persist to Postgres (3.2) so the auth cookie is valid across App Runner
+// replicas (a per-process key ring would reject cookies issued by another instance). Skipped with no
+// database configured (e.g. the bare /health + SPA integration tests) — those never issue a cookie.
+if (!string.IsNullOrWhiteSpace(postgres))
+    builder.Services.AddDataProtection()
+        .SetApplicationName("litmus-ai")
+        .PersistKeysToDbContext<AppIdentityDbContext>();
+
 builder.Services.AddScoped<CreatePromptHandler>();
 builder.Services.AddScoped<AddPromptVersionHandler>();
 builder.Services.AddScoped<CreateFolderHandler>();
@@ -71,7 +93,13 @@ builder.Services
         options.SlidingExpiration = true;
         options.Events.OnRedirectToLogin = ctx => { ctx.Response.StatusCode = StatusCodes.Status401Unauthorized; return Task.CompletedTask; };
         options.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = StatusCodes.Status403Forbidden; return Task.CompletedTask; };
-    });
+        // Re-validate the security stamp on each request (3.2) — rejects cookies after a password reset.
+        options.Events.OnValidatePrincipal = SecurityStampValidator.ValidatePrincipalAsync;
+    })
+    // On rejection the SecurityStampValidator also signs out the two-factor-remember-me scheme, so it
+    // must be a registered cookie scheme even though we don't use 2FA. (AddIdentityCookies registers
+    // this for you; we wire the application cookie by hand, so register it explicitly.)
+    .AddCookie(IdentityConstants.TwoFactorRememberMeScheme);
 builder.Services.AddAuthorization();
 
 // Allow the Angular dev server to reach the API during per-process development. Credentials are

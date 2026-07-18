@@ -1,8 +1,8 @@
 using System.Security.Claims;
 using System.Text;
 using Application.Ports;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using Infrastructure.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 
 namespace Api.Auth;
@@ -10,38 +10,47 @@ namespace Api.Auth;
 /// <summary>
 /// First-party authentication endpoints (4.1): self-service registration, login, logout, and the
 /// session-restore probe <c>/me</c>. Credential validation goes through the <see cref="IUserDirectory"/>
-/// port; issuing/clearing the cookie is done here (an Api concern) via <c>HttpContext.SignInAsync</c>.
+/// port; the cookie is issued/cleared here (an Api concern) via <see cref="SignInManager{TUser}"/> so
+/// the principal carries the security stamp the <c>SecurityStampValidator</c> checks (3.2) — a
+/// password reset then invalidates live sessions.
 /// </summary>
 public static class AuthEndpoints
 {
-    /// <summary>The cookie authentication scheme the whole Api uses.</summary>
-    public const string Scheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    /// <summary>
+    /// The cookie authentication scheme the whole Api uses. It IS the Identity application scheme so
+    /// <see cref="SignInManager{TUser}"/> signs into the same cookie the API authorizes against.
+    /// </summary>
+    public static readonly string Scheme = IdentityConstants.ApplicationScheme;
+
+    internal const string DisplayNameClaim = "display_name";
 
     public static IEndpointRouteBuilder MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/auth");
 
-        group.MapPost("/register", async (RegisterRequest req, IUserDirectory users, HttpContext http, CancellationToken ct) =>
+        group.MapPost("/register", async (
+            RegisterRequest req, IUserDirectory users, SignInManager<AppUser> signIn, UserManager<AppUser> userManager, CancellationToken ct) =>
         {
             var result = await users.RegisterAsync(req.Email, req.DisplayName, req.Password, ct);
             if (!result.Succeeded)
                 return Results.BadRequest(new { errors = result.Errors });
 
             // Registration signs the new user in immediately. New users are never global admins.
-            await SignInAsync(http, result.UserId, req.Email, req.DisplayName);
+            await SignInAsync(signIn, userManager, result.UserId);
             return Results.Ok(new UserResponse(result.UserId, req.Email, req.DisplayName, IsAdmin: false));
         });
 
-        group.MapPost("/login", async (LoginRequest req, IUserDirectory users, HttpContext http, CancellationToken ct) =>
+        group.MapPost("/login", async (
+            LoginRequest req, IUserDirectory users, SignInManager<AppUser> signIn, UserManager<AppUser> userManager, CancellationToken ct) =>
         {
             var userId = await users.ValidateCredentialsAsync(req.Email, req.Password, ct);
             if (userId is null)
                 return Results.Unauthorized();
 
             var account = await users.FindByEmailAsync(req.Email, ct);
-            await SignInAsync(http, userId.Value, account!.Email, account.DisplayName);
+            await SignInAsync(signIn, userManager, userId.Value);
             var isAdmin = await users.IsGlobalAdminAsync(userId.Value, ct);
-            return Results.Ok(new UserResponse(userId.Value, account.Email, account.DisplayName, isAdmin));
+            return Results.Ok(new UserResponse(userId.Value, account!.Email, account.DisplayName, isAdmin));
         });
 
         // Always returns 200 with no hint whether the email exists (enumeration resistance). When it
@@ -80,9 +89,9 @@ public static class AuthEndpoints
             return result.Succeeded ? Results.Ok() : Results.BadRequest(new { errors = result.Errors });
         });
 
-        group.MapPost("/logout", async (HttpContext http) =>
+        group.MapPost("/logout", async (SignInManager<AppUser> signIn) =>
         {
-            await http.SignOutAsync(Scheme);
+            await signIn.SignOutAsync();
             return Results.NoContent();
         }).RequireAuthorization();
 
@@ -107,18 +116,13 @@ public static class AuthEndpoints
         return app;
     }
 
-    private const string DisplayNameClaim = "display_name";
-
-    private static Task SignInAsync(HttpContext http, Guid userId, string email, string displayName)
+    // Issues the auth cookie through SignInManager so the principal carries the security stamp claim
+    // (validated by the SecurityStampValidator) plus the email/display-name claims added by
+    // AppUserClaimsPrincipalFactory. isPersistent keeps the 7-day sliding cookie behaviour of 4.1.
+    private static async Task SignInAsync(SignInManager<AppUser> signIn, UserManager<AppUser> userManager, Guid userId)
     {
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, userId.ToString()),
-            new(ClaimTypes.Email, email),
-            new(DisplayNameClaim, displayName),
-        };
-        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, Scheme));
-        return http.SignInAsync(Scheme, principal);
+        var user = await userManager.FindByIdAsync(userId.ToString());
+        await signIn.SignInAsync(user!, isPersistent: true);
     }
 }
 
