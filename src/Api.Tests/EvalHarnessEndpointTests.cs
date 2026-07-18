@@ -35,7 +35,28 @@ public sealed class EvalHarnessEndpointTests : IAsyncLifetime
             => Task.FromResult(new JudgeVerdict(0.9, true, $"judged by {judgeModel}"));
     }
 
-    private sealed class Factory(string connectionString) : WebApplicationFactory<Program>
+    // Fails prompt execution the way a provider with no credentials does: the adapter would raise
+    // EvalRunnerException carrying the eval-runner's detail. Used to prove the run fails loudly.
+    private sealed class NotConfiguredRunner : IEvaluationRunner
+    {
+        public Task<string> EchoAsync(string prompt, CancellationToken ct = default) => Task.FromResult(prompt);
+        public Task<IReadOnlyList<string>?> GetConfiguredProvidersAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<string>?>(null);
+        public Task<Application.ServiceVersion?> GetVersionAsync(CancellationToken ct = default)
+            => Task.FromResult<Application.ServiceVersion?>(null);
+        public Task<IReadOnlyList<GeneratedFixtureData>> GenerateSyntheticFixturesAsync(
+            IReadOnlyList<SeedExampleData> seeds, GenerationGuidanceData guidance, int count, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<GeneratedFixtureData>>([]);
+        public Task<PromptExecution> ExecutePromptAsync(
+            string promptContent, string targetModel, string input, string? upstreamContext, CancellationToken ct = default)
+            => throw new EvalRunnerException(
+                "eval-runner: Provider 'anthropic' for model 'claude-opus-4-8' is not configured (missing credentials?).");
+        public Task<JudgeVerdict> JudgeAsync(
+            string rubric, string input, string output, string? expected, string judgeModel, CancellationToken ct = default)
+            => Task.FromResult(new JudgeVerdict(0.9, true, "n/a"));
+    }
+
+    private sealed class Factory(string connectionString, IEvaluationRunner? runner = null) : WebApplicationFactory<Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
@@ -43,7 +64,10 @@ public sealed class EvalHarnessEndpointTests : IAsyncLifetime
             builder.ConfigureTestServices(services =>
             {
                 services.RemoveAll<IEvaluationRunner>();
-                services.AddScoped<IEvaluationRunner, StubRunner>();
+                if (runner is null)
+                    services.AddScoped<IEvaluationRunner, StubRunner>();
+                else
+                    services.AddScoped<IEvaluationRunner>(_ => runner);
             });
         }
     }
@@ -176,5 +200,22 @@ public sealed class EvalHarnessEndpointTests : IAsyncLifetime
         var res = await client.PostAsJsonAsync($"/api/datasets/{Guid.NewGuid()}/eval-runs",
             new { promptId, promptVersionId = versionId });
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_run_that_fails_at_the_eval_runner_returns_a_clear_error_not_500()
+    {
+        // B1/B2: a missing provider key must surface a named error, not a bare 500. The endpoint
+        // maps EvalRunnerException → 502 with a readable {error} body the UI can show.
+        await using var factory = new Factory(_postgres.GetConnectionString(), new NotConfiguredRunner());
+        var client = await factory.CreateAuthenticatedClientAsync();
+        var (promptId, versionId, datasetId) = await SeedAsync(client);
+
+        var res = await client.PostAsJsonAsync($"/api/datasets/{datasetId}/eval-runs",
+            new { promptId, promptVersionId = versionId });
+
+        Assert.Equal(HttpStatusCode.BadGateway, res.StatusCode);
+        var body = await res.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+        Assert.Contains("not configured", body!["error"]);
     }
 }

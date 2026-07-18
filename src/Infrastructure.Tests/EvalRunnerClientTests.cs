@@ -177,6 +177,45 @@ public class EvalRunnerClientTests
     }
 
     [Fact]
+    public async Task ExecutePromptAsync_surfaces_the_eval_runner_detail_as_EvalRunnerException()
+    {
+        // eval-runner returns 400 {"detail": …} when a model's provider has no credentials. The
+        // adapter must surface that reason (B1/B2), not swallow it into a bare HttpRequestException.
+        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = JsonContent.Create(new
+            {
+                detail = "Provider 'anthropic' for model 'claude-opus-4-8' is not configured (missing credentials?).",
+            }),
+        });
+        var http = new HttpClient(handler) { BaseAddress = new Uri("http://eval-runner:8000") };
+        var client = new EvalRunnerClient(http);
+
+        var ex = await Assert.ThrowsAsync<EvalRunnerException>(() =>
+            client.ExecutePromptAsync("You summarize.", "claude-opus-4-8", "input", null));
+
+        Assert.Contains("not configured", ex.Message);
+        Assert.Contains("anthropic", ex.Message);
+        Assert.StartsWith("eval-runner:", ex.Message);
+    }
+
+    [Fact]
+    public async Task JudgeAsync_surfaces_the_eval_runner_detail_as_EvalRunnerException()
+    {
+        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = JsonContent.Create(new { detail = "Provider 'openai' for model 'gpt-4o' is not configured." }),
+        });
+        var http = new HttpClient(handler) { BaseAddress = new Uri("http://eval-runner:8000") };
+        var client = new EvalRunnerClient(http);
+
+        var ex = await Assert.ThrowsAsync<EvalRunnerException>(() =>
+            client.JudgeAsync("Is it good?", "q", "a", null, "gpt-4o"));
+
+        Assert.Contains("not configured", ex.Message);
+    }
+
+    [Fact]
     public async Task JudgeAsync_posts_snake_case_and_parses_the_verdict()
     {
         var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)

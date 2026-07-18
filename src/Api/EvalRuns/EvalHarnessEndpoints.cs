@@ -54,10 +54,20 @@ public static class EvalHarnessEndpoints
             {
                 if ((await access.CanAccessDatasetAsync(id, ct)).ToProblem() is { } problem)
                     return problem;
-                var run = await handler.HandleAsync(request.PromptId, request.PromptVersionId, id, ct);
-                return run is null
-                    ? Results.NotFound()
-                    : Results.Created($"/api/eval-runs/{run.Id}", EvalRunResponse.From(run));
+                try
+                {
+                    var run = await handler.HandleAsync(request.PromptId, request.PromptVersionId, id, ct);
+                    return run is null
+                        ? Results.NotFound()
+                        : Results.Created($"/api/eval-runs/{run.Id}", EvalRunResponse.From(run));
+                }
+                catch (EvalRunnerException ex)
+                {
+                    // The run reached the eval-runner but it failed (e.g. a provider with no
+                    // credentials). Fail loudly with the reason (B1/B2) — a 502 with a readable
+                    // {error} the UI surfaces, never a bare 500.
+                    return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status502BadGateway);
+                }
             }).RequireAuthorization();
 
         app.MapGet("/api/datasets/{id:guid}/eval-runs",

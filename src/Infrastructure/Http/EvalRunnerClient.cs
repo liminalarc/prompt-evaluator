@@ -52,7 +52,7 @@ public sealed class EvalRunnerClient(HttpClient http) : IEvaluationRunner
             count);
 
         var response = await http.PostAsJsonAsync("/generate-fixtures", request, ct);
-        response.EnsureSuccessStatusCode();
+        await EnsureRunnerSuccessAsync(response, ct);
         var body = await response.Content.ReadFromJsonAsync<GenerateResponse>(ct)
             ?? throw new InvalidOperationException("eval-runner returned an empty /generate-fixtures body.");
 
@@ -66,7 +66,7 @@ public sealed class EvalRunnerClient(HttpClient http) : IEvaluationRunner
     {
         var request = new ExecuteRequest(promptContent, targetModel, input, upstreamContext);
         var response = await http.PostAsJsonAsync("/execute-prompt", request, ct);
-        response.EnsureSuccessStatusCode();
+        await EnsureRunnerSuccessAsync(response, ct);
         var body = await response.Content.ReadFromJsonAsync<ExecuteResponse>(ct)
             ?? throw new InvalidOperationException("eval-runner returned an empty /execute-prompt body.");
 
@@ -78,12 +78,41 @@ public sealed class EvalRunnerClient(HttpClient http) : IEvaluationRunner
     {
         var request = new JudgeRequest(rubric, input, output, expected, judgeModel);
         var response = await http.PostAsJsonAsync("/judge", request, ct);
-        response.EnsureSuccessStatusCode();
+        await EnsureRunnerSuccessAsync(response, ct);
         var body = await response.Content.ReadFromJsonAsync<JudgeResponse>(ct)
             ?? throw new InvalidOperationException("eval-runner returned an empty /judge body.");
 
         return new JudgeVerdict(body.Score, body.Passed, body.Rationale);
     }
+
+    /// <summary>
+    /// Turns a non-success eval-runner response into an <see cref="EvalRunnerException"/> carrying
+    /// the service's own <c>detail</c> message (e.g. "…provider not configured…"), so a failed run
+    /// fails loudly with the reason instead of a bare <see cref="HttpRequestException"/> → 500.
+    /// </summary>
+    private static async Task EnsureRunnerSuccessAsync(HttpResponseMessage response, CancellationToken ct)
+    {
+        if (response.IsSuccessStatusCode)
+            return;
+
+        string? detail = null;
+        try
+        {
+            var error = await response.Content.ReadFromJsonAsync<RunnerError>(ct);
+            detail = error?.Detail;
+        }
+        catch
+        {
+            // Body was not the expected {detail} shape — fall back to the status line below.
+        }
+
+        throw new EvalRunnerException(string.IsNullOrWhiteSpace(detail)
+            ? $"eval-runner: request failed ({(int)response.StatusCode} {response.ReasonPhrase})."
+            : $"eval-runner: {detail}");
+    }
+
+    // FastAPI HTTPException / our UnknownProviderError handler both serialize as {"detail": "..."}.
+    private sealed record RunnerError([property: JsonPropertyName("detail")] string? Detail);
 
     // Serialized with System.Text.Json web defaults (camelCase) -> {"prompt":...} / {"output":...}.
     private sealed record EchoRequest(string Prompt);
