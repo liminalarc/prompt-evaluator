@@ -19,6 +19,7 @@
 - **2.6** Adopt brand-tokens hero tokens (drop local stopgap) — `NOT STARTED` — [detail](specs/2.6.md)
 - **2.7** AI Prompt Authoring Assistant (proactive, best-practice) — `NOT STARTED` — [detail](specs/2.7.md)
 - **2.8** Eval-loop UX round 2 (dogfood findings) — `IN PROGRESS` — [detail](specs/2.8.md)
+- **2.9** Weighted composite scoring (per-dataset scorer weights → one overall score) — `NOT STARTED` — [detail](specs/2.9.md)
 
 ## Phase 3 — Integrations & Ops
 - **3.1** Zatomic-backed Prompt Registry — `NOT STARTED` — [detail](specs/3.1.md)
