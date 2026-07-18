@@ -18,7 +18,6 @@
 - **2.3** Prompt Authoring UX — `NOT STARTED` — [detail](specs/2.3.md)
 - **2.6** Adopt brand-tokens hero tokens (drop local stopgap) — `NOT STARTED` — [detail](specs/2.6.md)
 - **2.7** AI Prompt Authoring Assistant (proactive, best-practice) — `NOT STARTED` — [detail](specs/2.7.md)
-- **2.8** Eval-loop UX round 2 (dogfood findings) — `IN PROGRESS` — [detail](specs/2.8.md)
 - **2.9** Weighted composite scoring (per-dataset scorer weights → one overall score) — `NOT STARTED` — [detail](specs/2.9.md)
 
 ## Phase 3 — Integrations & Ops
@@ -31,6 +30,7 @@
 - **5.1** Adopt LitmusAI across Cortex Golf & Stormboard (discover → onboard → improve every prompt) — `IN PROGRESS` — [detail](specs/5.1/5.1.md)
 
 ## Archive
+- **2.8** Eval-loop UX round 2 (dogfood findings) — `DONE` — [detail](specs/archive/2.8.md)
 - **4.6** Admin-created users (create user, no email) — `DONE` — [detail](specs/archive/4.6.md)
 - **3.2** Production Deployment (AWS App Runner/ECR/RDS dev env, Prism-modeled) — `DONE` — [detail](specs/archive/3.2.md)
 - **4.5** Org-owner member management on the org page (owner-or-admin, member-scoped) — `DONE` — [detail](specs/archive/4.5.md)
