@@ -23,9 +23,9 @@
 
 ## Phase 4 — Accounts & Access
 - **4.2** SSO / OAuth Sign-In — `NOT STARTED` — [detail](specs/4.2.md)
-- **4.6** Admin-created users (create user, no email) — `IN PROGRESS` — [detail](specs/4.6.md)
 
 ## Archive
+- **4.6** Admin-created users (create user, no email) — `DONE` — [detail](specs/archive/4.6.md)
 - **3.2** Production Deployment (AWS App Runner/ECR/RDS dev env, Prism-modeled) — `DONE` — [detail](specs/archive/3.2.md)
 - **4.5** Org-owner member management on the org page (owner-or-admin, member-scoped) — `DONE` — [detail](specs/archive/4.5.md)
 - **4.4** Organization management (admin) — list / create / rename / delete orgs — `DONE` — [detail](specs/archive/4.4.md)
