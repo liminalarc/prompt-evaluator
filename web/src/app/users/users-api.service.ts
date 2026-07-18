@@ -15,6 +15,11 @@ export class UsersApiService {
     return this.http.get<UserDetail[]>('/api/admin/users');
   }
 
+  /** Admin-create a user directly (4.6) — no email; org/role + admin are granted afterward. */
+  createUser(email: string, displayName: string, password: string): Observable<UserDetail> {
+    return this.http.post<UserDetail>('/api/admin/users', { email, displayName, password });
+  }
+
   setAdmin(id: string, isAdmin: boolean): Observable<void> {
     return this.http.post<void>(`/api/admin/users/${id}/admin`, { isAdmin });
   }

@@ -5,9 +5,9 @@ using Application.Ports;
 namespace Api.Admin;
 
 /// <summary>
-/// Admin user & access management (spec 4.3): list users, toggle the workspace global-admin flag,
-/// grant/revoke org membership + role, and set a password — all gated by the [[1.13]] global-admin
-/// flag via <see cref="OrgAccess.IsGlobalAdminAsync"/>. No email; account creation stays self-service.
+/// Admin user & access management (spec 4.3, + create-user 4.6): list users, create a user (no
+/// email), toggle the workspace global-admin flag, grant/revoke org membership + role, and set a
+/// password — all gated by the [[1.13]] global-admin flag via <see cref="OrgAccess.IsGlobalAdminAsync"/>.
 /// </summary>
 public static class AdminUserEndpoints
 {

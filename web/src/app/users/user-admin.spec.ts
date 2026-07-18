@@ -49,6 +49,49 @@ describe('UserAdmin (admin user & access management)', () => {
     expect(table.textContent).toContain('Acme'); // membership org resolved to its name
   });
 
+  it('creates a user, posting email/name/password then reloading the list (4.6)', () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance as unknown as {
+      newEmail: { set: (v: string) => void };
+      newDisplayName: { set: (v: string) => void };
+      newPassword: { set: (v: string) => void };
+      createUser: () => void;
+    };
+    cmp.newEmail.set('created@test.local');
+    cmp.newDisplayName.set('Created');
+    cmp.newPassword.set('Created-Pass-1');
+    cmp.createUser();
+
+    const req = httpMock.expectOne('/api/admin/users');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({
+      email: 'created@test.local',
+      displayName: 'Created',
+      password: 'Created-Pass-1',
+    });
+    req.flush({
+      id: 'u3',
+      email: 'created@test.local',
+      displayName: 'Created',
+      isAdmin: false,
+      memberships: [],
+    });
+    httpMock.expectOne('/api/admin/users').flush(users); // reload
+  });
+
+  it('shows an inline error when required create fields are missing (4.6)', () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance as unknown as {
+      toggleCreate: () => void;
+      createUser: () => void;
+    };
+    cmp.toggleCreate(); // open the form
+    cmp.createUser(); // all fields empty → no HTTP call, inline error
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="create-user-error"]')).toBeTruthy();
+    // httpMock.verify() in afterEach asserts no create request was made
+  });
+
   it('toggles global-admin, posting the new flag then reloading', () => {
     const fixture = setup();
     const cmp = fixture.componentInstance as unknown as { toggleAdmin: (u: unknown) => void };

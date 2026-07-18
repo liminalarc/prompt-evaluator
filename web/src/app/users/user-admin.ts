@@ -18,9 +18,9 @@ import { UsersApiService } from './users-api.service';
 const ROLES = ['Owner', 'Member'];
 
 /**
- * Admin user & access management (spec 4.3). Reached at /admin/users under the Admin folder, gated
- * to global admins. Lists users and lets an admin toggle global-admin, manage org membership + role,
- * and set a password. Account creation stays self-service; org-entity management is spec 4.4.
+ * Admin user & access management (spec 4.3, + create-user 4.6). Reached at /admin/users under the
+ * Admin folder, gated to global admins. Lets an admin create a user (4.6, no email), toggle
+ * global-admin, manage org membership + role, and set a password. Org-entity management is spec 4.4.
  */
 @Component({
   selector: 'app-user-admin',
@@ -44,10 +44,68 @@ const ROLES = ['Owner', 'Member'];
 
       <app-page-header
         heading="Users"
-        subtitle="Manage admin access, organization membership, and passwords."
+        subtitle="Create users and manage admin access, organization membership, and passwords."
       />
 
       <app-card heading="Users">
+        <div class="create-user">
+          @if (showCreate()) {
+            <div class="create-form" data-testid="create-user-form">
+              <input
+                type="email"
+                placeholder="Email"
+                data-testid="new-user-email"
+                name="new-user-email"
+                [ngModel]="newEmail()"
+                (ngModelChange)="newEmail.set($event)"
+              />
+              <input
+                type="text"
+                placeholder="Display name"
+                data-testid="new-user-name"
+                name="new-user-name"
+                [ngModel]="newDisplayName()"
+                (ngModelChange)="newDisplayName.set($event)"
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                data-testid="new-user-password"
+                name="new-user-password"
+                [ngModel]="newPassword()"
+                (ngModelChange)="newPassword.set($event)"
+              />
+              <button
+                type="button"
+                class="sb-btn sb-btn--sm sb-btn--primary"
+                data-testid="create-user"
+                (click)="createUser()"
+              >
+                Create user
+              </button>
+              <button
+                type="button"
+                class="sb-btn sb-btn--sm sb-btn--ghost"
+                (click)="toggleCreate()"
+              >
+                Cancel
+              </button>
+              @if (createError(); as message) {
+                <span class="create-error" data-testid="create-user-error">{{ message }}</span>
+              }
+            </div>
+          } @else {
+            <button
+              type="button"
+              class="sb-btn sb-btn--sm sb-btn--secondary"
+              data-testid="toggle-create-user"
+              (click)="toggleCreate()"
+            >
+              + New user
+            </button>
+          }
+        </div>
+
         @if (loading()) {
           <app-loading-state label="Loading users…" />
         } @else if (users().length === 0) {
@@ -178,6 +236,19 @@ const ROLES = ['Owner', 'Member'];
         font-size: var(--sb-type-small-size);
         color: var(--sb-text-secondary);
       }
+      .create-user {
+        margin-bottom: var(--sb-space-md);
+      }
+      .create-form {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--sb-space-sm);
+      }
+      .create-error {
+        color: var(--sb-danger, #c0392b);
+        font-size: var(--sb-type-small-size);
+      }
       .admin-toggle,
       .set-password,
       .add-membership {
@@ -218,6 +289,13 @@ export class UserAdmin implements OnInit {
   protected readonly orgs = signal<Organization[]>([]);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
+
+  // Admin create-user form (4.6).
+  protected readonly showCreate = signal(false);
+  protected readonly newEmail = signal('');
+  protected readonly newDisplayName = signal('');
+  protected readonly newPassword = signal('');
+  protected readonly createError = signal<string | null>(null);
 
   private readonly addOrg = signal<Record<string, string>>({});
   private readonly addRole = signal<Record<string, string>>({});
@@ -279,6 +357,34 @@ export class UserAdmin implements OnInit {
         this.error.set('Could not load users.');
         this.loading.set(false);
       },
+    });
+  }
+
+  protected toggleCreate(): void {
+    this.showCreate.update((v) => !v);
+    this.createError.set(null);
+  }
+
+  protected createUser(): void {
+    const email = this.newEmail().trim();
+    const displayName = this.newDisplayName().trim();
+    const password = this.newPassword();
+    if (!email || !displayName || !password) {
+      this.createError.set('Email, display name, and password are all required.');
+      return;
+    }
+    this.createError.set(null);
+    this.api.createUser(email, displayName, password).subscribe({
+      next: () => {
+        this.newEmail.set('');
+        this.newDisplayName.set('');
+        this.newPassword.set('');
+        this.load(); // new user appears in the list; grant org/role there
+      },
+      error: () =>
+        this.createError.set(
+          'Could not create the user — the email may be in use or the password too weak (min 8 chars).',
+        ),
     });
   }
 
