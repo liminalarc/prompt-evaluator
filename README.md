@@ -298,5 +298,12 @@ Each service has its own `Dockerfile`; `docker-compose.yml` orchestrates all fou
 
 ## Deployment
 
-Production orchestration (hosting/k8s) is out of scope for the skeleton. The compose stack
-is the local + CI runtime; deployment is established later.
+A hosted **dev** environment runs on **AWS App Runner** (spec 3.2), modeled on Prism: Terraform
+in `infra/`, two ECR images (the combined web+api app + the eval-runner), and LitmusAI's own RDS
+Postgres inside the shared `stormboard-dev` VPC. It reuses the shared account's GitHub OIDC provider
+and VPC connector; it owns everything else.
+
+- **Provisioning / first-time setup + the apply runbook:** [`infra/README.md`](infra/README.md).
+- **Continuous deploy:** the `deploy-dev` CI job builds + pushes both images and rolls the App Runner
+  services on every push to `main`, then smokes the deployed URL (`/health`, `/api/version`).
+- **Dev-only:** there is no prod deploy target yet (future work under 3.2).
