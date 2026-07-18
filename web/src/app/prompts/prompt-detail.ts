@@ -65,6 +65,10 @@ import { validateImportFile } from './import-file';
         </app-page-header>
 
         <app-card heading="Version history">
+          <p class="subtitle">
+            Each version is immutable — <strong>v1, v2…</strong> are the identity; the label is an
+            optional description. Select a row to view its content and edit the label.
+          </p>
           @if (p.versions.length === 0) {
             <app-empty-state
               message="No versions yet — add the first with the button below."
@@ -83,8 +87,13 @@ import { validateImportFile } from './import-file';
               </thead>
               <tbody>
                 @for (v of p.versions; track v.id) {
-                  <tr>
-                    <td>{{ v.versionNumber }}</td>
+                  <tr
+                    class="version-row"
+                    [class.version-row--open]="expandedVersionId() === v.id"
+                    (click)="toggleVersion(v.id)"
+                    data-testid="version-row"
+                  >
+                    <td>v{{ v.versionNumber }}</td>
                     <td><app-chip [label]="v.targetModel" /></td>
                     <td>{{ v.label ?? '—' }}</td>
                     <td>
@@ -96,6 +105,36 @@ import { validateImportFile } from './import-file';
                     </td>
                     <td>{{ v.createdAt }}</td>
                   </tr>
+                  @if (expandedVersionId() === v.id) {
+                    <tr class="version-detail" data-testid="version-detail">
+                      <td colspan="5">
+                        <div class="sb-field">
+                          <label>Content (immutable — add a version to change it)</label>
+                          <pre class="version-content">{{ v.content }}</pre>
+                        </div>
+                        <form class="form-stack" (submit)="saveLabel($event, v.id)">
+                          <div class="sb-field">
+                            <label [attr.for]="'label-' + v.id">Label (optional description)</label>
+                            <input
+                              [attr.id]="'label-' + v.id"
+                              name="editLabel"
+                              [ngModel]="editLabel()"
+                              (ngModelChange)="editLabel.set($event)"
+                              [ngModelOptions]="{ standalone: true }"
+                              data-testid="edit-label"
+                            />
+                          </div>
+                          <button
+                            class="sb-btn sb-btn--primary sb-btn--sm"
+                            type="submit"
+                            data-testid="save-label"
+                          >
+                            Save label
+                          </button>
+                        </form>
+                      </td>
+                    </tr>
+                  }
                 }
               </tbody>
             </table>
@@ -140,7 +179,7 @@ import { validateImportFile } from './import-file';
                 </select>
               </div>
               <div class="sb-field">
-                <label for="label">Label (optional)</label>
+                <label for="label">Label (optional description)</label>
                 <input
                   id="label"
                   name="label"
@@ -159,7 +198,7 @@ import { validateImportFile } from './import-file';
             class="sb-btn sb-btn--sm sb-btn--secondary"
             type="button"
             data-testid="toggle-add-version"
-            (click)="showAddVersion.set(!showAddVersion())"
+            (click)="toggleAddVersion()"
           >
             + Add version
           </button>
@@ -313,6 +352,21 @@ import { validateImportFile } from './import-file';
         padding-top: var(--sb-space-lg);
         border-top: 1px solid var(--sb-border);
       }
+      .version-row {
+        cursor: pointer;
+      }
+      .version-row--open {
+        background: var(--sb-surface-raised);
+      }
+      .version-content {
+        white-space: pre-wrap;
+        word-break: break-word;
+        margin: 0;
+        padding: var(--sb-space-md);
+        background: var(--sb-surface-raised);
+        border-radius: var(--sb-radius-sm);
+        font-size: var(--sb-type-small-size);
+      }
     `,
   ],
 })
@@ -351,6 +405,11 @@ export class PromptDetail implements OnInit {
   // Progressive disclosure: the version history + datasets stay visible; the create forms reveal.
   protected readonly showAddVersion = signal(false);
   protected readonly showCreateDataset = signal(false);
+
+  // Version history is a collapsible list (U2): a row expands to show its (immutable) content and
+  // an editable label (U3). Only one row is open at a time.
+  protected readonly expandedVersionId = signal<string | null>(null);
+  protected readonly editLabel = signal('');
 
   // Datasets + analytics — this prompt's, shown together with it (1.7).
   protected readonly datasets = signal<DatasetSummary[] | null>(null);
@@ -460,6 +519,43 @@ export class PromptDetail implements OnInit {
     reader.onerror = () => this.error.set('Could not read that file.');
     reader.readAsText(file);
     input.value = '';
+  }
+
+  // Expand/collapse a version row; on expand, seed the label editor with that version's label.
+  protected toggleVersion(versionId: string): void {
+    if (this.expandedVersionId() === versionId) {
+      this.expandedVersionId.set(null);
+      return;
+    }
+    const version = this.prompt()?.versions.find((v) => v.id === versionId);
+    this.editLabel.set(version?.label ?? '');
+    this.expandedVersionId.set(versionId);
+  }
+
+  protected saveLabel(event: Event, versionId: string): void {
+    event.preventDefault();
+    this.error.set(null);
+    this.api.editVersionLabel(this.id, versionId, this.editLabel().trim() || null).subscribe({
+      next: () => {
+        this.expandedVersionId.set(null);
+        this.load();
+      },
+      error: () => this.error.set('Could not update the version label.'),
+    });
+  }
+
+  // Reveal the add-version form; on open, seed the draft content from the latest version so a new
+  // version is edited from the previous one rather than pasted from scratch (U11). Content stays
+  // immutable-by-add — this only pre-fills the editable draft.
+  protected toggleAddVersion(): void {
+    const opening = !this.showAddVersion();
+    this.showAddVersion.set(opening);
+    if (!opening) return;
+    const versions = this.prompt()?.versions ?? [];
+    const latest = versions[versions.length - 1];
+    if (latest && !this.content().trim()) {
+      this.content.set(latest.content);
+    }
   }
 
   protected addVersion(event: Event): void {

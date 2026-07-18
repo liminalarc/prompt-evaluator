@@ -195,6 +195,49 @@ describe('PromptDetail (unified workspace)', () => {
     expect(el.querySelector('[data-testid="versions"]')?.textContent).toContain('legacy-model-x');
   });
 
+  it('expands a version row to reveal its content and an editable label [U2/U3]', () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance as unknown as { toggleVersion: (id: string) => void };
+    // Collapsed by default — no detail panel until a row is opened.
+    expect(fixture.nativeElement.querySelector('[data-testid="version-detail"]')).toBeNull();
+
+    cmp.toggleVersion('v1');
+    fixture.detectChanges();
+    const detail = fixture.nativeElement.querySelector('[data-testid="version-detail"]');
+    expect(detail).not.toBeNull();
+    expect(detail.textContent).toContain('Summarize: {input}'); // immutable content shown
+    expect(detail.querySelector('[data-testid="edit-label"]')).not.toBeNull();
+  });
+
+  it('saves an edited version label via PATCH and reloads [U3]', () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance as unknown as {
+      toggleVersion: (id: string) => void;
+      editLabel: { set: (v: string) => void };
+      saveLabel: (e: Event, id: string) => void;
+    };
+    cmp.toggleVersion('v1');
+    cmp.editLabel.set('renamed');
+    cmp.saveLabel(new Event('submit'), 'v1');
+
+    const patch = httpMock.expectOne('/api/prompts/p1/versions/v1');
+    expect(patch.request.method).toBe('PATCH');
+    expect(patch.request.body).toEqual({ label: 'renamed' });
+    patch.flush({ ...prompt });
+    httpMock.expectOne('/api/prompts/p1').flush(prompt); // reload
+  });
+
+  it('seeds the new-version form content from the latest version [U11]', () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance as unknown as {
+      toggleAddVersion: () => void;
+      content: () => string;
+    };
+    expect(cmp.content()).toBe('');
+    cmp.toggleAddVersion();
+    expect(cmp.content()).toBe('Summarize: {input}'); // pre-filled from v1 to edit, not paste
+  });
+
   it('loads analytics for a selected dataset', () => {
     const fixture = setup();
     const select: HTMLSelectElement = fixture.nativeElement.querySelector(

@@ -48,6 +48,11 @@ export class PromptsApiService {
     return this.http.post<Prompt>(`/api/prompts/${id}/versions`, body);
   }
 
+  /** Edits a version's editable metadata — its label (content + target model are immutable). */
+  editVersionLabel(id: string, versionId: string, label: string | null): Observable<Prompt> {
+    return this.http.patch<Prompt>(`/api/prompts/${id}/versions/${versionId}`, { label });
+  }
+
   /** Moves a prompt into a folder (1.7), or unfiles it to the root when folderId is null. */
   movePrompt(id: string, folderId: string | null): Observable<Prompt> {
     return this.http.post<Prompt>(`/api/prompts/${id}/move`, { folderId });
