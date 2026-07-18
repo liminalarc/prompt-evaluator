@@ -68,6 +68,16 @@
   change now (no premature abstraction); revisit if a prompt that doesn't fit appears. → *home: decision
   logged; spec only when needed*
 
+## Feature (new capability)
+- **F1 — No "deployed / current" version marker.** LitmusAI tracks `Prompt × Version` but has no concept of
+  *which version the source app is actually running*. After a backport, that state lives only in 5.1's fill
+  sheets — invisible inside the tool. Two costs: (a) on **re-onboarding** a prompt, the true baseline is the
+  deployed version (e.g. `daily-briefing` v2), not v1, and nothing surfaces that; (b) you can't tell "won in
+  the harness" from "shipped to the app." Proposal: a per-prompt **deployed-version pointer** (mark a version
+  Current/Deployed; optional backport commit SHA + timestamp). Overlaps the **registry's** job of tracking
+  version/deployment state. → *home: candidate **3.1** (Zatomic-backed registry) or its own LitmusAI spec —
+  **user to confirm**. Not built in 5.1 (use what exists).*
+
 ## Ops / infra
 - **O1 — Dev deployed without the Anthropic key set.** Provisioning shipped the secret as a placeholder;
   the first eval was the first thing to exercise it. The next environment shouldn't repeat this — add a

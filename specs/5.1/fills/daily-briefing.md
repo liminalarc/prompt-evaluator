@@ -139,8 +139,10 @@ Deduct for markdown, vagueness, generic filler, wrong or invented numbers, and w
   (was 1/5)**. Fixed undershoot (all in 75-100) + invented stats (F1 0.35→0.90). Residue: slightly
   generic micro-tips (the 0.85s). Cost/call ~3-5× (longer prompt + fuller output) — negligible for a
   once-daily 24h-cached call. Analytics: _pending user check_.
-- **Backport:** _recommend_ — clear quality win, cost bump immaterial for daily-briefing. Actual Golf-repo
-  edit **deferred to T3 resume** (walk pinned here).
+- **Backport:** ✅ **DONE (2026-07-18)** — v2 text written to `AiService.WebApi/Prompts/daily-briefing.md`
+  in the Golf repo, committed `660a3ff2` (`feat(ai): improve daily-briefing prompt — firm length + ban
+  computed stats`). Clear quality win; cost bump immaterial for a once-daily 24h-cached call. Not pushed
+  (local commit — user's call to push).
 - **Learnings:** "N words **maximum**" reads as a ceiling → models undershoot; reframe to a firm target
   reached by **citing more real data**, and **explicitly ban computing new stats** (models will fabricate
   derived numbers to fill space). Likely applies to other narrative prompts (golf-dna, hole-notes,
