@@ -121,6 +121,10 @@ Deduct for markdown, vagueness, generic filler, wrong or invented numbers, and w
 - **Regex** · Config `[0-9]` (cites a number)
 
 ## Baseline & iterations (fill as you run)
+- **⏸ PAUSED at ⑤ (2026-07-18)** — Run evaluation returns **HTTP 500**: eval-runner's Anthropic
+  provider not configured on dev (`ANTHROPIC_API_KEY` placeholder — first real eval on this box).
+  Resume after the key is set (`aws secretsmanager put-secret-value …`) + `litmus-ai-eval-runner`
+  restarted. Registered as 5.1 findings (bare-500 UX + UI swallows error).
 - **v1 baseline** (haiku): _record judge avg + per-fixture, `[0-9]` fails_ →
 - **Hypothesis:** _one thing to improve_ →
 - **v2:** _what changed_ → _movement vs v1_ →
