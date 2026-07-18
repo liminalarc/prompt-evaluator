@@ -83,30 +83,79 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
           @if (filteredFixtures().length === 0) {
             <app-empty-state message="No fixtures for this filter." data-testid="no-fixtures" />
           } @else {
+            <p class="subtitle">Select a row to view the full fixture and edit its label.</p>
             <table class="sb-table" data-testid="fixtures">
               <thead>
                 <tr>
                   <th>Origin</th>
+                  <th>Label</th>
                   <th>Input</th>
-                  <th>Upstream context</th>
-                  <th>Expected output</th>
                   <th>Seed</th>
                 </tr>
               </thead>
               <tbody>
                 @for (f of filteredFixtures(); track f.id) {
-                  <tr [attr.data-origin]="f.origin">
+                  <tr
+                    class="fixture-row"
+                    [attr.data-origin]="f.origin"
+                    [class.fixture-row--open]="expandedFixtureId() === f.id"
+                    (click)="toggleFixture(f.id)"
+                    data-testid="fixture-row"
+                  >
                     <td>
                       <app-status-badge
                         [variant]="originBadge(f.origin).variant"
                         [label]="originBadge(f.origin).label"
                       />
                     </td>
-                    <td>{{ f.input }}</td>
-                    <td>{{ f.upstreamContext ?? '—' }}</td>
-                    <td>{{ f.expectedOutput ?? '—' }}</td>
+                    <td>{{ f.label ?? '—' }}</td>
+                    <td class="cell-truncate">{{ f.input }}</td>
                     <td>{{ f.seedFixtureId ? 'linked' : '—' }}</td>
                   </tr>
+                  @if (expandedFixtureId() === f.id) {
+                    <tr class="fixture-detail" data-testid="fixture-detail">
+                      <td colspan="4">
+                        <dl class="facts">
+                          <dt>Input</dt>
+                          <dd>{{ f.input }}</dd>
+                          <dt>Upstream context</dt>
+                          <dd>{{ f.upstreamContext ?? '—' }}</dd>
+                          <dt>Expected output</dt>
+                          <dd>{{ f.expectedOutput ?? '—' }}</dd>
+                        </dl>
+                        <form class="form-stack" (submit)="saveFixtureMeta($event, f.id)">
+                          <div class="sb-field">
+                            <label [attr.for]="'flabel-' + f.id">Label</label>
+                            <input
+                              [attr.id]="'flabel-' + f.id"
+                              [ngModel]="editFixtureLabel()"
+                              (ngModelChange)="editFixtureLabel.set($event)"
+                              [ngModelOptions]="{ standalone: true }"
+                              data-testid="edit-fixture-label"
+                            />
+                          </div>
+                          <div class="sb-field">
+                            <label [attr.for]="'fdesc-' + f.id">Description</label>
+                            <textarea
+                              [attr.id]="'fdesc-' + f.id"
+                              rows="2"
+                              [ngModel]="editFixtureDescription()"
+                              (ngModelChange)="editFixtureDescription.set($event)"
+                              [ngModelOptions]="{ standalone: true }"
+                              data-testid="edit-fixture-description"
+                            ></textarea>
+                          </div>
+                          <button
+                            class="sb-btn sb-btn--primary sb-btn--sm"
+                            type="submit"
+                            data-testid="save-fixture"
+                          >
+                            Save
+                          </button>
+                        </form>
+                      </td>
+                    </tr>
+                  }
                 }
               </tbody>
             </table>
@@ -114,6 +163,40 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
 
           @if (showCapture()) {
             <form class="form-stack reveal-form" (submit)="capture($event)">
+              <div class="sb-field">
+                <label for="fixtureLabel">Label (optional)</label>
+                <input
+                  id="fixtureLabel"
+                  name="fixtureLabel"
+                  [ngModel]="fixtureLabel()"
+                  (ngModelChange)="fixtureLabel.set($event)"
+                  data-testid="fixture-label"
+                />
+              </div>
+              <div class="sb-field">
+                <label for="fixtureDescription">Description (optional)</label>
+                <textarea
+                  id="fixtureDescription"
+                  name="fixtureDescription"
+                  rows="2"
+                  [ngModel]="fixtureDescription()"
+                  (ngModelChange)="fixtureDescription.set($event)"
+                  data-testid="fixture-description"
+                ></textarea>
+              </div>
+              <div class="sb-field">
+                <label for="fixtureOrigin">Origin</label>
+                <select
+                  id="fixtureOrigin"
+                  name="fixtureOrigin"
+                  [ngModel]="fixtureOrigin()"
+                  (ngModelChange)="fixtureOrigin.set($event)"
+                  data-testid="fixture-origin"
+                >
+                  <option value="Captured">Captured (from real app traffic)</option>
+                  <option value="Synthetic">Synthetic (hand-written)</option>
+                </select>
+              </div>
               <div class="sb-field">
                 <label for="promptInput">Prompt input</label>
                 <textarea
@@ -146,7 +229,7 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                 ></textarea>
               </div>
               <button class="sb-btn sb-btn--primary" type="submit" data-testid="capture">
-                Capture fixture
+                Add fixture
               </button>
             </form>
           }
@@ -203,7 +286,7 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
               data-testid="toggle-capture"
               (click)="showCapture.set(!showCapture())"
             >
-              + Capture fixture
+              + Add fixture
             </button>
             <button
               class="sb-btn sb-btn--sm sb-btn--secondary"
@@ -397,6 +480,31 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
         margin: 0;
         font-weight: 600;
       }
+      .fixture-row {
+        cursor: pointer;
+      }
+      .fixture-row--open {
+        background: var(--sb-surface-raised);
+      }
+      .cell-truncate {
+        max-width: 28rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .facts {
+        margin: 0 0 var(--sb-space-md);
+      }
+      .facts dt {
+        font-size: var(--sb-type-small-size);
+        color: var(--sb-text-secondary);
+        margin-top: var(--sb-space-sm);
+      }
+      .facts dd {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
     `,
   ],
 })
@@ -434,6 +542,14 @@ export class DatasetDetail implements OnInit {
   protected readonly promptInput = signal('');
   protected readonly slmOutput = signal('');
   protected readonly expectedOutput = signal('');
+  // Manual add-fixture metadata: label/description + operator-chosen origin (U7/U8).
+  protected readonly fixtureLabel = signal('');
+  protected readonly fixtureDescription = signal('');
+  protected readonly fixtureOrigin = signal<'Captured' | 'Synthetic'>('Captured');
+  // Fixture rows expand to a detail panel with an inline metadata editor (U6/U7).
+  protected readonly expandedFixtureId = signal<string | null>(null);
+  protected readonly editFixtureLabel = signal('');
+  protected readonly editFixtureDescription = signal('');
   protected readonly coverageGoals = signal('');
   protected readonly edgeCases = signal('');
   protected readonly count = signal(5);
@@ -553,6 +669,9 @@ export class DatasetDetail implements OnInit {
           slmOutput: this.slmOutput().trim() || null,
           // The optional expected output maps to Fixture.expectedOutput via downstreamResult (1.2).
           downstreamResult: this.expectedOutput().trim() || null,
+          origin: this.fixtureOrigin(),
+          label: this.fixtureLabel().trim() || null,
+          description: this.fixtureDescription().trim() || null,
         },
       ])
       .subscribe({
@@ -561,8 +680,42 @@ export class DatasetDetail implements OnInit {
           this.promptInput.set('');
           this.slmOutput.set('');
           this.expectedOutput.set('');
+          this.fixtureLabel.set('');
+          this.fixtureDescription.set('');
+          this.fixtureOrigin.set('Captured');
         },
-        error: () => this.error.set('Could not capture the fixture.'),
+        error: (err) => this.error.set(this.serverError(err) ?? 'Could not add the fixture.'),
+      });
+  }
+
+  // Expand/collapse a fixture row; on expand, seed the metadata editor from that fixture.
+  protected toggleFixture(fixtureId: string): void {
+    if (this.expandedFixtureId() === fixtureId) {
+      this.expandedFixtureId.set(null);
+      return;
+    }
+    const f = this.dataset()?.fixtures.find((x) => x.id === fixtureId);
+    this.editFixtureLabel.set(f?.label ?? '');
+    this.editFixtureDescription.set(f?.description ?? '');
+    this.expandedFixtureId.set(fixtureId);
+  }
+
+  protected saveFixtureMeta(event: Event, fixtureId: string): void {
+    event.preventDefault();
+    this.error.set(null);
+    this.api
+      .editFixture(
+        this.id,
+        fixtureId,
+        this.editFixtureLabel().trim() || null,
+        this.editFixtureDescription().trim() || null,
+      )
+      .subscribe({
+        next: (d) => {
+          this.dataset.set(d);
+          this.expandedFixtureId.set(null);
+        },
+        error: (err) => this.error.set(this.serverError(err) ?? 'Could not update the fixture.'),
       });
   }
 

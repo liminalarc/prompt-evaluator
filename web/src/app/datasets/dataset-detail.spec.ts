@@ -18,6 +18,8 @@ const dataset: Dataset = {
     {
       id: 'f1',
       origin: 'Captured',
+      label: null,
+      description: null,
       input: 'captured input',
       upstreamContext: null,
       expectedOutput: null,
@@ -27,6 +29,8 @@ const dataset: Dataset = {
     {
       id: 'f2',
       origin: 'Synthetic',
+      label: 'edge: empty',
+      description: null,
       input: 'synthetic input',
       upstreamContext: null,
       expectedOutput: null,
@@ -222,6 +226,75 @@ describe('DatasetDetail run form + scorer config', () => {
     cmp.scorerConfig.set('^OUT:');
     fixture.detectChanges();
     expect(button.disabled).toBe(false);
+  });
+
+  it('shows the fixture label column [U7]', () => {
+    const fixture = render();
+    const table = fixture.nativeElement.querySelector('[data-testid="fixtures"]') as HTMLElement;
+    expect(table.querySelector('thead')!.textContent).toContain('Label');
+    expect(table.textContent).toContain('edge: empty'); // f2's label
+  });
+
+  it('adds a manual fixture with origin, label and description [U6/U7/U8]', () => {
+    let captured: unknown = null;
+    const fixture = render();
+    const api = TestBed.inject(DatasetsApiService) as unknown as {
+      captureFixtures: (id: string, t: unknown) => unknown;
+    };
+    api.captureFixtures = (_id: string, tuples: unknown) => {
+      captured = tuples;
+      return of(dataset);
+    };
+    const cmp = fixture.componentInstance as unknown as {
+      showCapture: { set: (v: boolean) => void };
+      promptInput: { set: (v: string) => void };
+      fixtureLabel: { set: (v: string) => void };
+      fixtureOrigin: { set: (v: string) => void };
+      capture: (e: Event) => void;
+    };
+    cmp.showCapture.set(true);
+    fixture.detectChanges();
+    cmp.promptInput.set('hand-written case');
+    cmp.fixtureLabel.set('empty thread');
+    cmp.fixtureOrigin.set('Synthetic');
+    cmp.capture(new Event('submit'));
+
+    expect(captured).toEqual([
+      jasmine.objectContaining({
+        promptInput: 'hand-written case',
+        origin: 'Synthetic',
+        label: 'empty thread',
+      }),
+    ]);
+  });
+
+  it('expands a fixture row and edits its label via PATCH [U6/U7]', () => {
+    let patched: { id: string; fixtureId: string; label: string | null } | null = null;
+    const fixture = render();
+    const api = TestBed.inject(DatasetsApiService) as unknown as {
+      editFixture: (
+        id: string,
+        fixtureId: string,
+        label: string | null,
+        description: string | null,
+      ) => unknown;
+    };
+    api.editFixture = (id, fixtureId, label) => {
+      patched = { id, fixtureId, label };
+      return of(dataset);
+    };
+    const cmp = fixture.componentInstance as unknown as {
+      toggleFixture: (id: string) => void;
+      editFixtureLabel: { set: (v: string) => void };
+      saveFixtureMeta: (e: Event, id: string) => void;
+    };
+    cmp.toggleFixture('f1');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="fixture-detail"]')).not.toBeNull();
+
+    cmp.editFixtureLabel.set('renamed');
+    cmp.saveFixtureMeta(new Event('submit'), 'f1');
+    expect(patched).toEqual(jasmine.objectContaining({ fixtureId: 'f1', label: 'renamed' }));
   });
 
   it('surfaces the server error message when a run fails [B2]', () => {

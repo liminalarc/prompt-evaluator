@@ -51,6 +51,7 @@ export interface RegressionFlag {
 /** Mirrors the .NET FixtureDeltaResponse DTO. */
 export interface FixtureDelta {
   fixtureId: string;
+  fixtureLabel: string | null;
   fromValue: number | null;
   toValue: number | null;
   delta: number | null;

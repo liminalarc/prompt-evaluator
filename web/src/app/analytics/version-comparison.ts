@@ -46,7 +46,9 @@ import {
               <tbody>
                 @for (f of sc.fixtures; track f.fixtureId) {
                   <tr data-testid="fixture-delta-row">
-                    <td class="mono">{{ shortId(f.fixtureId) }}</td>
+                    <td [class.mono]="!f.fixtureLabel">
+                      {{ f.fixtureLabel ?? shortId(f.fixtureId) }}
+                    </td>
                     <td>{{ fmt(f.fromValue) }}</td>
                     <td>{{ fmt(f.toValue) }}</td>
                     <td class="delta" [class]="deltaClass(f.delta)">

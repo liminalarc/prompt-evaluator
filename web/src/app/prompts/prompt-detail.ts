@@ -284,6 +284,17 @@ import { validateImportFile } from './import-file';
                     (ngModelChange)="datasetName.set($event)"
                   />
                 </div>
+                <div class="sb-field">
+                  <label for="datasetDescription">Description (optional)</label>
+                  <textarea
+                    id="datasetDescription"
+                    name="datasetDescription"
+                    rows="2"
+                    [ngModel]="datasetDescription()"
+                    (ngModelChange)="datasetDescription.set($event)"
+                    data-testid="dataset-description"
+                  ></textarea>
+                </div>
                 <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-dataset">
                   Add dataset
                 </button>
@@ -414,6 +425,7 @@ export class PromptDetail implements OnInit {
   // Datasets + analytics — this prompt's, shown together with it (1.7).
   protected readonly datasets = signal<DatasetSummary[] | null>(null);
   protected readonly datasetName = signal('');
+  protected readonly datasetDescription = signal('');
   protected readonly selectedDatasetId = signal('');
   protected readonly trends = signal<TrendSeries[] | null>(null);
 
@@ -458,13 +470,16 @@ export class PromptDetail implements OnInit {
     const name = this.datasetName().trim();
     if (!name) return;
     this.error.set(null);
-    this.datasetsApi.createDataset(this.id, name, null).subscribe({
-      next: () => {
-        this.datasetName.set('');
-        this.loadDatasets();
-      },
-      error: () => this.error.set('Could not create the dataset.'),
-    });
+    this.datasetsApi
+      .createDataset(this.id, name, this.datasetDescription().trim() || null)
+      .subscribe({
+        next: () => {
+          this.datasetName.set('');
+          this.datasetDescription.set('');
+          this.loadDatasets();
+        },
+        error: () => this.error.set('Could not create the dataset.'),
+      });
   }
 
   protected selectDataset(datasetId: string): void {

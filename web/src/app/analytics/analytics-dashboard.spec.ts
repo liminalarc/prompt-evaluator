@@ -263,6 +263,7 @@ describe('AnalyticsDashboard', () => {
           fixtures: [
             {
               fixtureId: 'aaaaaaaa-0000-0000-0000-000000000000',
+              fixtureLabel: null,
               fromValue: 0.7,
               toValue: 0.5,
               delta: -0.2,

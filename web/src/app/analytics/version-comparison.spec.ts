@@ -20,12 +20,14 @@ const data: VersionComparisonData = {
       fixtures: [
         {
           fixtureId: 'aaaaaaaa-0000-0000-0000-000000000000',
+          fixtureLabel: 'mid-cap golfer',
           fromValue: 0.9,
           toValue: 0.7,
           delta: -0.2,
         },
         {
           fixtureId: 'bbbbbbbb-0000-0000-0000-000000000000',
+          fixtureLabel: null,
           fromValue: 0.5,
           toValue: 0.8,
           delta: 0.3,
@@ -61,6 +63,9 @@ describe('VersionComparison', () => {
     const rows = el.querySelectorAll('[data-testid="fixture-delta-row"]');
     expect(rows.length).toBe(2);
     expect(rows[0].textContent).toContain('▼'); // -0.2 regression on the first fixture
+    expect(rows[0].textContent).toContain('mid-cap golfer'); // label shown, not the GUID (U7)
+    expect(rows[0].textContent).not.toContain('aaaaaaaa');
+    expect(rows[1].textContent).toContain('bbbbbbbb'); // no label → short-GUID fallback
     expect(rows[1].textContent).toContain('▲'); // +0.3 improvement on the second
   });
 

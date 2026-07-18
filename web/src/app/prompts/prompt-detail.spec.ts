@@ -119,6 +119,32 @@ describe('PromptDetail (unified workspace)', () => {
     httpMock.expectOne('/api/prompts/p1/datasets').flush(datasets); // reload
   });
 
+  it('sends a dataset description from the create form [U5]', () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance as unknown as {
+      datasetName: { set: (v: string) => void };
+      datasetDescription: { set: (v: string) => void };
+      createDataset: (e: Event) => void;
+    };
+    cmp.datasetName.set('Described set');
+    cmp.datasetDescription.set('captured golf rounds');
+    cmp.createDataset(new Event('submit'));
+
+    const create = httpMock.expectOne('/api/prompts/p1/datasets');
+    expect(create.request.body).toEqual({
+      name: 'Described set',
+      description: 'captured golf rounds',
+    });
+    create.flush({
+      id: 'd2',
+      promptId: 'p1',
+      name: 'Described set',
+      description: 'captured golf rounds',
+      fixtures: [],
+    });
+    httpMock.expectOne('/api/prompts/p1/datasets').flush(datasets); // reload
+  });
+
   it('imports a text file into the add-version content signal', async () => {
     const fixture = setup();
     const cmp = fixture.componentInstance as unknown as {

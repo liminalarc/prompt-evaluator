@@ -2,6 +2,8 @@
 export interface Fixture {
   id: string;
   origin: 'Captured' | 'Synthetic';
+  label: string | null;
+  description: string | null;
   input: string;
   upstreamContext: string | null;
   expectedOutput: string | null;
@@ -35,6 +37,9 @@ export interface CaptureTuple {
   input: string | null;
   slmOutput: string | null;
   downstreamResult: string | null;
+  origin?: 'Captured' | 'Synthetic';
+  label?: string | null;
+  description?: string | null;
 }
 
 /** Mirrors the .NET GenerationGuidanceRequest DTO. */

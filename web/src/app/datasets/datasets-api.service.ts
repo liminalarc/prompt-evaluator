@@ -34,6 +34,19 @@ export class DatasetsApiService {
     return this.http.post<Dataset>(`/api/datasets/${id}/fixtures/capture`, { tuples });
   }
 
+  /** Edits a fixture's editable metadata — label + description (input/origin/seed are fixed). */
+  editFixture(
+    id: string,
+    fixtureId: string,
+    label: string | null,
+    description: string | null,
+  ): Observable<Dataset> {
+    return this.http.patch<Dataset>(`/api/datasets/${id}/fixtures/${fixtureId}`, {
+      label,
+      description,
+    });
+  }
+
   generateFixtures(id: string, guidance: GenerationGuidance, count: number): Observable<Dataset> {
     return this.http.post<Dataset>(`/api/datasets/${id}/fixtures/generate`, { guidance, count });
   }
