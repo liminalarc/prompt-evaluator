@@ -12,6 +12,13 @@ public sealed class Fixture
 
     public FixtureOrigin Origin { get; private set; }
 
+    /// <summary>Optional short human label for the scenario (e.g. "improving mid-handicapper") —
+    /// shown in tables instead of the raw input. Editable metadata (U7).</summary>
+    public string? Label { get; private set; }
+
+    /// <summary>Optional longer description of the fixture. Editable metadata (U7).</summary>
+    public string? Description { get; private set; }
+
     /// <summary>The prompt's actual input.</summary>
     public string Input { get; private set; }
 
@@ -32,6 +39,8 @@ public sealed class Fixture
     internal Fixture(
         FixtureOrigin origin,
         string input,
+        string? label,
+        string? description,
         string? upstreamContext,
         string? expectedOutput,
         Guid? seedFixtureId,
@@ -40,6 +49,8 @@ public sealed class Fixture
         Id = Guid.NewGuid();
         Origin = origin;
         Input = input;
+        Label = label;
+        Description = description;
         UpstreamContext = upstreamContext;
         ExpectedOutput = expectedOutput;
         SeedFixtureId = seedFixtureId;
@@ -50,5 +61,16 @@ public sealed class Fixture
     private Fixture()
     {
         Input = string.Empty;
+    }
+
+    /// <summary>
+    /// Updates the fixture's editable metadata — its <see cref="Label"/> and
+    /// <see cref="Description"/>. Input/origin/seed are fixed. Called only by the owning
+    /// <see cref="Dataset"/> aggregate, via <see cref="Dataset.EditFixtureMetadata"/>.
+    /// </summary>
+    internal void SetMetadata(string? label, string? description)
+    {
+        Label = label;
+        Description = description;
     }
 }

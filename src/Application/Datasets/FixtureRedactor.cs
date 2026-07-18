@@ -14,9 +14,11 @@ public sealed partial class FixtureRedactor
     [GeneratedRegex(@"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", RegexOptions.CultureInvariant)]
     private static partial Regex EmailRegex();
 
-    // Loose international/NANP phone match: optional +, groups of digits with space/dot/hyphen
-    // separators, 9+ digits total. Kept conservative to avoid mangling ordinary numbers.
-    [GeneratedRegex(@"\+?\d[\d\-\.\s]{7,}\d", RegexOptions.CultureInvariant)]
+    // Loose international/NANP phone match: optional +, then a run of digits (space/dot/hyphen
+    // separated) totalling at least 10 digits. Requiring ≥10 digits keeps date-shaped strings
+    // safe — an ISO date (2026-07-12, 8 digits) never matches (B7); a real phone (10–15 digits)
+    // still does. Kept conservative to avoid mangling ordinary numbers.
+    [GeneratedRegex(@"\+?\d(?:[\s\-\.]?\d){9,}", RegexOptions.CultureInvariant)]
     private static partial Regex PhoneRegex();
 
     /// <summary>Returns the text with recognised PII replaced by placeholders; null passes through.</summary>

@@ -80,6 +80,54 @@ public class DatasetTests
     }
 
     [Fact]
+    public void AddManualFixture_can_mark_synthetic_with_no_seed()
+    {
+        var dataset = Dataset.Create(PromptId, "Summaries");
+
+        var fixture = dataset.AddManualFixture(
+            FixtureOrigin.Synthetic, "hand-written edge case", When, label: "empty thread");
+
+        Assert.Equal(FixtureOrigin.Synthetic, fixture.Origin);
+        Assert.Null(fixture.SeedFixtureId); // hand-authored → no seed
+        Assert.Equal("empty thread", fixture.Label);
+    }
+
+    [Fact]
+    public void AddCapturedFixture_records_label_and_description()
+    {
+        var dataset = Dataset.Create(PromptId, "Summaries");
+
+        var fixture = dataset.AddCapturedFixture(
+            "Summarize this", When, label: "mid-cap", description: "improving mid-handicapper");
+
+        Assert.Equal("mid-cap", fixture.Label);
+        Assert.Equal("improving mid-handicapper", fixture.Description);
+    }
+
+    [Fact]
+    public void EditFixtureMetadata_updates_label_and_description_leaving_input_fixed()
+    {
+        var dataset = Dataset.Create(PromptId, "Summaries");
+        var fixture = dataset.AddCapturedFixture("Summarize this", When, label: "old");
+
+        var ok = dataset.EditFixtureMetadata(fixture.Id, "new label", "new description");
+
+        Assert.True(ok);
+        Assert.Equal("new label", fixture.Label);
+        Assert.Equal("new description", fixture.Description);
+        Assert.Equal("Summarize this", fixture.Input); // fixed
+    }
+
+    [Fact]
+    public void EditFixtureMetadata_returns_false_for_an_unknown_fixture()
+    {
+        var dataset = Dataset.Create(PromptId, "Summaries");
+        dataset.AddCapturedFixture("Summarize this", When);
+
+        Assert.False(dataset.EditFixtureMetadata(Guid.NewGuid(), "x", null));
+    }
+
+    [Fact]
     public void AddSyntheticFixture_rejects_an_empty_seed()
     {
         var dataset = Dataset.Create(PromptId, "Summaries");

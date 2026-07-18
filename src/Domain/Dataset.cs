@@ -52,12 +52,16 @@ public sealed class Dataset
     public Fixture AddCapturedFixture(
         string input,
         DateTimeOffset createdAt,
+        string? label = null,
+        string? description = null,
         string? upstreamContext = null,
         string? expectedOutput = null)
     {
         var fixture = new Fixture(
             FixtureOrigin.Captured,
             RequireInput(input),
+            Normalize(label),
+            Normalize(description),
             Normalize(upstreamContext),
             Normalize(expectedOutput),
             seedFixtureId: null,
@@ -68,13 +72,16 @@ public sealed class Dataset
 
     /// <summary>
     /// Appends a synthetic fixture, linked to the captured <paramref name="seedFixtureId"/> it
-    /// was generated from. Synthetic fixtures must always name a seed so the distribution stays
-    /// traceable to captured ground truth.
+    /// was generated from. Generated synthetic fixtures must always name a seed so the distribution
+    /// stays traceable to captured ground truth. (Hand-authored synthetic fixtures use
+    /// <see cref="AddManualFixture"/> instead — they have no seed.)
     /// </summary>
     public Fixture AddSyntheticFixture(
         string input,
         Guid seedFixtureId,
         DateTimeOffset createdAt,
+        string? label = null,
+        string? description = null,
         string? upstreamContext = null,
         string? expectedOutput = null)
     {
@@ -84,12 +91,56 @@ public sealed class Dataset
         var fixture = new Fixture(
             FixtureOrigin.Synthetic,
             RequireInput(input),
+            Normalize(label),
+            Normalize(description),
             Normalize(upstreamContext),
             Normalize(expectedOutput),
             seedFixtureId,
             createdAt);
         _fixtures.Add(fixture);
         return fixture;
+    }
+
+    /// <summary>
+    /// Appends a <b>hand-authored</b> fixture with an operator-chosen <paramref name="origin"/>
+    /// (U8 — manual entry can mark Synthetic, not only Captured). Unlike a generated synthetic
+    /// fixture it has no seed: the operator wrote it, so there is no captured example it derives
+    /// from.
+    /// </summary>
+    public Fixture AddManualFixture(
+        FixtureOrigin origin,
+        string input,
+        DateTimeOffset createdAt,
+        string? label = null,
+        string? description = null,
+        string? upstreamContext = null,
+        string? expectedOutput = null)
+    {
+        var fixture = new Fixture(
+            origin,
+            RequireInput(input),
+            Normalize(label),
+            Normalize(description),
+            Normalize(upstreamContext),
+            Normalize(expectedOutput),
+            seedFixtureId: null,
+            createdAt);
+        _fixtures.Add(fixture);
+        return fixture;
+    }
+
+    /// <summary>
+    /// Edits a fixture's editable metadata — its label and description (U7). Input/origin/seed are
+    /// fixed. Returns false when the fixture is not in this dataset.
+    /// </summary>
+    public bool EditFixtureMetadata(Guid fixtureId, string? label, string? description)
+    {
+        var fixture = _fixtures.FirstOrDefault(f => f.Id == fixtureId);
+        if (fixture is null)
+            return false;
+
+        fixture.SetMetadata(Normalize(label), Normalize(description));
+        return true;
     }
 
     private static string RequireInput(string input)

@@ -10,7 +10,13 @@ namespace Application.Datasets;
 /// is the immediate upstream context the input was derived from; <see cref="DownstreamResult"/>
 /// is an optional reference output.
 /// </summary>
-public sealed record CapturedTuple(string PromptInput, string? SlmOutput, string? DownstreamResult);
+public sealed record CapturedTuple(
+    string PromptInput,
+    string? SlmOutput,
+    string? DownstreamResult,
+    FixtureOrigin Origin = FixtureOrigin.Captured,
+    string? Label = null,
+    string? Description = null);
 
 /// <summary>
 /// Lands captured tuples as <see cref="FixtureOrigin.Captured"/> fixtures. Every text field is
@@ -34,9 +40,14 @@ public sealed class CaptureFixturesHandler(
         var now = time.GetUtcNow();
         foreach (var tuple in tuples)
         {
-            dataset.AddCapturedFixture(
+            // Manual-entry path (U8): the operator chooses the origin. Content is redacted at ingest;
+            // the label/description are operator-authored metadata, so they pass through as-is.
+            dataset.AddManualFixture(
+                tuple.Origin,
                 redactor.Redact(tuple.PromptInput)!,
                 now,
+                label: tuple.Label,
+                description: tuple.Description,
                 upstreamContext: redactor.Redact(tuple.SlmOutput),
                 expectedOutput: redactor.Redact(tuple.DownstreamResult));
         }

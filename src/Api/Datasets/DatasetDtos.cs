@@ -19,9 +19,13 @@ public sealed record CreateDatasetUnderPromptRequest(string Name, string? Descri
 /// </para>
 /// </summary>
 public sealed record CaptureTupleRequest(
-    string PromptInput, string? Input, string? SlmOutput, string? DownstreamResult);
+    string PromptInput, string? Input, string? SlmOutput, string? DownstreamResult,
+    string? Origin = null, string? Label = null, string? Description = null);
 
 public sealed record CaptureFixturesRequest(List<CaptureTupleRequest> Tuples);
+
+/// <summary>Editable fixture metadata — label + description; input/origin/seed are fixed (U7).</summary>
+public sealed record EditFixtureRequest(string? Label, string? Description);
 
 public sealed record GenerationGuidanceRequest(string? CoverageGoals, string? EdgeCases, string? Constraints);
 
@@ -30,6 +34,8 @@ public sealed record GenerateFixturesRequest(GenerationGuidanceRequest? Guidance
 public sealed record FixtureResponse(
     Guid Id,
     string Origin,
+    string? Label,
+    string? Description,
     string Input,
     string? UpstreamContext,
     string? ExpectedOutput,
@@ -37,7 +43,7 @@ public sealed record FixtureResponse(
     DateTimeOffset CreatedAt)
 {
     public static FixtureResponse From(Fixture f) =>
-        new(f.Id, f.Origin.ToString(), f.Input, f.UpstreamContext, f.ExpectedOutput, f.SeedFixtureId, f.CreatedAt);
+        new(f.Id, f.Origin.ToString(), f.Label, f.Description, f.Input, f.UpstreamContext, f.ExpectedOutput, f.SeedFixtureId, f.CreatedAt);
 }
 
 public sealed record DatasetResponse(

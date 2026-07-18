@@ -6,7 +6,8 @@ namespace Application.Analytics;
 /// side (e.g. added to the dataset between runs); <see cref="Delta"/> (<c>To − From</c>) is null
 /// unless both sides are present.
 /// </summary>
-public sealed record FixtureDelta(Guid FixtureId, double? FromValue, double? ToValue, double? Delta);
+public sealed record FixtureDelta(
+    Guid FixtureId, string? FixtureLabel, double? FromValue, double? ToValue, double? Delta);
 
 /// <summary>
 /// A single scorer's view of a version comparison: the aggregate means on each side (over that

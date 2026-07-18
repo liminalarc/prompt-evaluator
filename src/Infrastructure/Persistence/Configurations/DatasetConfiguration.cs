@@ -32,6 +32,8 @@ internal sealed class DatasetConfiguration : IEntityTypeConfiguration<Dataset>
             f.HasKey(x => x.Id);
             f.Property(x => x.Id).ValueGeneratedNever();
             f.Property(x => x.Origin).HasConversion<string>().IsRequired();
+            f.Property(x => x.Label);
+            f.Property(x => x.Description);
             f.Property(x => x.Input).IsRequired();
             f.Property(x => x.UpstreamContext);
             f.Property(x => x.ExpectedOutput);

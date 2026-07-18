@@ -63,7 +63,7 @@ public sealed class DatasetsEndpointTests : IAsyncLifetime
     }
 
     private sealed record FixtureDto(
-        Guid Id, string Origin, string Input, string? UpstreamContext, string? ExpectedOutput,
+        Guid Id, string Origin, string? Label, string? Description, string Input, string? UpstreamContext, string? ExpectedOutput,
         Guid? SeedFixtureId, DateTimeOffset CreatedAt);
     private sealed record DatasetDto(Guid Id, Guid PromptId, string Name, string? Description, List<FixtureDto> Fixtures);
     private sealed record SummaryDto(
@@ -133,6 +133,92 @@ public sealed class DatasetsEndpointTests : IAsyncLifetime
         var fixture = Assert.Single(fetched!.Fixtures);
         Assert.DoesNotContain("bob@acme.com", fixture.Input);
         Assert.Contains("[REDACTED-EMAIL]", fixture.Input);
+    }
+
+    [Fact]
+    public async Task Capture_can_mark_a_manual_fixture_synthetic_with_a_label()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync();
+        var promptId = await CreatePromptAsync(client);
+        var create = await client.PostAsJsonAsync($"/api/prompts/{promptId}/datasets", new { name = "Manual", description = (string?)null });
+        var created = await create.Content.ReadFromJsonAsync<DatasetDto>();
+
+        await client.PostAsJsonAsync($"/api/datasets/{created!.Id}/fixtures/capture", new
+        {
+            tuples = new[]
+            {
+                new { promptInput = "hand written", input = (string?)null, slmOutput = (string?)null,
+                    downstreamResult = (string?)null, origin = "Synthetic", label = "empty thread", description = "no rounds yet" },
+            },
+        });
+
+        var fetched = await client.GetFromJsonAsync<DatasetDto>($"/api/datasets/{created.Id}");
+        var fixture = Assert.Single(fetched!.Fixtures);
+        Assert.Equal("Synthetic", fixture.Origin); // U8
+        Assert.Null(fixture.SeedFixtureId);
+        Assert.Equal("empty thread", fixture.Label);
+        Assert.Equal("no rounds yet", fixture.Description);
+    }
+
+    [Fact]
+    public async Task Capture_does_not_scrub_iso_dates_as_phone_numbers()
+    {
+        // B7: a date in captured text must survive ingest intact (was mangled to [REDACTED-PHONE]).
+        var client = await _factory.CreateAuthenticatedClientAsync();
+        var promptId = await CreatePromptAsync(client);
+        var create = await client.PostAsJsonAsync($"/api/prompts/{promptId}/datasets", new { name = "Dates", description = (string?)null });
+        var created = await create.Content.ReadFromJsonAsync<DatasetDto>();
+
+        await client.PostAsJsonAsync($"/api/datasets/{created!.Id}/fixtures/capture", new
+        {
+            tuples = new[]
+            {
+                new { promptInput = "RECENT ROUNDS on 2026-07-12 were strong", input = (string?)null, slmOutput = (string?)null, downstreamResult = (string?)null },
+            },
+        });
+
+        var fetched = await client.GetFromJsonAsync<DatasetDto>($"/api/datasets/{created.Id}");
+        var fixture = Assert.Single(fetched!.Fixtures);
+        Assert.Contains("2026-07-12", fixture.Input);
+        Assert.DoesNotContain("REDACTED-PHONE", fixture.Input);
+    }
+
+    [Fact]
+    public async Task Edit_fixture_updates_label_and_description()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync();
+        var promptId = await CreatePromptAsync(client);
+        var create = await client.PostAsJsonAsync($"/api/prompts/{promptId}/datasets", new { name = "Edit", description = (string?)null });
+        var created = await create.Content.ReadFromJsonAsync<DatasetDto>();
+        await client.PostAsJsonAsync($"/api/datasets/{created!.Id}/fixtures/capture", new
+        {
+            tuples = new[] { new { promptInput = "input", input = (string?)null, slmOutput = (string?)null, downstreamResult = (string?)null } },
+        });
+        var withFixture = await client.GetFromJsonAsync<DatasetDto>($"/api/datasets/{created.Id}");
+        var fixtureId = withFixture!.Fixtures[0].Id;
+
+        var edit = await client.PatchAsJsonAsync($"/api/datasets/{created.Id}/fixtures/{fixtureId}",
+            new { label = "renamed", description = "a scenario" });
+        Assert.Equal(HttpStatusCode.OK, edit.StatusCode);
+
+        var fetched = await client.GetFromJsonAsync<DatasetDto>($"/api/datasets/{created.Id}");
+        var fixture = Assert.Single(fetched!.Fixtures);
+        Assert.Equal("renamed", fixture.Label);
+        Assert.Equal("a scenario", fixture.Description);
+        Assert.Equal("input", fixture.Input); // fixed
+    }
+
+    [Fact]
+    public async Task Edit_unknown_fixture_returns_404()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync();
+        var promptId = await CreatePromptAsync(client);
+        var create = await client.PostAsJsonAsync($"/api/prompts/{promptId}/datasets", new { name = "E404", description = (string?)null });
+        var created = await create.Content.ReadFromJsonAsync<DatasetDto>();
+
+        var edit = await client.PatchAsJsonAsync($"/api/datasets/{created!.Id}/fixtures/{Guid.NewGuid()}",
+            new { label = "x", description = (string?)null });
+        Assert.Equal(HttpStatusCode.NotFound, edit.StatusCode);
     }
 
     [Fact]

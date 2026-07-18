@@ -1,6 +1,7 @@
 using Api.Auth;
 using Application.Datasets;
 using Application.Ports;
+using Domain;
 
 namespace Api.Datasets;
 
@@ -78,11 +79,12 @@ public static class DatasetEndpoints
             {
                 if ((await access.CanAccessDatasetAsync(id, ct)).ToProblem() is { } problem)
                     return problem;
-                var tuples = (request.Tuples ?? new())
-                    .Select(t => new CapturedTuple(t.PromptInput, t.SlmOutput, t.DownstreamResult))
-                    .ToList();
                 try
                 {
+                    var tuples = (request.Tuples ?? new())
+                        .Select(t => new CapturedTuple(
+                            t.PromptInput, t.SlmOutput, t.DownstreamResult, ParseOrigin(t.Origin), t.Label, t.Description))
+                        .ToList();
                     var dataset = await handler.HandleAsync(id, tuples, ct);
                     return dataset is null ? Results.NotFound() : Results.Ok(DatasetResponse.From(dataset));
                 }
@@ -90,6 +92,16 @@ public static class DatasetEndpoints
                 {
                     return Results.BadRequest(new { error = ex.Message });
                 }
+            });
+
+        // Edit a fixture's editable metadata — label + description (U7). Input/origin/seed are fixed.
+        group.MapPatch("/{id:guid}/fixtures/{fixtureId:guid}",
+            async (Guid id, Guid fixtureId, EditFixtureRequest request, EditFixtureHandler handler, OrgAccess access, CancellationToken ct) =>
+            {
+                if ((await access.CanAccessDatasetAsync(id, ct)).ToProblem() is { } problem)
+                    return problem;
+                var dataset = await handler.HandleAsync(id, fixtureId, request.Label, request.Description, ct);
+                return dataset is null ? Results.NotFound() : Results.Ok(DatasetResponse.From(dataset));
             });
 
         group.MapPost("/{id:guid}/fixtures/generate",
@@ -113,4 +125,10 @@ public static class DatasetEndpoints
 
         return app;
     }
+
+    // Manual fixtures may be marked Synthetic (U8); anything else (or blank) defaults to Captured.
+    private static FixtureOrigin ParseOrigin(string? origin) =>
+        Enum.TryParse<FixtureOrigin>(origin, ignoreCase: true, out var parsed)
+            ? parsed
+            : FixtureOrigin.Captured;
 }

@@ -113,6 +113,56 @@ public class DatasetHandlersTests
     }
 
     [Fact]
+    public async Task CaptureFixtures_honors_a_manual_synthetic_origin_and_label()
+    {
+        var repo = new InMemoryDatasetRepo();
+        var existing = Dataset.Create(Guid.NewGuid(), "Summaries");
+        await repo.AddAsync(existing);
+        var handler = new CaptureFixturesHandler(repo, new FixtureRedactor(), new FixedTime(When));
+
+        var updated = await handler.HandleAsync(existing.Id, new[]
+        {
+            new CapturedTuple("hand-written edge case", null, null, FixtureOrigin.Synthetic, "empty thread", "no rounds yet"),
+        });
+
+        var fixture = Assert.Single(updated!.Fixtures);
+        Assert.Equal(FixtureOrigin.Synthetic, fixture.Origin); // U8
+        Assert.Null(fixture.SeedFixtureId); // hand-authored, not generated
+        Assert.Equal("empty thread", fixture.Label);
+        Assert.Equal("no rounds yet", fixture.Description);
+    }
+
+    [Fact]
+    public async Task EditFixture_updates_metadata_and_saves()
+    {
+        var repo = new InMemoryDatasetRepo();
+        var existing = Dataset.Create(Guid.NewGuid(), "Summaries");
+        var fixture = existing.AddCapturedFixture("summarize this", When, label: "old");
+        await repo.AddAsync(existing);
+        var handler = new EditFixtureHandler(repo);
+
+        var updated = await handler.HandleAsync(existing.Id, fixture.Id, "new label", "new description");
+
+        Assert.NotNull(updated);
+        var f = Assert.Single(updated!.Fixtures);
+        Assert.Equal("new label", f.Label);
+        Assert.Equal("new description", f.Description);
+        Assert.Equal(1, repo.SaveChangesCalls);
+    }
+
+    [Fact]
+    public async Task EditFixture_returns_null_when_the_fixture_does_not_exist()
+    {
+        var repo = new InMemoryDatasetRepo();
+        var existing = Dataset.Create(Guid.NewGuid(), "Summaries");
+        await repo.AddAsync(existing);
+        var handler = new EditFixtureHandler(repo);
+
+        Assert.Null(await handler.HandleAsync(existing.Id, Guid.NewGuid(), "x", null));
+        Assert.Equal(0, repo.SaveChangesCalls);
+    }
+
+    [Fact]
     public async Task CaptureFixtures_redacts_pii_before_persisting()
     {
         var repo = new InMemoryDatasetRepo();

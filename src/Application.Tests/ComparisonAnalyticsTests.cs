@@ -35,6 +35,20 @@ public class ComparisonAnalyticsTests
                 Saved.Where(r => r.PromptId == promptId && r.DatasetId == datasetId).ToList());
     }
 
+    private sealed class InMemoryDatasetRepo : IDatasetRepository
+    {
+        private readonly List<Dataset> _saved = [];
+        public Task AddAsync(Dataset dataset, CancellationToken ct = default) { _saved.Add(dataset); return Task.CompletedTask; }
+        public Task<Dataset?> GetByIdAsync(Guid id, CancellationToken ct = default)
+            => Task.FromResult(_saved.SingleOrDefault(d => d.Id == id));
+        public Task<IReadOnlyList<Dataset>> ListAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Dataset>>(_saved);
+        public Task<IReadOnlyList<Dataset>> ListByPromptAsync(Guid promptId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Dataset>>(_saved.Where(d => d.PromptId == promptId).ToList());
+        public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task DeleteAsync(Guid id, CancellationToken ct = default) { _saved.RemoveAll(d => d.Id == id); return Task.CompletedTask; }
+    }
+
     private static EvalRun RunFor(
         Guid promptId, Guid versionId, Guid datasetId, ScorerDescriptor scorer,
         DateTimeOffset at, IReadOnlyList<(Guid fixtureId, double value)> scores)
@@ -62,7 +76,7 @@ public class ComparisonAnalyticsTests
         await runs.AddAsync(RunFor(prompt.Id, v1.Id, datasetId, scorer, When, [(f0, 0.9), (f1, 0.5)]));
         await runs.AddAsync(RunFor(prompt.Id, v2.Id, datasetId, scorer, When.AddDays(1), [(f0, 0.7), (f1, 0.8)]));
 
-        var handler = new ComparisonAnalyticsHandler(runs, promptRepo);
+        var handler = new ComparisonAnalyticsHandler(runs, promptRepo, new InMemoryDatasetRepo());
         var cmp = await handler.HandleAsync(prompt.Id, datasetId, v1.Id, v2.Id);
 
         Assert.NotNull(cmp);
@@ -86,6 +100,31 @@ public class ComparisonAnalyticsTests
     }
 
     [Fact]
+    public async Task Comparison_labels_each_fixture_from_the_dataset()
+    {
+        var prompt = Prompt.Create(Guid.NewGuid(), "Summarizer");
+        var v1 = prompt.AddVersion("v1", "claude-opus-4-8", When);
+        var v2 = prompt.AddVersion("v2", "claude-opus-4-8", When.AddDays(1));
+        var dataset = Dataset.Create(prompt.Id, "Summaries");
+        var f = dataset.AddManualFixture(FixtureOrigin.Captured, "improving mid-handicapper", When, label: "mid-cap");
+        var scorer = ScorerDescriptor.Deterministic(ScorerKind.FuzzyMatch);
+
+        var promptRepo = new InMemoryPromptRepo();
+        await promptRepo.AddAsync(prompt);
+        var datasetRepo = new InMemoryDatasetRepo();
+        await datasetRepo.AddAsync(dataset);
+        var runs = new InMemoryEvalRunRepo();
+        await runs.AddAsync(RunFor(prompt.Id, v1.Id, dataset.Id, scorer, When, [(f.Id, 0.5)]));
+        await runs.AddAsync(RunFor(prompt.Id, v2.Id, dataset.Id, scorer, When.AddDays(1), [(f.Id, 0.9)]));
+
+        var handler = new ComparisonAnalyticsHandler(runs, promptRepo, datasetRepo);
+        var cmp = await handler.HandleAsync(prompt.Id, dataset.Id, v1.Id, v2.Id);
+
+        var delta = Assert.Single(Assert.Single(cmp!.Scorers).Fixtures);
+        Assert.Equal("mid-cap", delta.FixtureLabel);
+    }
+
+    [Fact]
     public async Task Comparison_uses_the_latest_run_of_each_version()
     {
         var prompt = Prompt.Create(Guid.NewGuid(), "Summarizer");
@@ -102,7 +141,7 @@ public class ComparisonAnalyticsTests
         await runs.AddAsync(RunFor(prompt.Id, v2.Id, datasetId, scorer, When.AddHours(1), [(f0, 0.1)])); // stale
         await runs.AddAsync(RunFor(prompt.Id, v2.Id, datasetId, scorer, When.AddDays(1), [(f0, 0.9)]));  // latest
 
-        var handler = new ComparisonAnalyticsHandler(runs, promptRepo);
+        var handler = new ComparisonAnalyticsHandler(runs, promptRepo, new InMemoryDatasetRepo());
         var cmp = await handler.HandleAsync(prompt.Id, datasetId, v1.Id, v2.Id);
 
         var sc = Assert.Single(cmp!.Scorers);
@@ -127,7 +166,7 @@ public class ComparisonAnalyticsTests
         await runs.AddAsync(RunFor(prompt.Id, v1.Id, datasetId, scorer, When, [(shared, 0.5), (onlyOld, 0.9)]));
         await runs.AddAsync(RunFor(prompt.Id, v2.Id, datasetId, scorer, When.AddDays(1), [(shared, 0.7)]));
 
-        var handler = new ComparisonAnalyticsHandler(runs, promptRepo);
+        var handler = new ComparisonAnalyticsHandler(runs, promptRepo, new InMemoryDatasetRepo());
         var sc = Assert.Single((await handler.HandleAsync(prompt.Id, datasetId, v1.Id, v2.Id))!.Scorers);
 
         var removed = Assert.Single(sc.Fixtures, x => x.FixtureId == onlyOld);
@@ -143,7 +182,7 @@ public class ComparisonAnalyticsTests
         var v1 = prompt.AddVersion("v1", "claude-opus-4-8", When);
         var promptRepo = new InMemoryPromptRepo();
         await promptRepo.AddAsync(prompt);
-        var handler = new ComparisonAnalyticsHandler(new InMemoryEvalRunRepo(), promptRepo);
+        var handler = new ComparisonAnalyticsHandler(new InMemoryEvalRunRepo(), promptRepo, new InMemoryDatasetRepo());
 
         Assert.Null(await handler.HandleAsync(prompt.Id, Guid.NewGuid(), v1.Id, Guid.NewGuid()));
         Assert.Null(await handler.HandleAsync(Guid.NewGuid(), Guid.NewGuid(), v1.Id, v1.Id));

@@ -7,7 +7,8 @@ namespace Application.Analytics;
 /// Compares two prompt versions over a dataset, per scorer: aggregate means on each side plus a
 /// per-fixture delta breakdown (matched by fixture id), using each version's latest run. Read-only.
 /// </summary>
-public sealed class ComparisonAnalyticsHandler(IEvalRunRepository runs, IPromptRepository prompts)
+public sealed class ComparisonAnalyticsHandler(
+    IEvalRunRepository runs, IPromptRepository prompts, IDatasetRepository datasets)
 {
     /// <summary>Returns null when the prompt or either version does not exist (Api → 404).</summary>
     public async Task<VersionComparison?> HandleAsync(
@@ -18,6 +19,10 @@ public sealed class ComparisonAnalyticsHandler(IEvalRunRepository runs, IPromptR
         var toVersion = prompt?.Versions.FirstOrDefault(v => v.Id == toVersionId);
         if (prompt is null || fromVersion is null || toVersion is null)
             return null;
+
+        // Fixture labels (U7) so the per-fixture table reads by scenario, not opaque GUID.
+        var dataset = await datasets.GetByIdAsync(datasetId, ct);
+        var labels = dataset?.Fixtures.ToDictionary(f => f.Id, f => f.Label) ?? [];
 
         var allRuns = await runs.ListByPromptAndDatasetAsync(promptId, datasetId, ct);
         var latest = AnalyticsProjection.LatestRunPerVersion(allRuns, prompt.Versions.Select(v => v.Id).ToHashSet());
@@ -53,7 +58,8 @@ public sealed class ComparisonAnalyticsHandler(IEvalRunRepository runs, IPromptR
                 {
                     double? from = e.From.TryGetValue(id, out var fv) ? fv : null;
                     double? to = e.To.TryGetValue(id, out var tv) ? tv : null;
-                    return new FixtureDelta(id, from, to, from.HasValue && to.HasValue ? to - from : null);
+                    var label = labels.TryGetValue(id, out var l) ? l : null;
+                    return new FixtureDelta(id, label, from, to, from.HasValue && to.HasValue ? to - from : null);
                 }).ToList();
 
                 double? fromMean = e.From.Count > 0 ? e.From.Values.Average() : null;
