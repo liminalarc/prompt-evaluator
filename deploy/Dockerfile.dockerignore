@@ -1,0 +1,16 @@
+# Build context is the repo root (docker build -f deploy/Dockerfile .). Keep the context small
+# and deterministic — the image rebuilds node_modules / publish output from source.
+**/node_modules
+**/dist
+**/bin
+**/obj
+**/.git
+**/.vs
+**/.venv
+**/__pycache__
+**/*.user
+web/.angular
+specs
+smoke
+samples
+*.md

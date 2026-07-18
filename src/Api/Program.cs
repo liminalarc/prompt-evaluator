@@ -84,6 +84,12 @@ var app = builder.Build();
 
 app.UseCors(DevCors);
 
+// Single-origin deploy (3.2): outside Development the API also serves the built Angular SPA from
+// wwwroot (the `litmus-ai` App Runner image bundles it — no nginx). In Development the SPA is owned
+// by `ng serve` / the compose nginx, so static serving stays off and the API is framework-only.
+if (!app.Environment.IsDevelopment())
+    app.UseStaticFiles();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -100,6 +106,11 @@ app.MapFolderEndpoints();
 app.MapDatasetEndpoints();
 app.MapEvalHarnessEndpoints();
 app.MapAnalyticsEndpoints();
+
+// SPA client-side routes (e.g. /prompts, /analytics) fall back to index.html outside Development.
+// Lowest route priority, so the /api/* endpoints and /health, /version above keep their responses.
+if (!app.Environment.IsDevelopment())
+    app.MapFallbackToFile("index.html");
 
 // Apply migrations on startup once a database is configured (skipped when none is,
 // e.g. the bare /health integration test).
