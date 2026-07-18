@@ -217,7 +217,7 @@ resource "aws_iam_role_policy" "apprunner_instance_secrets" {
 # ---------------------------------------------------------------------------
 resource "aws_security_group" "rds" {
   name        = "litmus-ai-rds"
-  description = "LitmusAI RDS Postgres — accepts 5432 only from the shared App Runner connector SG"
+  description = "LitmusAI RDS Postgres - accepts 5432 only from the shared App Runner connector SG"
   vpc_id      = data.aws_vpc.shared.id
 
   ingress {
