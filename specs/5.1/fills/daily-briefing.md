@@ -128,8 +128,20 @@ Deduct for markdown, vagueness, generic filler, wrong or invented numbers, and w
   runs adaptive thinking by default → truncated the structured verdict JSON → eval-runner 500 (finding
   B6). **Fixed** in eval-runner (`JUDGE_MAX_TOKENS`, model-agnostic budget); deploying via CI. Your saved
   Sonnet-5 scorer is fine as-is — just **re-run** once dev redeploys (no dataset recreate needed).
-- **v1 baseline** (haiku): _record judge avg + per-fixture, `[0-9]` fails_ →
-- **Hypothesis:** _one thing to improve_ →
-- **v2:** _what changed_ → _movement vs v1_ →
-- **Backport:** _committed to Golf / declined + reason_ →
-- **Learnings:** _what moved the needle_
+- **v1 baseline** (haiku, judge Sonnet 5): avg **0.55**, **1/5 pass** (F4=0.80; F3=0.62, F2=0.55,
+  F5=0.45, F1=0.35). Regex 5/5 pass. Dominant miss = **word count**: 4/5 under 75 (F1 62, F5 55, F2 49,
+  F3 69; only F4 88). Secondary: **computed/invented stats** (F1 wrong 4-round avg 86.3 vs 88.75; F3
+  speculative) + **vague micro-tips**. (Also surfaced redactor bug B7.)
+- **Hypothesis:** "75-100 **maximum**" reads as a ceiling → undershoot; model fills/reasons via
+  computed or vague filler. → v2: firm 75-100 target reached by **citing more real numbers**, and
+  **ban computing new stats**; micro-tip must be data-tied.
+- **v2:** firm length + no-computed-stats + data-tied tip → **avg 0.88 (was 0.55, +0.33), 5/5 pass
+  (was 1/5)**. Fixed undershoot (all in 75-100) + invented stats (F1 0.35→0.90). Residue: slightly
+  generic micro-tips (the 0.85s). Cost/call ~3-5× (longer prompt + fuller output) — negligible for a
+  once-daily 24h-cached call. Analytics: _pending user check_.
+- **Backport:** _recommend_ — clear quality win, cost bump immaterial for daily-briefing. Actual Golf-repo
+  edit **deferred to T3 resume** (walk pinned here).
+- **Learnings:** "N words **maximum**" reads as a ceiling → models undershoot; reframe to a firm target
+  reached by **citing more real data**, and **explicitly ban computing new stats** (models will fabricate
+  derived numbers to fill space). Likely applies to other narrative prompts (golf-dna, hole-notes,
+  round-debrief, stat-narratives).

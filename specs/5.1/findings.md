@@ -30,6 +30,13 @@
   thinking) and/or raise `max_tokens`. This blocks LLM-judge scoring for ~all freeform prompts, so it's
   the highest-priority finding. → *home: eval-runner fix (own task / 2.8 backend slice)*
 
+- **B7 — Fixture redactor corrupts ISO dates as phone numbers.** `FixtureRedactor.PhoneRegex`
+  (`\+?\d[\d\-\.\s]{7,}\d`) matches `2026-07-12` → replaces it with `[REDACTED-PHONE]`. Runs **at
+  ingest before persist**, so the stored fixture *and* the input sent to the model are corrupted (not
+  display-only). Surfaced on the daily-briefing baseline (dates in RECENT ROUNDS all scrubbed). Fix:
+  tighten the phone pattern so date-shaped strings don't match (e.g. require ≥10 digits, phone-like
+  grouping / leading `+`/`(`, or a negative lookahead for `\d{4}-\d{2}-\d{2}`). → *home: 2.8 (bug)*
+
 ## UX / consistency
 - **U1 — Create-prompt lands on the prompts table**, not the new prompt's workspace (`/prompts/:id`).
   Should navigate to the thing you just made. → *home: 2.8*
@@ -44,7 +51,8 @@
   create form omits it). → *home: 2.8*
 - **U6 — Fixtures need the add/edit table pattern** (add or edit a row → reveal details), like the rest. → *home: 2.8*
 - **U7 — Fixtures have no label/description.** A short name ("improving mid-handicapper") beats showing the
-  raw input in the table. Add `Fixture.Label`/`Description`. → *home: 2.8*
+  raw input in the table. Add `Fixture.Label`/`Description`. Also bites **Analytics** — the compare-versions
+  table lists fixtures by opaque GUID (`4ae1e431…`), so you can't tell which scenario moved. → *home: 2.8*
 - **U8 — Hand-entered fixtures are mislabeled `Captured`.** The capture form is the only manual-entry path
   and stamps origin `Captured`; truly-synthetic hand-written fixtures read wrong. → *home: 2.8*
 - **U9 — Scorers need the add/edit table pattern** (add or edit → fields → save). → *home: 2.8*
