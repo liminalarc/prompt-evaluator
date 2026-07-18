@@ -51,4 +51,11 @@ public sealed class PromptVersion
         Content = string.Empty;
         TargetModel = string.Empty;
     }
+
+    /// <summary>
+    /// Updates the version's editable <see cref="Label"/> — an optional description. Content and
+    /// target model are immutable (they define the run's identity) and have no setter. Only the
+    /// owning <see cref="Prompt"/> aggregate calls this, via <see cref="Prompt.EditVersionLabel"/>.
+    /// </summary>
+    internal void SetLabel(string? label) => Label = label;
 }

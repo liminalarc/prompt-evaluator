@@ -155,6 +155,44 @@ public class PromptTests
     }
 
     [Fact]
+    public void EditVersionLabel_updates_only_the_label_leaving_content_and_model_immutable()
+    {
+        var prompt = Prompt.Create(OrgId, "Summarizer");
+        var v1 = prompt.AddVersion("Summarize: {input}", "claude-opus-4-8", When, label: "baseline");
+
+        var ok = prompt.EditVersionLabel(v1.Id, "renamed baseline");
+
+        Assert.True(ok);
+        var version = Assert.Single(prompt.Versions);
+        Assert.Equal("renamed baseline", version.Label);
+        Assert.Equal("Summarize: {input}", version.Content); // immutable
+        Assert.Equal("claude-opus-4-8", version.TargetModel); // immutable
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void EditVersionLabel_normalizes_a_blank_label_to_null(string? label)
+    {
+        var prompt = Prompt.Create(OrgId, "Summarizer");
+        var v1 = prompt.AddVersion("Summarize: {input}", "claude-sonnet-5", When, label: "baseline");
+
+        prompt.EditVersionLabel(v1.Id, label);
+
+        Assert.Null(Assert.Single(prompt.Versions).Label);
+    }
+
+    [Fact]
+    public void EditVersionLabel_returns_false_for_a_version_not_in_this_prompt()
+    {
+        var prompt = Prompt.Create(OrgId, "Summarizer");
+        prompt.AddVersion("Summarize: {input}", "claude-sonnet-5", When);
+
+        Assert.False(prompt.EditVersionLabel(Guid.NewGuid(), "x"));
+    }
+
+    [Fact]
     public void Versions_is_append_only_from_the_outside()
     {
         var prompt = Prompt.Create(OrgId, "Summarizer");

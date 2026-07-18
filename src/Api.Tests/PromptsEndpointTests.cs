@@ -108,6 +108,44 @@ public sealed class PromptsEndpointTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Edit_version_updates_the_label_and_leaves_content_and_model_immutable()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync();
+        var orgId = await CreateOrgAsync(client);
+        var create = await client.PostAsJsonAsync($"/api/organizations/{orgId}/prompts",
+            new { name = "Summarizer", description = (string?)null });
+        var created = await create.Content.ReadFromJsonAsync<PromptDto>();
+        var addVersion = await client.PostAsJsonAsync($"/api/prompts/{created!.Id}/versions",
+            new { content = "Summarize: {input}", targetModel = "claude-sonnet-5", label = "baseline", sourceApp = (string?)null });
+        var withVersion = await addVersion.Content.ReadFromJsonAsync<PromptDto>();
+        var versionId = withVersion!.Versions[0].Id;
+
+        var edit = await client.PatchAsJsonAsync($"/api/prompts/{created.Id}/versions/{versionId}",
+            new { label = "renamed baseline" });
+        Assert.Equal(HttpStatusCode.OK, edit.StatusCode);
+
+        var fetched = await client.GetFromJsonAsync<PromptDto>($"/api/prompts/{created.Id}");
+        var version = Assert.Single(fetched!.Versions);
+        Assert.Equal("renamed baseline", version.Label);
+        Assert.Equal("Summarize: {input}", version.Content); // immutable
+        Assert.Equal("claude-sonnet-5", version.TargetModel); // immutable
+    }
+
+    [Fact]
+    public async Task Edit_unknown_version_returns_404()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync();
+        var orgId = await CreateOrgAsync(client);
+        var create = await client.PostAsJsonAsync($"/api/organizations/{orgId}/prompts",
+            new { name = "Summarizer", description = (string?)null });
+        var created = await create.Content.ReadFromJsonAsync<PromptDto>();
+
+        var edit = await client.PatchAsJsonAsync($"/api/prompts/{created!.Id}/versions/{Guid.NewGuid()}",
+            new { label = "x" });
+        Assert.Equal(HttpStatusCode.NotFound, edit.StatusCode);
+    }
+
+    [Fact]
     public async Task Create_with_blank_name_returns_400()
     {
         var client = await _factory.CreateAuthenticatedClientAsync();

@@ -104,4 +104,35 @@ public class PromptHandlersTests
         Assert.Null(result);
         Assert.Equal(0, repo.SaveChangesCalls);
     }
+
+    [Fact]
+    public async Task EditPromptVersion_updates_the_label_and_saves()
+    {
+        var repo = new InMemoryPromptRepo();
+        var existing = Prompt.Create(Guid.NewGuid(), "Summarizer");
+        var v1 = existing.AddVersion("Summarize: {input}", "claude-sonnet-5", When, label: "baseline");
+        await repo.AddAsync(existing);
+        var handler = new EditPromptVersionHandler(repo);
+
+        var updated = await handler.HandleAsync(existing.Id, v1.Id, "renamed");
+
+        Assert.NotNull(updated);
+        Assert.Equal("renamed", Assert.Single(updated!.Versions).Label);
+        Assert.Equal(1, repo.SaveChangesCalls);
+    }
+
+    [Fact]
+    public async Task EditPromptVersion_returns_null_when_the_version_does_not_exist()
+    {
+        var repo = new InMemoryPromptRepo();
+        var existing = Prompt.Create(Guid.NewGuid(), "Summarizer");
+        existing.AddVersion("Summarize: {input}", "claude-sonnet-5", When);
+        await repo.AddAsync(existing);
+        var handler = new EditPromptVersionHandler(repo);
+
+        var result = await handler.HandleAsync(existing.Id, Guid.NewGuid(), "x");
+
+        Assert.Null(result);
+        Assert.Equal(0, repo.SaveChangesCalls);
+    }
 }

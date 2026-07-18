@@ -100,6 +100,17 @@ public static class PromptEndpoints
                 }
             });
 
+        // Edit a version's editable metadata — its label only (U3). Content + target model are
+        // immutable (run identity), so they are not accepted here.
+        group.MapPatch("/{id:guid}/versions/{versionId:guid}",
+            async (Guid id, Guid versionId, EditPromptVersionRequest request, EditPromptVersionHandler handler, OrgAccess access, CancellationToken ct) =>
+            {
+                if ((await access.CanAccessPromptAsync(id, ct)).ToProblem() is { } problem)
+                    return problem;
+                var prompt = await handler.HandleAsync(id, versionId, request.Label, ct);
+                return prompt is null ? Results.NotFound() : Results.Ok(PromptResponse.From(prompt));
+            });
+
         return app;
     }
 }

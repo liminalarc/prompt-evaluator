@@ -59,6 +59,7 @@ if (!string.IsNullOrWhiteSpace(postgres))
 
 builder.Services.AddScoped<CreatePromptHandler>();
 builder.Services.AddScoped<AddPromptVersionHandler>();
+builder.Services.AddScoped<EditPromptVersionHandler>();
 builder.Services.AddScoped<CreateFolderHandler>();
 builder.Services.AddScoped<RenameFolderHandler>();
 builder.Services.AddScoped<MoveFolderHandler>();

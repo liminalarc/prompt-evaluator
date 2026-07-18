@@ -91,6 +91,22 @@ public sealed class Prompt
         return version;
     }
 
+    /// <summary>
+    /// Edits a version's <b>editable metadata</b> — its <see cref="PromptVersion.Label"/> (an
+    /// optional description). Content and target model are <b>immutable</b> (they define the run's
+    /// identity — change them by adding a new version), so they are never touched here. Returns
+    /// false when the version is not in this prompt's history.
+    /// </summary>
+    public bool EditVersionLabel(Guid versionId, string? label)
+    {
+        var version = _versions.FirstOrDefault(v => v.Id == versionId);
+        if (version is null)
+            return false;
+
+        version.SetLabel(Normalize(label));
+        return true;
+    }
+
     private static string? Normalize(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value;
 }

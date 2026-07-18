@@ -7,6 +7,9 @@ public sealed record CreatePromptRequest(string Name, string? Description);
 public sealed record AddPromptVersionRequest(
     string Content, string TargetModel, string? Label, string? SourceApp);
 
+/// <summary>Editable version metadata — the label only; content/target model are immutable.</summary>
+public sealed record EditPromptVersionRequest(string? Label);
+
 public sealed record PromptVersionResponse(
     Guid Id,
     int VersionNumber,
