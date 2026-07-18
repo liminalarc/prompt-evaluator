@@ -207,6 +207,8 @@ resource "aws_iam_role_policy" "apprunner_instance_secrets" {
         aws_secretsmanager_secret.db.arn,
         aws_secretsmanager_secret.service_token.arn,
         aws_secretsmanager_secret.anthropic.arn,
+        aws_secretsmanager_secret.openai.arn,
+        aws_secretsmanager_secret.bootstrap_admin.arn,
       ]
     }]
   })
@@ -316,7 +318,8 @@ resource "aws_secretsmanager_secret_version" "service_token" {
   secret_string = random_password.service_token.result
 }
 
-# Anthropic key is set out-of-band via the AWS CLI (never committed / never in state as a real value).
+# Model-provider keys are set out-of-band via the AWS CLI (never committed / never in state as a real
+# value) — placeholders here, real values via `aws secretsmanager put-secret-value`.
 resource "aws_secretsmanager_secret" "anthropic" {
   name = "litmus-ai/ANTHROPIC_API_KEY"
 }
@@ -326,9 +329,43 @@ resource "aws_secretsmanager_secret_version" "anthropic" {
   secret_string = "PLACEHOLDER-set-via-cli"
 
   lifecycle {
-    # The real key is set with `aws secretsmanager put-secret-value` after apply; don't revert it.
     ignore_changes = [secret_string]
   }
+}
+
+resource "aws_secretsmanager_secret" "openai" {
+  name = "litmus-ai/OPENAI_API_KEY"
+}
+
+resource "aws_secretsmanager_secret_version" "openai" {
+  secret_id     = aws_secretsmanager_secret.openai.id
+  secret_string = "PLACEHOLDER-set-via-cli"
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
+}
+
+# Bootstrap admin password — generated (real value in Secrets Manager, like Stormboard). min_* satisfy
+# the Identity policy (>=8, upper/lower/digit). Retrieve: aws secretsmanager get-secret-value
+# --secret-id litmus-ai/Auth__BootstrapAdmin__Password
+resource "random_password" "bootstrap_admin" {
+  length           = 24
+  special          = true
+  override_special = "!#%*-_"
+  min_upper        = 2
+  min_lower        = 2
+  min_numeric      = 2
+  min_special      = 1
+}
+
+resource "aws_secretsmanager_secret" "bootstrap_admin" {
+  name = "litmus-ai/Auth__BootstrapAdmin__Password"
+}
+
+resource "aws_secretsmanager_secret_version" "bootstrap_admin" {
+  secret_id     = aws_secretsmanager_secret.bootstrap_admin.id
+  secret_string = random_password.bootstrap_admin.result
 }
 
 # ---------------------------------------------------------------------------
@@ -352,6 +389,7 @@ resource "aws_apprunner_service" "eval_runner" {
         port = "8000"
         runtime_environment_secrets = {
           "ANTHROPIC_API_KEY"         = aws_secretsmanager_secret.anthropic.arn
+          "OPENAI_API_KEY"            = aws_secretsmanager_secret.openai.arn
           "EVAL_RUNNER_SERVICE_TOKEN" = aws_secretsmanager_secret.service_token.arn
         }
       }
@@ -374,7 +412,11 @@ resource "aws_apprunner_service" "eval_runner" {
     unhealthy_threshold = 5
   }
 
-  depends_on = [aws_secretsmanager_secret_version.anthropic, aws_secretsmanager_secret_version.service_token]
+  depends_on = [
+    aws_secretsmanager_secret_version.anthropic,
+    aws_secretsmanager_secret_version.openai,
+    aws_secretsmanager_secret_version.service_token,
+  ]
 }
 
 # app: the combined web+api image. VPC egress (reaches RDS privately; the internet, incl. the
@@ -393,12 +435,15 @@ resource "aws_apprunner_service" "app" {
       image_configuration {
         port = "8080"
         runtime_environment_variables = {
-          ASPNETCORE_ENVIRONMENT = "Production"
-          "EvalRunner__BaseUrl"  = "https://${aws_apprunner_service.eval_runner[0].service_url}"
+          ASPNETCORE_ENVIRONMENT              = "Production"
+          "EvalRunner__BaseUrl"               = "https://${aws_apprunner_service.eval_runner[0].service_url}"
+          "Auth__BootstrapAdmin__Email"       = var.admin_email
+          "Auth__BootstrapAdmin__DisplayName" = var.admin_display_name
         }
         runtime_environment_secrets = {
-          "ConnectionStrings__Postgres" = aws_secretsmanager_secret.db.arn
-          "EvalRunner__ServiceToken"    = aws_secretsmanager_secret.service_token.arn
+          "ConnectionStrings__Postgres"    = aws_secretsmanager_secret.db.arn
+          "EvalRunner__ServiceToken"       = aws_secretsmanager_secret.service_token.arn
+          "Auth__BootstrapAdmin__Password" = aws_secretsmanager_secret.bootstrap_admin.arn
         }
       }
     }
@@ -427,5 +472,9 @@ resource "aws_apprunner_service" "app" {
     unhealthy_threshold = 5
   }
 
-  depends_on = [aws_secretsmanager_secret_version.db, aws_secretsmanager_secret_version.service_token]
+  depends_on = [
+    aws_secretsmanager_secret_version.db,
+    aws_secretsmanager_secret_version.service_token,
+    aws_secretsmanager_secret_version.bootstrap_admin,
+  ]
 }

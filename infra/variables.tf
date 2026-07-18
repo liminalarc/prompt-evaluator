@@ -52,6 +52,18 @@ variable "db_instance_class" {
   default = "db.t4g.micro" # smallest current-gen; dev-sized
 }
 
+# Bootstrap admin seeded on first boot (Auth__BootstrapAdmin__*): Owner of the Default org + global
+# admin. The password is generated (Secrets Manager); retrieve it via the AWS CLI after apply.
+variable "admin_email" {
+  type    = string
+  default = "todd.hurley@liminalarc.co"
+}
+
+variable "admin_display_name" {
+  type    = string
+  default = "Todd Hurley"
+}
+
 # App Runner services need an image in ECR first, so they're created in a second apply
 # (create_services=true) after the first images are pushed. See infra/README.md.
 variable "create_services" {
