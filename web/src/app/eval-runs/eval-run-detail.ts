@@ -58,77 +58,100 @@ import { EvalRunsApiService } from './eval-runs-api.service';
         } @else {
           @for (fixtureRun of r.results; track fixtureRun.fixtureId) {
             <div class="sb-card fixture-run" data-testid="fixture-run">
-              <div class="sb-card__body">
-                <div class="io-grid">
-                  <div class="io-block">
-                    <span class="result__key">Fixture input</span>
-                    <pre class="io-text">{{ fixtureInput(fixtureRun.fixtureId) }}</pre>
+              <button
+                type="button"
+                class="fixture-run__summary"
+                (click)="toggle(fixtureRun.fixtureId)"
+                data-testid="fixture-run-summary"
+              >
+                <span class="fixture-run__label">{{ fixtureLabel(fixtureRun.fixtureId) }}</span>
+                <span class="fixture-run__scores">
+                  @for (score of fixtureRun.scores; track score.scorerIdentity) {
+                    <app-status-badge
+                      [variant]="pass(score.passed).variant"
+                      [label]="score.scorerKind + ' ' + score.value"
+                    />
+                  } @empty {
+                    <span class="result__key">no scores</span>
+                  }
+                </span>
+                <span class="fixture-run__chevron">{{
+                  isOpen(fixtureRun.fixtureId) ? '▾' : '▸'
+                }}</span>
+              </button>
+              @if (isOpen(fixtureRun.fixtureId)) {
+                <div class="sb-card__body" data-testid="fixture-run-detail">
+                  <div class="io-grid">
+                    <div class="io-block">
+                      <span class="result__key">Fixture input</span>
+                      <pre class="io-text">{{ fixtureInput(fixtureRun.fixtureId) }}</pre>
+                    </div>
+                    <div class="io-block">
+                      <span class="result__key">Model output</span>
+                      <pre class="io-text">{{ formatOutput(fixtureRun.modelOutput) }}</pre>
+                    </div>
                   </div>
-                  <div class="io-block">
-                    <span class="result__key">Model output</span>
-                    <pre class="io-text">{{ formatOutput(fixtureRun.modelOutput) }}</pre>
-                  </div>
-                </div>
 
-                <dl class="result__meta">
-                  <div class="result__row">
-                    <dt class="result__key">Latency</dt>
-                    <dd class="result__val">{{ fixtureRun.latencyMs }} ms</dd>
-                  </div>
-                  <div class="result__row">
-                    <dt class="result__key">Input tokens</dt>
-                    <dd class="result__val" data-testid="input-tokens">
-                      {{ fixtureRun.inputTokens }}
-                    </dd>
-                  </div>
-                  <div class="result__row">
-                    <dt class="result__key">Output tokens</dt>
-                    <dd class="result__val" data-testid="output-tokens">
-                      {{ fixtureRun.outputTokens }}
-                    </dd>
-                  </div>
-                  <div class="result__row">
-                    <dt class="result__key">Cost</dt>
-                    <dd class="result__val">
-                      {{ fixtureRun.costUsd !== null ? '$' + fixtureRun.costUsd : '—' }}
-                    </dd>
-                  </div>
-                </dl>
+                  <dl class="result__meta">
+                    <div class="result__row">
+                      <dt class="result__key">Latency</dt>
+                      <dd class="result__val">{{ fixtureRun.latencyMs }} ms</dd>
+                    </div>
+                    <div class="result__row">
+                      <dt class="result__key">Input tokens</dt>
+                      <dd class="result__val" data-testid="input-tokens">
+                        {{ fixtureRun.inputTokens }}
+                      </dd>
+                    </div>
+                    <div class="result__row">
+                      <dt class="result__key">Output tokens</dt>
+                      <dd class="result__val" data-testid="output-tokens">
+                        {{ fixtureRun.outputTokens }}
+                      </dd>
+                    </div>
+                    <div class="result__row">
+                      <dt class="result__key">Cost</dt>
+                      <dd class="result__val">
+                        {{ fixtureRun.costUsd !== null ? '$' + fixtureRun.costUsd : '—' }}
+                      </dd>
+                    </div>
+                  </dl>
 
-                <table class="sb-table" data-testid="scores">
-                  <thead>
-                    <tr>
-                      <th>Scorer</th>
-                      <th>Judge model</th>
-                      <th>Value</th>
-                      <th>Passed</th>
-                      <th>Detail</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (score of fixtureRun.scores; track score.scorerIdentity) {
-                      <tr [attr.data-scorer]="score.scorerKind">
-                        <td><app-chip [label]="score.scorerKind" /></td>
-                        <td>
-                          @if (score.judgeModel; as m) {
-                            <app-chip [label]="m" />
-                          } @else {
-                            —
-                          }
-                        </td>
-                        <td>{{ score.value }}</td>
-                        <td>
-                          <app-status-badge
-                            [variant]="pass(score.passed).variant"
-                            [label]="pass(score.passed).label"
-                          />
-                        </td>
-                        <td>{{ score.detail ?? '—' }}</td>
+                  <table class="sb-table" data-testid="scores">
+                    <thead>
+                      <tr>
+                        <th>Scorer</th>
+                        <th>Judge model</th>
+                        <th>Value</th>
+                        <th>Passed</th>
+                        <th>Detail</th>
                       </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      @for (score of fixtureRun.scores; track score.scorerIdentity) {
+                        <tr [attr.data-scorer]="score.scorerKind">
+                          <td><app-chip [label]="score.scorerKind" /></td>
+                          <td>
+                            @if (score.judgeModel; as m) {
+                              <app-chip [label]="m" />
+                            } @else {
+                              —
+                            }
+                          </td>
+                          <td>{{ score.value }}</td>
+                          <td>
+                            <app-status-badge
+                              [variant]="pass(score.passed).variant"
+                              [label]="pass(score.passed).label"
+                            />
+                          </td>
+                          <td>{{ score.detail ?? '—' }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
             </div>
           }
         }
@@ -139,7 +162,35 @@ import { EvalRunsApiService } from './eval-runs-api.service';
   styles: [
     `
       .fixture-run + .fixture-run {
-        margin-top: var(--sb-space-lg);
+        margin-top: var(--sb-space-md);
+      }
+      .fixture-run__summary {
+        display: flex;
+        align-items: center;
+        gap: var(--sb-space-md);
+        width: 100%;
+        padding: var(--sb-space-md);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        text-align: left;
+        color: var(--sb-text);
+      }
+      .fixture-run__label {
+        font-weight: 600;
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .fixture-run__scores {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--sb-space-xs);
+      }
+      .fixture-run__chevron {
+        color: var(--sb-text-muted);
       }
       .io-grid {
         display: grid;
@@ -208,8 +259,28 @@ export class EvalRunDetail implements OnInit {
   // The run DTO carries only fixtureId per result; the dataset supplies each fixture's input text
   // so we can show the input alongside its output.
   protected readonly fixturesById = signal<Map<string, Fixture>>(new Map());
+  // Progressive disclosure (U10): each fixture result collapses to a summary row; expand for detail.
+  protected readonly expanded = signal<Set<string>>(new Set());
 
   protected readonly pass = passBadge;
+
+  protected isOpen(fixtureId: string): boolean {
+    return this.expanded().has(fixtureId);
+  }
+
+  protected toggle(fixtureId: string): void {
+    const next = new Set(this.expanded());
+    next.has(fixtureId) ? next.delete(fixtureId) : next.add(fixtureId);
+    this.expanded.set(next);
+  }
+
+  /** Fixture label if it has one, else a short form of its input, else the id — for the summary row. */
+  protected fixtureLabel(fixtureId: string): string {
+    const f = this.fixturesById().get(fixtureId);
+    if (f?.label) return f.label;
+    if (f?.input) return f.input.length > 60 ? f.input.slice(0, 60) + '…' : f.input;
+    return fixtureId.slice(0, 8);
+  }
 
   // A run links back to both its prompt and its dataset (2.4) — the trail names them once loaded.
   protected readonly crumbs = computed<Crumb[]>(() => {

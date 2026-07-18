@@ -37,6 +37,7 @@ export interface EvalRunSummary {
   createdAt: string;
   fixtureCount: number;
   scoreCount: number;
+  scorerKinds: string[];
 }
 
 /** Mirrors the .NET ScorerConfigResponse DTO. */

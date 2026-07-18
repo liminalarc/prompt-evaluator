@@ -341,6 +341,30 @@ describe('DatasetDetail run form + scorer config', () => {
     );
   });
 
+  it('shows version, model and scorers in the runs table [U14]', () => {
+    const fixture = render();
+    const cmp = fixture.componentInstance as unknown as {
+      runs: { set: (v: unknown[]) => void };
+    };
+    cmp.runs.set([
+      {
+        id: 'run1',
+        promptId: 'p1',
+        promptVersionId: 'v1',
+        createdAt: '2026-07-12T00:00:00Z',
+        fixtureCount: 3,
+        scoreCount: 6,
+        scorerKinds: ['LlmJudge', 'Regex'],
+      },
+    ]);
+    fixture.detectChanges();
+    const runsTable = fixture.nativeElement.querySelector('[data-testid="runs"]') as HTMLElement;
+    expect(runsTable.textContent).toContain('v1'); // version (from owning prompt's versions)
+    expect(runsTable.textContent).toContain('claude-opus-4-8'); // target model
+    expect(runsTable.textContent).toContain('Regex'); // scorer kind chip
+    expect(runsTable.textContent).toContain('LlmJudge');
+  });
+
   it('surfaces the server error message when a run fails [B2]', () => {
     const fixture = render({
       triggerRun: () =>

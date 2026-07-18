@@ -68,10 +68,11 @@ test('runs a prompt version over a dataset and shows per-fixture scores', async 
   await page.getByTestId('version-select').selectOption({ index: 0 });
   await page.getByTestId('run').click();
 
-  // 6. Land on the run-results view with per-fixture scores.
+  // 6. Land on the run-results view; expand the fixture summary row for per-fixture scores (U10).
   await expect(page).toHaveURL(/\/eval-runs\//);
   const fixtureRun = page.getByTestId('fixture-run');
   await expect(fixtureRun).toHaveCount(1);
   await expect(fixtureRun).toContainText('summarize this thread');
+  await page.getByTestId('fixture-run-summary').click();
   await expect(page.getByTestId('scores').locator('tr[data-scorer="Regex"]')).toHaveCount(1);
 });

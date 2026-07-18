@@ -145,6 +145,34 @@ describe('PromptDetail (unified workspace)', () => {
     httpMock.expectOne('/api/prompts/p1/datasets').flush(datasets); // reload
   });
 
+  it('runs a version against a dataset from the workspace [U13]', () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance as unknown as {
+      showRun: { set: (v: boolean) => void };
+      runVersionId: { set: (v: string) => void };
+      onRunDatasetChange: (id: string) => void;
+      triggerRun: (e: Event) => void;
+    };
+    cmp.showRun.set(true);
+    cmp.runVersionId.set('v1');
+    cmp.onRunDatasetChange('d1');
+    // Selecting a dataset loads its recent runs inline.
+    httpMock.expectOne('/api/datasets/d1/eval-runs').flush([]);
+
+    cmp.triggerRun(new Event('submit'));
+    const run = httpMock.expectOne('/api/datasets/d1/eval-runs');
+    expect(run.request.method).toBe('POST');
+    expect(run.request.body).toEqual({ promptId: 'p1', promptVersionId: 'v1' });
+    run.flush({
+      id: 'run-9',
+      promptId: 'p1',
+      promptVersionId: 'v1',
+      datasetId: 'd1',
+      createdAt: '2026-07-12T00:00:00Z',
+      results: [],
+    });
+  });
+
   it('imports a text file into the add-version content signal', async () => {
     const fixture = setup();
     const cmp = fixture.componentInstance as unknown as {

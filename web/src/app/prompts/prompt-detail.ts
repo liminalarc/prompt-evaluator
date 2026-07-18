@@ -3,10 +3,12 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Prompt } from '../prompt';
 import { DatasetSummary } from '../dataset';
+import { EvalRunSummary } from '../eval-run';
 import { ModelCatalogEntry } from '../model';
 import { TrendSeries } from '../analytics';
 import { ModelsApiService } from '../models/models-api.service';
 import { DatasetsApiService } from '../datasets/datasets-api.service';
+import { EvalRunsApiService } from '../eval-runs/eval-runs-api.service';
 import { AnalyticsApiService } from '../analytics/analytics-api.service';
 import { TrendChart } from '../analytics/trend-chart';
 import {
@@ -52,7 +54,7 @@ import { validateImportFile } from './import-file';
       @if (loading()) {
         <app-loading-state label="Loading prompt…" />
       } @else if (prompt(); as p) {
-        <app-page-header [heading]="p.name" [subtitle]="p.description ?? ''">
+        <app-page-header [heading]="'Prompt: ' + p.name" [subtitle]="p.description ?? ''">
           <button
             actions
             class="sb-btn sb-btn--danger sb-btn--sm"
@@ -236,6 +238,96 @@ import { validateImportFile } from './import-file';
           </app-card>
         }
 
+        @if (p.versions.length > 0 && datasets()?.length) {
+          <app-card heading="Run a version">
+            <p class="subtitle">
+              Score a version against one of this prompt's datasets — no page hop.
+            </p>
+            @if (showRun()) {
+              <form class="form-stack add-version-form" (submit)="triggerRun($event)">
+                <div class="sb-field">
+                  <label for="runVersion">Version</label>
+                  <select
+                    id="runVersion"
+                    name="runVersion"
+                    [ngModel]="runVersionId()"
+                    (ngModelChange)="runVersionId.set($event)"
+                    data-testid="run-version"
+                  >
+                    <option value="">Select a version…</option>
+                    @for (v of p.versions; track v.id) {
+                      <option [value]="v.id">v{{ v.versionNumber }} · {{ v.targetModel }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="sb-field">
+                  <label for="runDataset">Dataset</label>
+                  <select
+                    id="runDataset"
+                    name="runDataset"
+                    [ngModel]="runDatasetId()"
+                    (ngModelChange)="onRunDatasetChange($event)"
+                    data-testid="run-dataset"
+                  >
+                    <option value="">Select a dataset…</option>
+                    @for (d of datasets(); track d.id) {
+                      <option [value]="d.id">{{ d.name }}</option>
+                    }
+                  </select>
+                </div>
+                <button
+                  class="sb-btn sb-btn--primary"
+                  type="submit"
+                  data-testid="run"
+                  [disabled]="running() || !runVersionId() || !runDatasetId()"
+                >
+                  {{ running() ? 'Running…' : 'Run evaluation' }}
+                </button>
+              </form>
+
+              @if (recentRuns().length > 0) {
+                <table class="sb-table" data-testid="recent-runs">
+                  <thead>
+                    <tr>
+                      <th>Run</th>
+                      <th>Scorers</th>
+                      <th>Fixtures</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (r of recentRuns(); track r.id) {
+                      <tr>
+                        <td>
+                          <a [routerLink]="['/eval-runs', r.id]" data-testid="recent-run-link">{{
+                            r.createdAt
+                          }}</a>
+                        </td>
+                        <td>
+                          @for (k of r.scorerKinds; track k) {
+                            <app-chip [label]="k" />
+                          } @empty {
+                            —
+                          }
+                        </td>
+                        <td>{{ r.fixtureCount }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            }
+            <button
+              foot
+              class="sb-btn sb-btn--sm sb-btn--secondary"
+              type="button"
+              data-testid="toggle-run"
+              (click)="showRun.set(!showRun())"
+            >
+              + Run a version
+            </button>
+          </app-card>
+        }
+
         <div class="card-grid">
           <app-card heading="Datasets">
             <p class="subtitle">
@@ -384,6 +476,7 @@ import { validateImportFile } from './import-file';
 export class PromptDetail implements OnInit {
   private readonly api = inject(PromptsApiService);
   private readonly datasetsApi = inject(DatasetsApiService);
+  private readonly evalApi = inject(EvalRunsApiService);
   private readonly modelsApi = inject(ModelsApiService);
   private readonly analyticsApi = inject(AnalyticsApiService);
   private readonly confirm = inject(ConfirmService);
@@ -426,6 +519,14 @@ export class PromptDetail implements OnInit {
   protected readonly datasets = signal<DatasetSummary[] | null>(null);
   protected readonly datasetName = signal('');
   protected readonly datasetDescription = signal('');
+
+  // Run-from-workspace (U13): pick a version + one of this prompt's datasets, trigger a run and see
+  // recent runs — no hop to the dataset page. Revealed behind a toggle (progressive disclosure).
+  protected readonly showRun = signal(false);
+  protected readonly runVersionId = signal('');
+  protected readonly runDatasetId = signal('');
+  protected readonly running = signal(false);
+  protected readonly recentRuns = signal<EvalRunSummary[]>([]);
   protected readonly selectedDatasetId = signal('');
   protected readonly trends = signal<TrendSeries[] | null>(null);
 
@@ -480,6 +581,33 @@ export class PromptDetail implements OnInit {
         },
         error: () => this.error.set('Could not create the dataset.'),
       });
+  }
+
+  // U13: when a dataset is chosen in the Run card, show its recent runs inline.
+  protected onRunDatasetChange(datasetId: string): void {
+    this.runDatasetId.set(datasetId);
+    this.recentRuns.set([]);
+    if (!datasetId) return;
+    this.evalApi.listRuns(datasetId).subscribe({ next: (runs) => this.recentRuns.set(runs) });
+  }
+
+  protected triggerRun(event: Event): void {
+    event.preventDefault();
+    const versionId = this.runVersionId();
+    const datasetId = this.runDatasetId();
+    if (!versionId || !datasetId) return;
+    this.error.set(null);
+    this.running.set(true);
+    this.evalApi.triggerRun(datasetId, this.id, versionId).subscribe({
+      next: (run) => {
+        this.running.set(false);
+        void this.router.navigate(['/eval-runs', run.id]);
+      },
+      error: () => {
+        this.error.set('Could not run the evaluation.');
+        this.running.set(false);
+      },
+    });
   }
 
   protected selectDataset(datasetId: string): void {

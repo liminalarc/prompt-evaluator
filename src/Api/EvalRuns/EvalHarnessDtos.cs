@@ -71,7 +71,8 @@ public sealed record EvalRunResponse(
 }
 
 public sealed record EvalRunSummaryResponse(
-    Guid Id, Guid PromptId, Guid PromptVersionId, DateTimeOffset CreatedAt, int FixtureCount, int ScoreCount)
+    Guid Id, Guid PromptId, Guid PromptVersionId, DateTimeOffset CreatedAt, int FixtureCount, int ScoreCount,
+    IReadOnlyList<string> ScorerKinds)
 {
     public static EvalRunSummaryResponse From(EvalRun run) => new(
         run.Id,
@@ -79,5 +80,7 @@ public sealed record EvalRunSummaryResponse(
         run.PromptVersionId,
         run.CreatedAt,
         run.Results.Count,
-        run.Results.Sum(r => r.Scores.Count));
+        run.Results.Sum(r => r.Scores.Count),
+        // Distinct scorer kinds the run scored with, so the runs table reads version · model · scorers (U14).
+        run.Results.SelectMany(r => r.Scores).Select(s => s.Scorer.Kind.ToString()).Distinct().OrderBy(k => k).ToList());
 }

@@ -53,7 +53,7 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
       @if (loading()) {
         <app-loading-state label="Loading dataset…" />
       } @else if (dataset(); as d) {
-        <app-page-header [heading]="d.name" [subtitle]="d.description ?? ''">
+        <app-page-header [heading]="'Dataset: ' + d.name" [subtitle]="d.description ?? ''">
           <button
             actions
             class="sb-btn sb-btn--danger sb-btn--sm"
@@ -517,8 +517,10 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                 <thead>
                   <tr>
                     <th>Run</th>
+                    <th>Version</th>
+                    <th>Model</th>
+                    <th>Scorers</th>
                     <th>Fixtures</th>
-                    <th>Scores</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -529,8 +531,22 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                           r.createdAt
                         }}</a>
                       </td>
+                      <td>{{ versionLabelFor(r.promptVersionId) }}</td>
+                      <td>
+                        @if (modelFor(r.promptVersionId); as m) {
+                          <app-chip [label]="m" />
+                        } @else {
+                          —
+                        }
+                      </td>
+                      <td>
+                        @for (k of r.scorerKinds; track k) {
+                          <app-chip [label]="k" />
+                        } @empty {
+                          —
+                        }
+                      </td>
                       <td>{{ r.fixtureCount }}</td>
-                      <td>{{ r.scoreCount }}</td>
                     </tr>
                   }
                 </tbody>
@@ -659,6 +675,16 @@ export class DatasetDetail implements OnInit {
     const filter = this.originFilter();
     return filter === 'all' ? fixtures : fixtures.filter((f) => f.origin === filter);
   });
+
+  // Runs table (U14): resolve a run's version id to a readable "vN" + its target model, using the
+  // owning prompt's versions already loaded for the run form.
+  protected versionLabelFor(versionId: string): string {
+    const v = this.versions().find((x) => x.id === versionId);
+    return v ? `v${v.versionNumber}` : '—';
+  }
+  protected modelFor(versionId: string): string | null {
+    return this.versions().find((x) => x.id === versionId)?.targetModel ?? null;
+  }
 
   protected readonly isJudge = computed(() => this.scorerKind() === 'LlmJudge');
 

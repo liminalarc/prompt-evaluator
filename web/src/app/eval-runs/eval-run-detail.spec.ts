@@ -82,6 +82,13 @@ describe('EvalRunDetail', () => {
     const el = fixture.nativeElement as HTMLElement;
     const fixtureRun = el.querySelector('[data-testid="fixture-run"]');
     expect(fixtureRun).toBeTruthy();
+    // Collapsed by default (U10): the summary row shows headline scores; detail is hidden.
+    expect(el.querySelector('[data-testid="fixture-run-detail"]')).toBeNull();
+    expect(fixtureRun!.textContent).toContain('Regex'); // headline score badge in the summary
+
+    // Expand to reveal the full output + scores table.
+    (el.querySelector('[data-testid="fixture-run-summary"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
     expect(fixtureRun!.textContent).toContain('OUT:hello');
 
     const rows = el.querySelectorAll('[data-testid="scores"] tbody tr');
