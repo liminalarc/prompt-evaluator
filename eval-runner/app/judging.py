@@ -15,6 +15,15 @@ from app.providers import Provider
 
 DEFAULT_JUDGE_MODEL = "claude-opus-4-8"
 
+# Output budget for the judge call. Sized to leave room for models whose thinking is ON by default
+# (claude-sonnet-5, claude-fable-5): adaptive thinking spends output tokens before the structured
+# verdict is emitted, so too small a budget truncates the verdict JSON mid-string (JSONDecodeError
+# -> 500 — finding 5.1/B6). The verdict itself is tiny; this headroom is for the thinking. Kept
+# model-agnostic on purpose: we don't send per-model `thinking`/`effort` flags, because some models
+# 400 on `thinking:{type:"disabled"}` (Fable 5) or on `effort` (Haiku 4.5) — giving budget is safe
+# for every provider and model.
+JUDGE_MAX_TOKENS = 8192
+
 
 class JudgeRequest(BaseModel):
     rubric: str
@@ -77,7 +86,7 @@ def judge(provider: Provider, request: JudgeRequest) -> JudgeResponse:
         model=request.model,
         prompt=build_judge_prompt(request),
         schema=VERDICT_SCHEMA,
-        max_tokens=1024,
+        max_tokens=JUDGE_MAX_TOKENS,
     )
     # Structured outputs can't enforce numeric ranges, so clamp defensively.
     data["score"] = max(0.0, min(1.0, float(data["score"])))

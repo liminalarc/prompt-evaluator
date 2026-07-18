@@ -2,7 +2,7 @@
 
 from fastapi.testclient import TestClient
 
-from app.judging import VERDICT_SCHEMA
+from app.judging import JUDGE_MAX_TOKENS, VERDICT_SCHEMA
 from app.main import app, get_provider_registry
 
 
@@ -16,7 +16,9 @@ class FakeProvider:
         self.calls: list[dict] = []
 
     def structured(self, *, model, prompt, schema, max_tokens):
-        self.calls.append({"model": model, "prompt": prompt, "schema": schema})
+        self.calls.append(
+            {"model": model, "prompt": prompt, "schema": schema, "max_tokens": max_tokens}
+        )
         return dict(self._verdict)
 
     def complete(self, **kwargs):  # not used by the judge path
@@ -78,6 +80,20 @@ def test_requests_structured_output_and_includes_rubric_and_io():
     assert "GRADE ON HELPFULNESS" in prompt
     assert "the question" in prompt
     assert "the answer" in prompt
+
+
+def test_judge_budgets_for_thinking_on_by_default_models():
+    # Judge models whose thinking is ON by default (claude-sonnet-5, claude-fable-5) spend part of
+    # the output budget on adaptive thinking before emitting the structured verdict. Too small a
+    # budget truncates the verdict JSON mid-string (JSONDecodeError -> 500). The judge must request
+    # enough headroom for thinking + the small verdict. Regression guard for finding 5.1/B6.
+    provider = FakeProvider({"score": 0.7, "passed": True, "rationale": "ok"})
+    client_with(provider).post(
+        "/judge",
+        json={"rubric": "r", "input": "i", "output": "o", "model": "claude-sonnet-5"},
+    )
+    assert provider.calls[0]["max_tokens"] == JUDGE_MAX_TOKENS
+    assert JUDGE_MAX_TOKENS >= 4096  # room for adaptive thinking beyond the tiny verdict
 
 
 def test_score_is_clamped_into_the_unit_interval():

@@ -19,6 +19,16 @@
   → *home: 2.8*
 - **B5 — Scorer Config is optional even when required.** `Regex`/`JsonSchema` need a pattern/schema;
   the field is blanket-optional. Make it required per scorer kind. → *home: 2.8*
+- **B6 — LLM-judge 500s when the judge model has thinking-on-by-default (sonnet-5, fable-5).**
+  `judging.py` calls `provider.structured(..., max_tokens=1024)` with no thinking config;
+  `AnthropicProvider.structured` (`providers.py`) never disables thinking. On models where omitting
+  `thinking` runs **adaptive** (claude-sonnet-5, claude-fable-5 — per the `claude-api` skill), thinking
+  consumes the 1024-token budget before the structured JSON finishes → truncated JSON →
+  `json.loads` `JSONDecodeError` → eval-runner 500 → API 500. Models that default thinking-off
+  (claude-opus-4-8, claude-haiku-4-5) are unaffected. **Fix (eval-runner):** on the judge's
+  `structured()` call, pass `thinking={"type":"disabled"}` (a rubric-scorer doesn't need extended
+  thinking) and/or raise `max_tokens`. This blocks LLM-judge scoring for ~all freeform prompts, so it's
+  the highest-priority finding. → *home: eval-runner fix (own task / 2.8 backend slice)*
 
 ## UX / consistency
 - **U1 — Create-prompt lands on the prompts table**, not the new prompt's workspace (`/prompts/:id`).

@@ -108,7 +108,8 @@ STATS:
 ```
 
 ## ④ Scorers
-- **LlmJudge** · Judge model **Sonnet 5** · Rubric:
+- **LlmJudge** · Judge model **Sonnet 5** (or Opus 4.8) — both fine once the B6 eval-runner fix is
+  live (judge now budgets for thinking-on-by-default models) · Rubric:
 ```
 Score 0-1 how well this daily golf briefing follows its brief:
 (1) 75-100 words, 2-3 sentences, plain text with NO markdown, bullets, or headers;
@@ -121,10 +122,12 @@ Deduct for markdown, vagueness, generic filler, wrong or invented numbers, and w
 - **Regex** · Config `[0-9]` (cites a number)
 
 ## Baseline & iterations (fill as you run)
-- **⏸ PAUSED at ⑤ (2026-07-18)** — Run evaluation returns **HTTP 500**: eval-runner's Anthropic
-  provider not configured on dev (`ANTHROPIC_API_KEY` placeholder — first real eval on this box).
-  Resume after the key is set (`aws secretsmanager put-secret-value …`) + `litmus-ai-eval-runner`
-  restarted. Registered as 5.1 findings (bare-500 UX + UI swallows error).
+- **✅ RESOLVED (2026-07-18)** — dev Anthropic key was a placeholder; set it + rolled eval-runner.
+  Subject execution (Haiku) now works.
+- **⏸ PAUSED at ⑤ (2026-07-18)** — 2nd 500: the **LlmJudge** step, not the key. Judge model **Sonnet 5**
+  runs adaptive thinking by default → truncated the structured verdict JSON → eval-runner 500 (finding
+  B6). **Fixed** in eval-runner (`JUDGE_MAX_TOKENS`, model-agnostic budget); deploying via CI. Your saved
+  Sonnet-5 scorer is fine as-is — just **re-run** once dev redeploys (no dataset recreate needed).
 - **v1 baseline** (haiku): _record judge avg + per-fixture, `[0-9]` fails_ →
 - **Hypothesis:** _one thing to improve_ →
 - **v2:** _what changed_ → _movement vs v1_ →
