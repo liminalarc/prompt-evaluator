@@ -1,8 +1,41 @@
 # Changelog
 
 All notable changes to this project are documented here. Versions follow one unified product
-SemVer (pre-1.0 `0.x`) across the API, web, and eval-runner. A release is a tagged, verified
-**compose-stack build** — there is no hosted deployment yet (production deploy is spec 3.2).
+SemVer (pre-1.0 `0.x`) across the API, web, and eval-runner. A release is a tagged, verified build;
+as of `0.13.0` it also deploys to a hosted **dev** environment on every push to `main` (spec 3.2).
+There is no prod target yet.
+
+## [0.13.0] — 2026-07-18
+
+Ships the first hosted deployment: LitmusAI now runs on an AWS **dev** environment, deployed
+automatically on every push to `main`. Adds admin-created user accounts and polishes the topbar.
+
+### Added
+
+- **[#3.2] Production Deployment** ([detail](specs/archive/3.2.md)) — a hosted **dev** environment on
+  AWS App Runner + ECR + RDS, Terraform-managed (`infra/`, modeled on Prism; reuses the shared
+  account's GitHub OIDC provider + `stormboard-dev` VPC connector, owns its own RDS Postgres). The API
+  now serves the Angular SPA from one combined image (single origin, no nginx); the eval-runner runs
+  as a second, token-protected service. CI's `deploy-dev` job builds + pushes both images and rolls
+  the App Runner services on every push to `main`, with a post-deploy smoke. Auth hardened for a
+  multi-replica deploy: a password reset invalidates live sessions (SignInManager +
+  SecurityStampValidator) and Data-Protection keys persist to Postgres (cookie valid across replicas).
+- **[#4.6] Admin-created users** ([detail](specs/archive/4.6.md)) — admins can create user accounts
+  directly from the **Users** page (email + display name + password, no email required) via
+  `POST /api/admin/users`; the new user then gets org/role granted with the existing per-user controls.
+
+### Fixed
+
+- Topbar **Manage** and user-name are now legible control chips in both light and dark themes (were
+  dimmed white on the dark bar), and the **Admin** menu now closes on outside-click / Escape /
+  item-select instead of sticking open.
+
+### Notes
+
+- **Dev-only** — there is no prod deploy target yet (future work under 3.2). Git tags are the version
+  marker; the dev environment deploys continuously from `main`.
+- **Invite-by-email onboarding** and SSO remain out of scope → spec 4.2 (which also owns the
+  transactional-email provider).
 
 ## [0.12.0] — 2026-07-17
 
