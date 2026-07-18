@@ -69,10 +69,12 @@ aws secretsmanager put-secret-value --secret-id litmus-ai/ANTHROPIC_API_KEY \
 ```bash
 ACCT=973221168142.dkr.ecr.us-east-1.amazonaws.com
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ACCT
-docker build -f deploy/Dockerfile -t $ACCT/litmus-ai:dev .
-docker build -f eval-runner/Dockerfile -t $ACCT/litmus-ai-eval-runner:dev ./eval-runner
-docker push $ACCT/litmus-ai:dev
-docker push $ACCT/litmus-ai-eval-runner:dev
+# --provenance=false --sbom=false: App Runner can't run an OCI image *index* (BuildKit's default
+# attestations produce one) — it needs a single-platform linux/amd64 manifest. --push in one step.
+docker buildx build --provenance=false --sbom=false --platform linux/amd64 \
+  -f deploy/Dockerfile -t $ACCT/litmus-ai:dev --push .
+docker buildx build --provenance=false --sbom=false --platform linux/amd64 \
+  -f eval-runner/Dockerfile -t $ACCT/litmus-ai-eval-runner:dev --push ./eval-runner
 ```
 
 **Phase 2 — create the App Runner services** (now that images exist):

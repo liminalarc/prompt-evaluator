@@ -196,23 +196,21 @@ jobs:
           CHANNEL="dev"
           echo "Building version $VERSION ($CHANNEL, $SHA)"
 
+          # buildx with --provenance=false --sbom=false: App Runner can't run an OCI image *index*
+          # (BuildKit's default provenance attestation produces one) — it needs a single-platform
+          # linux/amd64 manifest. --push builds+pushes in one step.
           # Combined web+api image (build context = repo root).
-          docker build -f deploy/Dockerfile \
+          docker buildx build --provenance=false --sbom=false --platform linux/amd64 -f deploy/Dockerfile \
             -t "$ECR_APP:$CHANNEL" -t "$ECR_APP:$CHANNEL-$SHA" \
             --build-arg APP_VERSION="$VERSION" \
             --build-arg GIT_COMMIT="$SHA" \
-            --build-arg APP_CHANNEL="$CHANNEL" .
+            --build-arg APP_CHANNEL="$CHANNEL" --push .
 
           # eval-runner image (build context = ./eval-runner).
-          docker build -f eval-runner/Dockerfile \
+          docker buildx build --provenance=false --sbom=false --platform linux/amd64 -f eval-runner/Dockerfile \
             -t "$ECR_EVAL:$CHANNEL" -t "$ECR_EVAL:$CHANNEL-$SHA" \
             --build-arg APP_VERSION="$VERSION" \
-            --build-arg GIT_COMMIT="$SHA" ./eval-runner
-
-          docker push "$ECR_APP:$CHANNEL"
-          docker push "$ECR_APP:$CHANNEL-$SHA"
-          docker push "$ECR_EVAL:$CHANNEL"
-          docker push "$ECR_EVAL:$CHANNEL-$SHA"
+            --build-arg GIT_COMMIT="$SHA" --push ./eval-runner
 
       - name: Deploy both App Runner services
         run: |
