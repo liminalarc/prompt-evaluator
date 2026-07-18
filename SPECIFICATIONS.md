@@ -20,12 +20,12 @@
 
 ## Phase 3 — Integrations & Ops
 - **3.1** Zatomic-backed Prompt Registry — `NOT STARTED` — [detail](specs/3.1.md)
-- **3.2** Production Deployment — `IN PROGRESS` — [detail](specs/3.2.md)
 
 ## Phase 4 — Accounts & Access
 - **4.2** SSO / OAuth Sign-In — `NOT STARTED` — [detail](specs/4.2.md)
 
 ## Archive
+- **3.2** Production Deployment (AWS App Runner/ECR/RDS dev env, Prism-modeled) — `DONE` — [detail](specs/archive/3.2.md)
 - **4.5** Org-owner member management on the org page (owner-or-admin, member-scoped) — `DONE` — [detail](specs/archive/4.5.md)
 - **4.4** Organization management (admin) — list / create / rename / delete orgs — `DONE` — [detail](specs/archive/4.4.md)
 - **4.3** Admin user & access management (admin flag, org membership, passwords — no email) — `DONE` — [detail](specs/archive/4.3.md)
