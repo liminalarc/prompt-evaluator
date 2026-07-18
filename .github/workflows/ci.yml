@@ -144,3 +144,124 @@ jobs:
       - name: Dump logs on failure
         if: failure()
         run: docker compose logs
+
+  # Deploy to the AWS dev environment (spec 3.2). Modeled on Prism: OIDC to AWS, build+push both
+  # images to ECR, then start-deployment on both App Runner services and smoke the deployed URL.
+  # Only on push to main (never PRs); requires all four test gates to pass first. Dev-only — there
+  # is no prod target yet.
+  deploy:
+    name: deploy-dev
+    needs: [backend, eval-runner, web, compose-smoke]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # Serialize deploys so two quick pushes queue instead of racing App Runner (start-deployment is
+    # only valid from RUNNING). Never cancel an in-flight deploy.
+    concurrency:
+      group: deploy-dev
+      cancel-in-progress: false
+    permissions:
+      id-token: write # OIDC auth to AWS
+      contents: read
+    env:
+      AWS_REGION: us-east-1
+      # Role ARN is non-sensitive, so it's hardcoded (no repo secret needed). Auth is OIDC.
+      AWS_ROLE_ARN: arn:aws:iam::973221168142:role/litmus-github-deploy
+      ECR_APP: 973221168142.dkr.ecr.us-east-1.amazonaws.com/litmus-ai
+      ECR_EVAL: 973221168142.dkr.ecr.us-east-1.amazonaws.com/litmus-ai-eval-runner
+      SERVICE_APP: litmus-ai
+      SERVICE_EVAL: litmus-ai-eval-runner
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # full history + tags so `git describe` can derive the version
+          fetch-tags: true
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        run: aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_APP"
+
+      - name: Build & push both images
+        run: |
+          set -euo pipefail
+          SHA="${GITHUB_SHA::8}"
+          # Git-derived version (3.3): v* tag -> clean; on main -> pre-release lineage. The commit SHA
+          # is reported separately, so trim git describe's -g<sha>. Channel on main is always dev.
+          VERSION="$(git describe --tags --always 2>/dev/null | sed -E 's/^v//; s/-g[0-9a-f]+$//')"
+          [ -z "$VERSION" ] && VERSION="0.0.0-dev"
+          CHANNEL="dev"
+          echo "Building version $VERSION ($CHANNEL, $SHA)"
+
+          # Combined web+api image (build context = repo root).
+          docker build -f deploy/Dockerfile \
+            -t "$ECR_APP:$CHANNEL" -t "$ECR_APP:$CHANNEL-$SHA" \
+            --build-arg APP_VERSION="$VERSION" \
+            --build-arg GIT_COMMIT="$SHA" \
+            --build-arg APP_CHANNEL="$CHANNEL" .
+
+          # eval-runner image (build context = ./eval-runner).
+          docker build -f eval-runner/Dockerfile \
+            -t "$ECR_EVAL:$CHANNEL" -t "$ECR_EVAL:$CHANNEL-$SHA" \
+            --build-arg APP_VERSION="$VERSION" \
+            --build-arg GIT_COMMIT="$SHA" ./eval-runner
+
+          docker push "$ECR_APP:$CHANNEL"
+          docker push "$ECR_APP:$CHANNEL-$SHA"
+          docker push "$ECR_EVAL:$CHANNEL"
+          docker push "$ECR_EVAL:$CHANNEL-$SHA"
+
+      - name: Deploy both App Runner services
+        run: |
+          set -euo pipefail
+          deploy() {
+            local name="$1"
+            local arn
+            arn=$(aws apprunner list-services --region "$AWS_REGION" \
+              --query "ServiceSummaryList[?ServiceName=='$name'].ServiceArn" --output text)
+            if [ -z "$arn" ] || [ "$arn" = "None" ]; then
+              echo "::warning::App Runner service $name not found — run infra phase 2 (terraform apply -var=create_services=true). Image was pushed; skipping deploy."
+              return 0
+            fi
+            status() { aws apprunner describe-service --region "$AWS_REGION" --service-arn "$arn" --query "Service.Status" --output text; }
+            # A PAUSED service (idle cost-saving) can't accept a deployment — resume first, then wait
+            # out any in-flight operation (start-deployment is only valid from RUNNING).
+            [ "$(status)" = "PAUSED" ] && aws apprunner resume-service --region "$AWS_REGION" --service-arn "$arn" >/dev/null || true
+            for _ in $(seq 1 40); do
+              s=$(status); echo "$name status=$s"
+              case "$s" in RUNNING) break ;; *FAILED*) echo "::error::$name in failed state ($s)"; exit 1 ;; esac
+              sleep 15
+            done
+            echo "Deploying $name"
+            aws apprunner start-deployment --region "$AWS_REGION" --service-arn "$arn" >/dev/null
+            for _ in $(seq 1 40); do
+              s=$(status); echo "$name status=$s"
+              case "$s" in RUNNING) echo "$name deployed."; return 0 ;; *FAILED*) echo "::error::$name deploy failed ($s)"; exit 1 ;; esac
+              sleep 15
+            done
+            echo "::error::$name timed out waiting for RUNNING"; exit 1
+          }
+          deploy "$SERVICE_EVAL"
+          deploy "$SERVICE_APP"
+
+      - name: Post-deploy smoke against the deployed URL
+        run: |
+          set -euo pipefail
+          arn=$(aws apprunner list-services --region "$AWS_REGION" \
+            --query "ServiceSummaryList[?ServiceName=='$SERVICE_APP'].ServiceArn" --output text)
+          if [ -z "$arn" ] || [ "$arn" = "None" ]; then
+            echo "::warning::$SERVICE_APP not created yet — skipping post-deploy smoke."
+            exit 0
+          fi
+          url=$(aws apprunner describe-service --region "$AWS_REGION" --service-arn "$arn" \
+            --query "Service.ServiceUrl" --output text)
+          echo "Smoking https://$url"
+          curl -sf "https://$url/health" | grep -q '"status":"ok"'
+          ver=$(curl -sf "https://$url/api/version")
+          echo "$ver"
+          # Shape, not a literal — a real version + channel are present (3.3).
+          echo "$ver" | grep -qE '"version":"[0-9]+\.[0-9]+\.[0-9]+'
+          echo "$ver" | grep -qE '"channel":"(dev|prod)"'

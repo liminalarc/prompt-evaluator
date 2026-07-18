@@ -101,9 +101,13 @@ When a spec is done:
 
 ## Releasing (flow-ship)
 
-`/flow-ship` reads this section for the release mechanism. Today the deployable artifact is
-the **compose stack** (local + CI only — there is no hosted environment yet; **production
-deployment is spec 3.2**). A release here is a **tagged, verified build**, not a deploy.
+`/flow-ship` reads this section for the release mechanism. There is now a hosted **dev**
+environment on **AWS App Runner** (spec 3.2; infra in `infra/`, modeled on Prism). CI
+**deploys to dev continuously on every push to `main`** (the `deploy-dev` job — build+push both
+images to ECR, `start-deployment` on both App Runner services, then a post-deploy smoke of the
+deployed URL). A tagged release is still a **tagged, verified build** and the version marker; there
+is **no prod deploy target yet** (staging/prod is future work under 3.2's "Out"). So on this
+project, "the running dev app" tracks `main`, and the tag names the version stamped into images.
 
 **Version — git-tag-derived, single source of truth is the git tag.** There is **no version
 string to bump** anywhere in the tree (matching our other apps, e.g. Stormboard). The build
@@ -121,8 +125,9 @@ stamps the version from `git describe --tags` into each service; `/version` read
 - **Deploy channel (`DEPLOY_CHANNEL`) — the reliable dev/prod discriminator (3.3).** `ASPNETCORE_-
   ENVIRONMENT` is *not* trusted for this (a host can report `Production` everywhere), so the UI keys
   off `channel`: CI derives `APP_CHANNEL` from the git-ref (a `v*` tag → `prod`, else `dev`) → Docker
-  `ENV DEPLOY_CHANNEL` → the `/api/version` payload; a plain local build is `local`. Upper
-  environments (staging/prod deploy targets that set the channel) are wired in spec 3.2.
+  `ENV DEPLOY_CHANNEL` → the `/api/version` payload; a plain local build is `local`. The AWS dev
+  deploy (3.2) builds on `main`, so its channel is `dev`. Upper environments (a real staging/prod
+  deploy target that sets `prod`) remain future work.
 - CI (`compose-smoke`) computes `APP_VERSION` from `git describe` and `APP_CHANNEL` from the git-ref,
   passing both as build-args. Local/non-CI builds are `0.0.0-dev` / `local`. **Tests assert the
   version's (and channel's) shape, never a literal** — so a release never breaks a test.
@@ -139,14 +144,18 @@ with the user before tagging — it decides the **tag name**, nothing else.
 - The four CI gates are green on the release commit: `backend`, `eval-runner`, `web`,
   `compose-smoke`. Locally: `cd src && dotnet test`; `cd eval-runner && pytest`;
   `cd web && npm run test:ci && npm run build`; optionally `docker compose up --build --wait`.
+- (Dev deploy is continuous on `main` via the `deploy-dev` job — it runs after the four gates and
+  is **not** a pre-ship gate itself, but a red `deploy-dev` means the running dev app is stale.)
 
 **Cut the release:**
 
 1. Update `CHANGELOG.md` from the commits since the last tag (link `[#id]` → `specs/archive/<id>.md`);
    commit `chore: release vX.Y.Z`. (No version strings to bump — the tag is the version.)
 2. Annotated tag: `git tag -a vX.Y.Z -m "…"` listing the specs shipped; push `main` + the tag.
-3. CI runs on the pushed commit and stamps `X.Y.Z` into the built images from the tag. **Stop
-   here** — no deploy step until spec 3.2 lands.
+3. CI runs on the pushed commit and stamps `X.Y.Z` into the built images from the tag.
+4. **Deploy:** the push to `main` already ran `deploy-dev`, rolling the dev App Runner services to
+   this build and smoking the deployed URL. Confirm `GET /api/version` on the dev URL shows the new
+   commit/build time. (Provisioning/first-time setup + a prod target: see `infra/README.md` / 3.2.)
 
 `--dry-run` prints the computed version, changelog, and tag without writing or pushing.
 
