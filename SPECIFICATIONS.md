@@ -35,6 +35,9 @@
 ## Phase 5 — Dogfooding & Real-World Adoption
 - **5.1** Adopt LitmusAI across Cortex Golf & Stormboard (discover → onboard → improve every prompt) — `IN PROGRESS` — [detail](specs/5.1/5.1.md)
 
+## Phase 6 — Cost & Operability
+- **6.1** AI Usage & Budget Tracker (admin) — `NOT STARTED` — [detail](specs/6.1.md)
+
 ## Archive
 - **1.16** Version status & backport lifecycle (deployed marker + backport-eligible signal) — `DONE` — [detail](specs/archive/1.16.md)
 - **2.21** Org lifecycle — deletable Default org, no-org onboarding, and request-to-join access — `DONE` — [detail](specs/archive/2.21.md)
