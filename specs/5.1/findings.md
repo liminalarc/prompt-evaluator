@@ -198,6 +198,14 @@
   that draws the eye (persists until dismissed) and/or an **inline error next to the run button**;
   optionally auto-scroll to the banner. → *home: **user decision** — R2 visibility follow-up (2.12) or a UI round. Not built.*
 
+- **U16 — Dark mode: the topbar org-switcher dropdown options are near-unreadable.** In dark mode the
+  open `<select>` option list (topbar org switcher, app shell 2.4) renders low-contrast — the
+  non-selected options ("Default", "Stormboard") are dark-grey on dark and hard to read; only the
+  highlighted option is legible. Native `<option>` popups aren't fully brand-token-styled. Likely fix:
+  set **`color-scheme: dark`** on `:root`/the control in dark theme (makes the browser render native
+  dropdowns dark-aware), or explicitly token the select's `color`/`background`. Not specific to 5.1 —
+  a general dark-mode/design-system nit. → *home: **user decision** — a UI/dark-mode fix (2.6 brand-tokens or a UI round). Not built.*
+
 ## Ops / infra
 - **O1 — Dev deployed without the Anthropic key set.** Provisioning shipped the secret as a placeholder;
   the first eval was the first thing to exercise it. The next environment shouldn't repeat this — add a
