@@ -23,7 +23,6 @@
 - **2.7** AI Prompt Authoring Assistant (proactive, best-practice) — `NOT STARTED` — [detail](specs/2.7.md)
 - **2.9** Weighted composite scoring (per-dataset scorer weights → one overall score) — `NOT STARTED` — [detail](specs/2.9.md)
 - **2.13** Dataset Design Assistant (proactive fixture/dataset-curation guidance) — `NOT STARTED` — [detail](specs/2.13.md)
-- **2.14** Score stability & rationale-first comparison (variance view + rationale-diff) — `IN PROGRESS` — [detail](specs/2.14.md)
 - **2.15** Structured, severity-tagged LLM-judge verdicts (per-criterion + failure-mode) — `NOT STARTED` — [detail](specs/2.15.md)
 - **2.16** Data-conditional / per-fixture rubric scoring — `NOT STARTED` — [detail](specs/2.16.md)
 - **2.17** Asynchronous eval runs (job + poll) — `NOT STARTED` — [detail](specs/2.17.md)
@@ -40,6 +39,7 @@
 - **5.1** Adopt LitmusAI across Cortex Golf & Stormboard (discover → onboard → improve every prompt) — `IN PROGRESS` — [detail](specs/5.1/5.1.md)
 
 ## Archive
+- **2.14** Score stability & rationale-first comparison (variance view + rationale-diff) — `DONE` — [detail](specs/archive/2.14.md)
 - **2.12** Eval-loop round 3 — reliability quick-fixes (B8/R2/R5 + run-timeout band-aid; R1/R3/R4 promoted to 2.17/2.16/2.14) — `DONE` — [detail](specs/archive/2.12.md)
 - **2.10** Markdown editor (with preview) for markdown-bearing fields — `DONE` — [detail](specs/archive/2.10.md)
 - **2.11** Cancel action on every reveal / expand-to-edit surface — `DONE` — [detail](specs/archive/2.11.md)
