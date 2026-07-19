@@ -79,6 +79,37 @@ export interface VersionComparison {
   scorers: ScorerComparison[];
 }
 
+/** Mirrors the .NET VarianceStatResponse DTO — mean ± spread over repeated runs (2.14). */
+export interface VarianceStat {
+  mean: number;
+  stdDev: number;
+  sampleCount: number;
+  min: number;
+  max: number;
+}
+
+/** Mirrors the .NET FixtureVarianceResponse DTO. */
+export interface FixtureVariance {
+  fixtureId: string;
+  value: VarianceStat;
+}
+
+/** Mirrors the .NET VersionVarianceResponse DTO. */
+export interface VersionVariance {
+  promptVersionId: string;
+  versionNumber: number;
+  versionLabel: string | null;
+  runCount: number;
+  aggregate: VarianceStat;
+  fixtures: FixtureVariance[];
+}
+
+/** Mirrors the .NET ScorerVarianceResponse DTO. */
+export interface ScorerVariance {
+  scorer: ScorerRef;
+  versions: VersionVariance[];
+}
+
 /** A human-readable label for a scorer series (kind + judge model when present). */
 export function scorerLabel(scorer: ScorerRef): string {
   return scorer.judgeModel ? `${scorer.kind} (${scorer.judgeModel})` : scorer.kind;

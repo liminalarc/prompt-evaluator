@@ -4,7 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import {
   RegressionFlag,
+  ScorerVariance,
   TrendSeries,
+  VarianceStat,
   VersionComparison as VersionComparisonData,
   scorerLabel,
 } from '../analytics';
@@ -99,6 +101,42 @@ import { BadgeVariant, Card, EmptyState, ErrorState, PageHeader, StatusBadge } f
         <app-card heading="Score trend">
           <app-trend-chart [series]="trends()" />
         </app-card>
+
+        @if (variance().length > 0) {
+          <app-card heading="Score stability">
+            <p class="subtitle">
+              Mean ± spread over each version's <strong>repeated runs</strong> — a run-to-run wobble
+              is noise, not signal. Run a version more than once to build the distribution.
+            </p>
+            @for (sv of variance(); track sv.scorer.identity) {
+              <div class="variance-block" data-testid="variance-scorer">
+                <h3 class="scorer-title">{{ varianceLabel(sv) }}</h3>
+                <table class="sb-table" data-testid="variance">
+                  <thead>
+                    <tr>
+                      <th>Version</th>
+                      <th>Runs</th>
+                      <th>Mean ± spread</th>
+                      <th>Range</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (v of sv.versions; track v.promptVersionId) {
+                      <tr data-testid="variance-row">
+                        <td>
+                          v{{ v.versionNumber }}{{ v.versionLabel ? ' · ' + v.versionLabel : '' }}
+                        </td>
+                        <td>{{ v.runCount }}</td>
+                        <td>{{ fmtStat(v.aggregate) }}</td>
+                        <td>{{ v.aggregate.min.toFixed(3) }}–{{ v.aggregate.max.toFixed(3) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </app-card>
+        }
 
         <div class="card-grid">
           <app-card heading="Regressions">
@@ -223,6 +261,15 @@ import { BadgeVariant, Card, EmptyState, ErrorState, PageHeader, StatusBadge } f
                   model constant to compare the prompt cleanly.
                 </p>
               }
+              @if (compareNoise(); as noise) {
+                @if (noise.withinNoise) {
+                  <p class="cross-model-warn" data-testid="within-noise">
+                    ⚠ This change (Δ {{ noise.delta.toFixed(3) }}) is within run-to-run noise (±{{
+                      noise.spread.toFixed(3)
+                    }}) — not a confident move. Run more repeats to confirm.
+                  </p>
+                }
+              }
               <app-version-comparison [comparison]="comparison()" />
             }
           </app-card>
@@ -269,10 +316,46 @@ export class AnalyticsDashboard {
     (this.regressions() ?? []).filter((f) => f.confidence === 'Unverified'),
   );
 
+  // Score stability (2.14/R4): mean ± spread over each version's repeated runs — so a run-to-run
+  // wobble reads as spread, not signal. Aggregates ALL runs of a version (trends takes only latest).
+  protected readonly variance = signal<ScorerVariance[]>([]);
+
   protected readonly versions = signal<PromptVersion[]>([]);
   protected readonly fromVersionId = signal<string | null>(null);
   protected readonly toVersionId = signal<string | null>(null);
   protected readonly comparison = signal<VersionComparisonData | null>(null);
+
+  // Flag a version-over-version change that sits within run-to-run noise: if |Δ| for the primary
+  // scorer is within the two versions' combined spread, it isn't a confident move (R4). Needs
+  // repeated runs to mean anything — with one run each, spread is 0 and nothing is flagged.
+  protected readonly compareNoise = computed<{
+    withinNoise: boolean;
+    spread: number;
+    delta: number;
+  } | null>(() => {
+    const cmp = this.comparison();
+    const from = this.fromVersionId();
+    const to = this.toVersionId();
+    if (!cmp || !from || !to || cmp.scorers.length === 0) return null;
+    const sc = cmp.scorers[0];
+    if (sc.delta == null) return null;
+    const sv = this.variance().find((v) => v.scorer.identity === sc.scorer.identity);
+    const fromVar = sv?.versions.find((v) => v.promptVersionId === from);
+    const toVar = sv?.versions.find((v) => v.promptVersionId === to);
+    if (!fromVar || !toVar) return null;
+    const spread = fromVar.aggregate.stdDev + toVar.aggregate.stdDev;
+    if (spread <= 0) return null; // no repeated runs → nothing to say
+    return { withinNoise: Math.abs(sc.delta) <= spread, spread, delta: sc.delta };
+  });
+
+  // "0.750 ± 0.050" — a version's aggregate mean with its run-to-run spread.
+  protected fmtStat(s: VarianceStat): string {
+    return `${s.mean.toFixed(3)} ± ${s.stdDev.toFixed(3)}`;
+  }
+
+  protected varianceLabel(sv: ScorerVariance): string {
+    return scorerLabel(sv.scorer);
+  }
 
   // R5: flag a cross-model comparison. If the two selected versions ran on different subject models,
   // a score delta mixes the prompt change with a model change — you can't cleanly attribute it to
@@ -398,6 +481,10 @@ export class AnalyticsDashboard {
     this.api.getRegressions(promptId, datasetId, threshold).subscribe({
       next: (flags) => this.regressions.set(flags),
       error: () => this.error.set('Could not load regressions.'),
+    });
+    this.api.getVariance(promptId, datasetId).subscribe({
+      next: (v) => this.variance.set(v),
+      error: () => this.error.set('Could not load score stability.'),
     });
   }
 

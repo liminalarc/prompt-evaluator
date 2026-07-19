@@ -216,6 +216,7 @@ describe('AnalyticsDashboard', () => {
 
     http.expectOne((r) => r.url === '/api/analytics/trends').flush(trends);
     http.expectOne((r) => r.url === '/api/analytics/regressions').flush(flags);
+    http.expectOne((r) => r.url === '/api/analytics/variance').flush([]);
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
@@ -259,6 +260,7 @@ describe('AnalyticsDashboard', () => {
 
     http.expectOne((r) => r.url === '/api/analytics/trends').flush([]);
     http.expectOne((r) => r.url === '/api/analytics/regressions').flush(flags);
+    http.expectOne((r) => r.url === '/api/analytics/variance').flush([]);
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
@@ -314,6 +316,7 @@ describe('AnalyticsDashboard', () => {
 
     http.expectOne((r) => r.url === '/api/analytics/trends').flush([]);
     http.expectOne((r) => r.url === '/api/analytics/regressions').flush([]);
+    http.expectOne((r) => r.url === '/api/analytics/variance').flush([]);
     http
       .expectOne((r) => r.url === '/api/analytics/comparison')
       .flush({
@@ -348,10 +351,144 @@ describe('AnalyticsDashboard', () => {
 
     http.expectOne((r) => r.url === '/api/analytics/trends').flush([]);
     http.expectOne((r) => r.url === '/api/analytics/regressions').flush([]);
+    http.expectOne((r) => r.url === '/api/analytics/variance').flush([]);
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('[data-testid="no-regressions"]')).toBeTruthy();
+  });
+
+  it('shows per-version mean ± spread in a Score stability card [2.14]', () => {
+    const fixture = createAndLoadLists();
+    const cmp = fixture.componentInstance as unknown as {
+      promptId: { set(v: string): void };
+      datasetId: { set(v: string): void };
+    };
+    cmp.promptId.set('p1');
+    cmp.datasetId.set('d1');
+    fixture.detectChanges();
+
+    http.expectOne((r) => r.url === '/api/analytics/trends').flush([]);
+    http.expectOne((r) => r.url === '/api/analytics/regressions').flush([]);
+    http
+      .expectOne((r) => r.url === '/api/analytics/variance')
+      .flush([
+        {
+          scorer: { identity: 'abc', kind: 'LlmJudge', judgeModel: 'claude-opus-4-8' },
+          versions: [
+            {
+              promptVersionId: 'v1',
+              versionNumber: 1,
+              versionLabel: null,
+              runCount: 2,
+              aggregate: { mean: 0.75, stdDev: 0.05, sampleCount: 2, min: 0.7, max: 0.8 },
+              fixtures: [],
+            },
+          ],
+        },
+      ]);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="variance"]')).toBeTruthy();
+    const row = el.querySelector('[data-testid="variance-row"]')!;
+    expect(row.textContent).toContain('v1');
+    expect(row.textContent).toContain('2'); // run count
+    expect(row.textContent).toContain('0.750 ± 0.050'); // mean ± spread
+  });
+
+  it('flags a version delta that is within run-to-run noise [2.14]', () => {
+    const fixture = createAndLoadLists();
+    const cmp = fixture.componentInstance as unknown as {
+      datasetId: { set(v: string): void };
+      selectPrompt(id: string): void;
+    };
+    cmp.datasetId.set('d1');
+    cmp.selectPrompt('p1');
+    fixture.detectChanges();
+
+    http.expectOne('/api/prompts/p1').flush({
+      id: 'p1',
+      name: 'Summarizer',
+      description: null,
+      versions: [
+        {
+          id: 'v1',
+          versionNumber: 1,
+          content: '',
+          targetModel: 'm',
+          label: null,
+          sourceApp: null,
+          createdAt: '',
+        },
+        {
+          id: 'v2',
+          versionNumber: 2,
+          content: '',
+          targetModel: 'm',
+          label: null,
+          sourceApp: null,
+          createdAt: '',
+        },
+      ],
+    });
+    fixture.detectChanges();
+
+    http.expectOne((r) => r.url === '/api/analytics/trends').flush([]);
+    http.expectOne((r) => r.url === '/api/analytics/regressions').flush([]);
+    // Both versions run 3× with a 0.15 spread each → combined spread 0.30; the compare Δ is -0.20,
+    // which sits inside that noise band → the within-noise banner should show.
+    http
+      .expectOne((r) => r.url === '/api/analytics/variance')
+      .flush([
+        {
+          scorer: { identity: 'abc', kind: 'FuzzyMatch', judgeModel: null },
+          versions: [
+            {
+              promptVersionId: 'v1',
+              versionNumber: 1,
+              versionLabel: null,
+              runCount: 3,
+              aggregate: { mean: 0.7, stdDev: 0.15, sampleCount: 3, min: 0.5, max: 0.85 },
+              fixtures: [],
+            },
+            {
+              promptVersionId: 'v2',
+              versionNumber: 2,
+              versionLabel: null,
+              runCount: 3,
+              aggregate: { mean: 0.5, stdDev: 0.15, sampleCount: 3, min: 0.35, max: 0.65 },
+              fixtures: [],
+            },
+          ],
+        },
+      ]);
+    http
+      .expectOne((r) => r.url === '/api/analytics/comparison')
+      .flush({
+        fromVersionId: 'v1',
+        fromVersionNumber: 1,
+        fromVersionLabel: null,
+        fromRunId: 'r1',
+        toVersionId: 'v2',
+        toVersionNumber: 2,
+        toVersionLabel: null,
+        toRunId: 'r2',
+        scorers: [
+          {
+            scorer: { identity: 'abc', kind: 'FuzzyMatch', judgeModel: null },
+            fromMean: 0.7,
+            toMean: 0.5,
+            delta: -0.2,
+            fixtures: [],
+          },
+        ],
+      });
+    fixture.detectChanges();
+
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('[data-testid="within-noise"]'),
+    ).toBeTruthy();
   });
 
   it('loads a version comparison after selecting a prompt (defaults to the two latest versions)', () => {
@@ -394,6 +531,7 @@ describe('AnalyticsDashboard', () => {
 
     http.expectOne((r) => r.url === '/api/analytics/trends').flush([]);
     http.expectOne((r) => r.url === '/api/analytics/regressions').flush([]);
+    http.expectOne((r) => r.url === '/api/analytics/variance').flush([]);
     const comparisonReq = http.expectOne((r) => r.url === '/api/analytics/comparison');
     expect(comparisonReq.request.params.get('fromVersionId')).toBe('v1');
     expect(comparisonReq.request.params.get('toVersionId')).toBe('v2');

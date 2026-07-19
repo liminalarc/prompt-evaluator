@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { RegressionFlag, TrendSeries, VersionComparison } from '../analytics';
+import { RegressionFlag, ScorerVariance, TrendSeries, VersionComparison } from '../analytics';
 
 /**
  * The single API client for the analytics bounded area (trends, regressions, comparison).
@@ -27,6 +27,12 @@ export class AnalyticsApiService {
       params = params.set('threshold', threshold);
     }
     return this.http.get<RegressionFlag[]>('/api/analytics/regressions', { params });
+  }
+
+  getVariance(promptId: string, datasetId: string): Observable<ScorerVariance[]> {
+    return this.http.get<ScorerVariance[]>('/api/analytics/variance', {
+      params: new HttpParams().set('promptId', promptId).set('datasetId', datasetId),
+    });
   }
 
   getComparison(
