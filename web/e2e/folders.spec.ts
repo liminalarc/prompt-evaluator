@@ -22,14 +22,16 @@ test('creates an org and folder, files a prompt into it, and navigates by folder
   await page.goto('/prompts');
 
   // Create an isolated organization via the UI and select it; capture its id from the create
-  // response so teardown can delete it reliably.
-  await page.getByTestId('toggle-new-org').click();
-  await page.fill('#orgName', org);
+  // response so teardown can delete it reliably. Use the org rail's inline "+" — it's always present
+  // regardless of whether this (shared) user currently has zero orgs (the 2.21 no-org onboarding
+  // fills the main area) or already has some, so the flow is stable under parallel specs.
+  await page.getByTestId('rail-add-org').click();
+  await page.getByTestId('rail-new-org-name').fill(org);
   const [orgRes] = await Promise.all([
     page.waitForResponse(
       (r) => r.url().endsWith('/api/organizations') && r.request().method() === 'POST',
     ),
-    page.getByTestId('create-org').click(),
+    page.getByTestId('rail-create-org').click(),
   ]);
   orgId = (await orgRes.json()).id;
   await expect(page.locator(`[data-testid="org-option"][data-org-id="${orgId}"]`)).toHaveAttribute(
