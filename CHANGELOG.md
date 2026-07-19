@@ -5,6 +5,42 @@ SemVer (pre-1.0 `0.x`) across the API, web, and eval-runner. A release is a tagg
 as of `0.13.0` it also deploys to a hosted **dev** environment on every push to `main` (spec 3.2).
 There is no prod target yet.
 
+## [0.19.0] — 2026-07-19
+
+Organization lifecycle plus a prompt **backport lifecycle**: a user in no org now gets real
+onboarding (create or **request to join**), the placeholder "Default" org is fully deletable, and
+every prompt version can be flagged as running-in-source with a **backport-eligible** signal when a
+better version exists.
+
+### Added
+
+- **[#2.21] Org lifecycle — deletable Default org, no-org onboarding, request-to-join**
+  ([detail](specs/archive/2.21.md)):
+  - **No-org onboarding** — a user in zero organizations sees a real first-run surface (Dashboard +
+    Prompts) offering two paths: **create an organization** or **request to join** one. Sign-up no
+    longer auto-assigns a placeholder org.
+  - **Request-to-join access** — the pull counterpart to 4.5's add-by-email push: request access to
+    an org from a workspace directory; the org's **Owner** (or an admin) reviews a **Requests** tab
+    and approves (granting membership at a role) or denies. Domain rules hold — no duplicate open
+    request, can't request an org you're in, idempotent approve.
+  - **Deletable "Default" org** — the seeded Default org deletes like any other; deleting an org now
+    revokes its memberships (no orphaned rows) and the bootstrap seeder no longer resurrects it.
+- **[#1.16] Version status & backport lifecycle** ([detail](specs/archive/1.16.md)):
+  - **"Current in source" marker** — mark which version your source app runs (optional commit SHA);
+    one per prompt, nullable until set.
+  - **Backport-eligible signal** — derived when a version scores higher than Current on a shared
+    dataset (same-scorer-config comparison, never blended); **mark-as-backported** moves the marker
+    and the flag re-derives. Weighted eligibility is future work ([#2.9]).
+  - **Version-status badges** — `Current` · `Backport-eligible` · `Regressed` on each version row,
+    plus a compact **Deployment summary** in the prompt workspace. LitmusAI signals only — it never
+    writes to a source repo.
+
+### Changed
+
+- **Marketing / positioning pass** — the README leads with value and audience, a new `MARKETING.md`
+  is the positioning source of truth, and the login / register / onboarding copy leads with the
+  outcome (score prompts, catch regressions) rather than restating the page heading.
+
 ## [0.18.0] — 2026-07-19
 
 Deferred UX polish from the cohesion pass ([#2.20]), led by a new **persistent left organization
