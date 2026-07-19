@@ -154,6 +154,18 @@
   stable baseline / regression call wants **repeated runs or a variance view**, and a diff should surface the
   **rationale delta**, not just the score delta. → *home: **[2.12](../2.12.md)** (+ methodology note).*
 
+## Subject-model drift (2026-07-18, round-debrief walk)
+- **R5 — Add-version doesn't hold the subject model; silent drift confounds prompt comparisons.** On
+  round-debrief, v1 ran on `claude-sonnet-4-6` (Golf's real model) but **v2/v3 ran on `claude-sonnet-5`** —
+  the add-version form defaulted the Target model to a different model and it slipped through, so the v1→v2
+  comparison confounded *prompt* with *model upgrade*, and the backported prompt was **never validated on
+  Golf's actual model**. For a tool whose whole job is isolating the prompt's effect, holding the subject
+  model constant must be the **default**. Fix: (a) add-version **defaults Target model to the latest
+  version's model**; (b) **warn** when a new version's model differs from the prior one; (c)
+  Analytics/Compare **flags a cross-model comparison** (you can't cleanly compare prompts across different
+  subject models — the axis isn't held). Sibling to 1.16's same-*scorer*-config rule: hold the identity axes
+  (subject model **and** scorer config) constant when comparing versions. → *home: **[2.12](../2.12.md)**.*
+
 ## Ops / infra
 - **O1 — Dev deployed without the Anthropic key set.** Provisioning shipped the secret as a placeholder;
   the first eval was the first thing to exercise it. The next environment shouldn't repeat this — add a

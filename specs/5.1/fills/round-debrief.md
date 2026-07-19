@@ -273,6 +273,14 @@ Rules for drills:
 - **Backport decision:** ✅ **v2 backported** — Golf `9ba2ad3c` (`feat(ai): improve round-debrief prompt…`).
   Ships the adaptive-structure + anti-benchmark/prediction/missing-data prompt (no few-shot). The
   **data-conditional rubric** change stays in LitmusAI (measurement, not what Golf runs).
+- ⚠️ **MODEL-DRIFT CAVEAT (finding R5):** v1 ran on **Sonnet 4.6** but **v2/v3 ran on Sonnet 5** (add-version
+  didn't hold the model). So v1→v2 confounds prompt+model, and the backported v2 prompt was **validated on
+  Sonnet 5, not Golf's Sonnet 4.6**. The prompt changes are behavioral/model-agnostic so the backport is
+  *likely* fine, but **unvalidated on the real model**.
+- **Validation (do this): add v4 = v2's exact content, Target model = `Claude Sonnet 4.6`** (paste the v2
+  content from the "v2 content" block above; do **not** use the seed-from-latest, which is v3). Run **v4**,
+  then **Compare v1 vs v4** (both Sonnet 4.6, new rubric) → the clean prompt-only result on Golf's real model.
+  If v4 ≥ v1 → backport confirmed; if not → reconsider.
 - **Learnings:** (1) daily-briefing's *data-starvation → fabrication* lesson **transfers** — explicit bans
   removed benchmarks/predictions on sparse input. (2) **Score ≠ quality**: v2 improved the output while the
   aggregate stayed flat; the win was only visible in the **rationale** (R4). (3) A single rubric over
