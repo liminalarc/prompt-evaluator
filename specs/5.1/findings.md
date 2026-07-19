@@ -222,6 +222,14 @@
   though it subsumes parts of each. → *home: **user decision — likely its own new spec** (structured/
   severity-tagged judging), spun out of 5.1 like 1.16/1.17/1.18. Not built.*
 
+- **R8 — Building a good test dataset is an artform with no proactive tooling.** Surfaced while building
+  `Core round scenarios`: coverage, rich-vs-sparse balance, homogeneity-vs-split, capture/synthetic ratio,
+  and fixture-count sufficiency are all craft decisions the tool doesn't help with — and getting them wrong
+  silently sabotages the eval (R3's cap; R7's hidden risk). The *mechanics* live in [[1.2]] and the
+  *reactive* critique in [[2.2]] (given run history), but the **proactive, at-build-time** craft guidance —
+  the dataset sibling of 2.7's proactive prompt authoring — has no home. → *home: **new spec [2.13](../2.13.md)**
+  (Dataset Design Assistant), drafted concept-only 2026-07-19 (user). Not built.*
+
 ## Ops / infra
 - **O1 — Dev deployed without the Anthropic key set.** Provisioning shipped the secret as a placeholder;
   the first eval was the first thing to exercise it. The next environment shouldn't repeat this — add a

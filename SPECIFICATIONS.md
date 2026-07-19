@@ -23,6 +23,7 @@
 - **2.7** AI Prompt Authoring Assistant (proactive, best-practice) — `NOT STARTED` — [detail](specs/2.7.md)
 - **2.9** Weighted composite scoring (per-dataset scorer weights → one overall score) — `NOT STARTED` — [detail](specs/2.9.md)
 - **2.12** Eval-loop round 3 — reliability & fair scoring (round-debrief dogfood findings) — `IN PROGRESS` — [detail](specs/2.12.md)
+- **2.13** Dataset Design Assistant (proactive fixture/dataset-curation guidance) — `NOT STARTED` — [detail](specs/2.13.md)
 
 ## Phase 3 — Integrations & Ops
 - **3.1** Zatomic-backed Prompt Registry — `NOT STARTED` — [detail](specs/3.1.md)
