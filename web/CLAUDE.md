@@ -159,6 +159,26 @@ The operator-facing UI:
 - A new reveal surface inherits Cancel by copying that two-line pattern — don't ship a reveal form
   without one.
 
+## Tabbed surfaces & drawers (from 2.19)
+
+- **The prompt workspace (`/prompts/:id`) is a tabbed hub** — Versions · Datasets · Analytics · Runs.
+  Panels stay in the DOM; a `[hidden]="tab() !== 'x'"` binding toggles visibility (so unit tests can
+  query any panel, and a tab switch is instant). Run is an elevated header action; Compare opens the
+  shared drawer.
+- **Tab state lives in the URL — the global convention for any tabbed surface.** Sync the active tab to
+  an **optional `?tab=` query param** so the tab is deep-linkable and, crucially, the browser Back
+  button / a breadcrumb from a child page (e.g. a dataset detail) returns to the **tab you left from**,
+  not the default. The pattern: a `tab` signal defaulted to the first tab; `selectTab(t)` sets the
+  signal **and** navigates **explicitly** (`router.navigate(['/prompts', id], { queryParams: { tab },
+  replaceUrl: true })` — a relative `navigate([])` can dedupe to a no-op on a `:id` route and never
+  write the param); `ngOnInit` restores it from `route.snapshot.queryParamMap.get('tab')` (the
+  component is recreated on cross-route Back, so the snapshot read is enough). A child page's breadcrumb
+  crumb back to a tabbed parent carries the tab via `Crumb.queryParams` (e.g. `{ tab: 'datasets' }`).
+- **Heavy/focused/occasional surfaces use the shared `Drawer`** (`shared/drawer.ts`) — right-side
+  slide-over, Esc/scrim close, focus-trap, responsive. Homes scorer-edit, user↔org management, and the
+  unified **Compare** (Content · Scores · Rationale off one From→To). *Not* for small inline add/edit
+  forms (those keep the 2.11 reveal + Cancel pattern) and *not* for always-on primary data.
+
 ## E2e that needs a model (from 1.2)
 
 - An e2e that would trigger a live model call (synthetic generation) runs against a **stubbed

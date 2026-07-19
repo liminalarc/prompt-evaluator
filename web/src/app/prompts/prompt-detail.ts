@@ -696,14 +696,14 @@ export class PromptDetail implements OnInit {
   }
 
   // Sync the active tab to a `?tab=` query param (replaceUrl — no history spam). This makes the
-  // workspace deep-linkable and, crucially, lets the browser Back button from a dataset detail page
-  // return to the *tab you left from* (e.g. Datasets), not always Versions.
+  // workspace deep-linkable and, crucially, lets the browser Back button / breadcrumb from a dataset
+  // detail page return to the *tab you left from* (e.g. Datasets), not always Versions.
+  // Explicit path navigation (not `navigate([])`) — a relative empty-command nav can dedupe to a
+  // no-op on a `:id`-param route, leaving the query param off the URL.
   protected selectTab(t: WorkspaceTab): void {
     this.tab.set(t);
-    void this.router.navigate([], {
-      relativeTo: this.route,
+    void this.router.navigate(['/prompts', this.id], {
       queryParams: { tab: t },
-      queryParamsHandling: 'merge',
       replaceUrl: true,
     });
   }
