@@ -39,7 +39,10 @@ test('registers a prompt, records versions, and diffs them', async ({ page, requ
   await page.getByTestId('add-version').click();
   await expect(page.getByTestId('versions')).toContainText('claude-opus-4-8');
 
-  // The diff between the two versions is shown.
+  // Compare is the unified drawer now (2.19 W7): open it; the Content tab (default) diffs the two
+  // latest versions.
+  await page.getByTestId('open-compare').click();
+  await expect(page.getByTestId('drawer')).toBeVisible();
   const diff = page.getByTestId('diff');
   await expect(diff).toBeVisible();
   await expect(diff).toContainText('+ Summarize concisely: {input}');

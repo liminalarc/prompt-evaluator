@@ -28,15 +28,17 @@ import {
   runFailureMessage,
 } from '../shared';
 import { PromptsApiService } from './prompts-api.service';
-import { VersionDiff } from './version-diff';
+import { CompareDrawer } from '../analytics/compare-drawer';
 import { validateImportFile } from './import-file';
+
+type WorkspaceTab = 'versions' | 'datasets' | 'analytics' | 'runs';
 
 @Component({
   selector: 'app-prompt-detail',
   imports: [
     FormsModule,
     RouterLink,
-    VersionDiff,
+    CompareDrawer,
     TrendChart,
     Breadcrumb,
     Card,
@@ -63,6 +65,28 @@ import { validateImportFile } from './import-file';
         <app-loading-state label="Loading prompt…" />
       } @else if (prompt(); as p) {
         <app-page-header [heading]="'Prompt: ' + p.name" [subtitle]="p.description ?? ''">
+          @if (p.versions.length > 0 && datasets()?.length) {
+            <button
+              actions
+              class="sb-btn sb-btn--sm sb-btn--primary"
+              type="button"
+              data-testid="header-run"
+              (click)="openRun()"
+            >
+              Run a version
+            </button>
+          }
+          @if (p.versions.length >= 2) {
+            <button
+              actions
+              class="sb-btn sb-btn--sm sb-btn--secondary"
+              type="button"
+              data-testid="open-compare"
+              (click)="showCompare.set(true)"
+            >
+              Compare
+            </button>
+          }
           <button
             actions
             class="sb-btn sb-btn--danger sb-btn--sm"
@@ -74,308 +98,304 @@ import { validateImportFile } from './import-file';
           </button>
         </app-page-header>
 
-        <app-card heading="Version history">
-          <p class="subtitle">
-            Each version is immutable — <strong>v1, v2…</strong> are the identity; the label is an
-            optional description. Select a row to view its content and edit the label.
-          </p>
-          @if (p.versions.length === 0) {
-            <app-empty-state
-              message="No versions yet — add the first with the button below."
-              data-testid="no-versions"
-            />
-          } @else {
-            <table class="sb-table" data-testid="versions">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Target model</th>
-                  <th>Label</th>
-                  <th>Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (v of p.versions; track v.id) {
-                  <tr
-                    class="version-row"
-                    [class.version-row--open]="expandedVersionId() === v.id"
-                    (click)="toggleVersion(v.id)"
-                    data-testid="version-row"
-                  >
-                    <td>v{{ v.versionNumber }}</td>
-                    <td><app-chip [label]="v.targetModel" /></td>
-                    <td>{{ v.label ?? '—' }}</td>
-                    <td>{{ v.createdAt | date: 'medium' }}</td>
-                  </tr>
-                  @if (expandedVersionId() === v.id) {
-                    <tr class="version-detail" data-testid="version-detail">
-                      <td colspan="4">
-                        <div class="sb-field">
-                          <label>Content (immutable — add a version to change it)</label>
-                          <pre class="version-content">{{ v.content }}</pre>
-                        </div>
-                        <form
-                          class="form-stack"
-                          (submit)="saveLabel($event, v.id)"
-                          (keydown.escape)="cancelEditLabel()"
-                        >
-                          <div class="sb-field">
-                            <label [attr.for]="'label-' + v.id">Label (optional description)</label>
-                            <input
-                              [attr.id]="'label-' + v.id"
-                              name="editLabel"
-                              [ngModel]="editLabel()"
-                              (ngModelChange)="editLabel.set($event)"
-                              [ngModelOptions]="{ standalone: true }"
-                              data-testid="edit-label"
-                            />
-                          </div>
-                          <div class="form-actions">
-                            <button
-                              class="sb-btn sb-btn--primary sb-btn--sm"
-                              type="submit"
-                              data-testid="save-label"
-                            >
-                              Save label
-                            </button>
-                            <button
-                              class="sb-btn sb-btn--ghost sb-btn--sm"
-                              type="button"
-                              data-testid="cancel-edit-label"
-                              (click)="cancelEditLabel()"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </form>
-                      </td>
-                    </tr>
-                  }
-                }
-              </tbody>
-            </table>
-          }
-
-          @if (showAddVersion()) {
-            <form
-              class="form-stack add-version-form"
-              (submit)="addVersion($event)"
-              (keydown.escape)="cancelAddVersion()"
+        <!-- D2: the workspace is a tabbed hub (Versions · Datasets · Analytics · Runs). Every panel
+             stays in the DOM ([hidden] toggles visibility) so a tab switch is instant and deep. -->
+        <nav class="ws-tabs" role="tablist">
+          @for (t of tabs; track t.id) {
+            <button
+              type="button"
+              role="tab"
+              class="ws-tabs__tab"
+              [class.ws-tabs__tab--active]="tab() === t.id"
+              [attr.data-testid]="'tab-' + t.id"
+              (click)="tab.set(t.id)"
             >
-              <div class="sb-field">
-                <label for="importFile">Import content from a file (optional)</label>
-                <input
-                  id="importFile"
-                  type="file"
-                  accept=".txt,.md,.markdown,.text,.prompt,text/*"
-                  data-testid="import-version-file"
-                  (change)="importVersionFile($event)"
-                />
-              </div>
-              <div class="sb-field">
-                <label for="content">Content</label>
-                <app-markdown-editor
-                  inputId="content"
-                  name="content"
-                  [rows]="8"
-                  [value]="content()"
-                  (valueChange)="content.set($event)"
-                />
-              </div>
-              <div class="sb-field">
-                <label for="targetModel">Target model</label>
-                <select
-                  id="targetModel"
-                  name="targetModel"
-                  [ngModel]="targetModel()"
-                  (ngModelChange)="targetModel.set($event)"
-                  [ngModelOptions]="{ standalone: true }"
-                  data-testid="target-model"
-                >
-                  @for (m of subjectModels(); track m.modelId) {
-                    <option [value]="m.modelId">
-                      {{ m.displayName }}{{ m.available ? '' : ' (unavailable)' }}
-                    </option>
-                  }
-                </select>
-                @if (targetModelChanged()) {
-                  <p class="model-warn" data-testid="model-change-warning">
-                    ⚠ This changes the subject model from the last version ({{
-                      modelDisplay(latestVersionModel())
-                    }}). Holding the model constant keeps a version-over-version comparison about
-                    the <em>prompt</em>, not a model swap — change it only on purpose.
-                  </p>
-                }
-              </div>
-              <div class="sb-field">
-                <label for="label">Label (optional description)</label>
-                <input
-                  id="label"
-                  name="label"
-                  [ngModel]="label()"
-                  (ngModelChange)="label.set($event)"
-                />
-              </div>
-              <div class="form-actions">
-                <button class="sb-btn sb-btn--primary" type="submit" data-testid="add-version">
-                  Add version
-                </button>
-                <button
-                  class="sb-btn sb-btn--ghost"
-                  type="button"
-                  data-testid="cancel-add-version"
-                  (click)="cancelAddVersion()"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
+              {{ t.label }}
+            </button>
           }
+        </nav>
 
-          <button
-            foot
-            class="sb-btn sb-btn--sm sb-btn--secondary"
-            type="button"
-            data-testid="toggle-add-version"
-            (click)="toggleAddVersion()"
-          >
-            + Add version
-          </button>
-        </app-card>
-
-        @if (p.versions.length >= 2) {
-          <app-card heading="Compare versions">
-            <div class="compare">
-              <label
-                >From
-                <select
-                  [ngModel]="fromNumber()"
-                  (ngModelChange)="fromNumber.set(+$event)"
-                  data-testid="from"
-                >
+        <div class="tab-panel" [hidden]="tab() !== 'versions'">
+          <app-card heading="Version history">
+            <p class="subtitle">
+              Each version is immutable — <strong>v1, v2…</strong> are the identity; the label is an
+              optional description. Select a row to view its content and edit the label.
+            </p>
+            @if (p.versions.length === 0) {
+              <app-empty-state
+                message="No versions yet — add the first with the button below."
+                data-testid="no-versions"
+              />
+            } @else {
+              <table class="sb-table" data-testid="versions">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Target model</th>
+                    <th>Label</th>
+                    <th>Created</th>
+                  </tr>
+                </thead>
+                <tbody>
                   @for (v of p.versions; track v.id) {
-                    <option [value]="v.versionNumber">v{{ v.versionNumber }}</option>
+                    <tr
+                      class="version-row"
+                      [class.version-row--open]="expandedVersionId() === v.id"
+                      (click)="toggleVersion(v.id)"
+                      data-testid="version-row"
+                    >
+                      <td>v{{ v.versionNumber }}</td>
+                      <td><app-chip [label]="v.targetModel" /></td>
+                      <td>{{ v.label ?? '—' }}</td>
+                      <td>{{ v.createdAt | date: 'medium' }}</td>
+                    </tr>
+                    @if (expandedVersionId() === v.id) {
+                      <tr class="version-detail" data-testid="version-detail">
+                        <td colspan="4">
+                          <div class="sb-field">
+                            <label>Content (immutable — add a version to change it)</label>
+                            <pre class="version-content">{{ v.content }}</pre>
+                          </div>
+                          <form
+                            class="form-stack"
+                            (submit)="saveLabel($event, v.id)"
+                            (keydown.escape)="cancelEditLabel()"
+                          >
+                            <div class="sb-field">
+                              <label [attr.for]="'label-' + v.id"
+                                >Label (optional description)</label
+                              >
+                              <input
+                                [attr.id]="'label-' + v.id"
+                                name="editLabel"
+                                [ngModel]="editLabel()"
+                                (ngModelChange)="editLabel.set($event)"
+                                [ngModelOptions]="{ standalone: true }"
+                                data-testid="edit-label"
+                              />
+                            </div>
+                            <div class="form-actions">
+                              <button
+                                class="sb-btn sb-btn--primary sb-btn--sm"
+                                type="submit"
+                                data-testid="save-label"
+                              >
+                                Save label
+                              </button>
+                              <button
+                                class="sb-btn sb-btn--ghost sb-btn--sm"
+                                type="button"
+                                data-testid="cancel-edit-label"
+                                (click)="cancelEditLabel()"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </form>
+                        </td>
+                      </tr>
+                    }
                   }
-                </select>
-              </label>
-              <label
-                >To
-                <select
-                  [ngModel]="toNumber()"
-                  (ngModelChange)="toNumber.set(+$event)"
-                  data-testid="to"
-                >
-                  @for (v of p.versions; track v.id) {
-                    <option [value]="v.versionNumber">v{{ v.versionNumber }}</option>
-                  }
-                </select>
-              </label>
-            </div>
-            <app-version-diff [before]="fromContent()" [after]="toContent()" />
-          </app-card>
-        }
+                </tbody>
+              </table>
+            }
 
-        @if (p.versions.length > 0 && datasets()?.length) {
-          <app-card heading="Run a version">
-            <p class="subtitle">Score a version against one of this prompt's datasets.</p>
-            @if (showRun()) {
+            @if (showAddVersion()) {
               <form
                 class="form-stack add-version-form"
-                (submit)="triggerRun($event)"
-                (keydown.escape)="cancelRun()"
+                (submit)="addVersion($event)"
+                (keydown.escape)="cancelAddVersion()"
               >
                 <div class="sb-field">
-                  <label for="runVersion">Version</label>
-                  <select
-                    id="runVersion"
-                    name="runVersion"
-                    [ngModel]="runVersionId()"
-                    (ngModelChange)="runVersionId.set($event)"
-                    data-testid="run-version"
-                  >
-                    <option value="">Select a version…</option>
-                    @for (v of p.versions; track v.id) {
-                      <option [value]="v.id">v{{ v.versionNumber }} · {{ v.targetModel }}</option>
-                    }
-                  </select>
+                  <label for="importFile">Import content from a file (optional)</label>
+                  <input
+                    id="importFile"
+                    type="file"
+                    accept=".txt,.md,.markdown,.text,.prompt,text/*"
+                    data-testid="import-version-file"
+                    (change)="importVersionFile($event)"
+                  />
                 </div>
                 <div class="sb-field">
-                  <label for="runDataset">Dataset</label>
+                  <label for="content">Content</label>
+                  <app-markdown-editor
+                    inputId="content"
+                    name="content"
+                    [rows]="8"
+                    [value]="content()"
+                    (valueChange)="content.set($event)"
+                  />
+                </div>
+                <div class="sb-field">
+                  <label for="targetModel">Target model</label>
                   <select
-                    id="runDataset"
-                    name="runDataset"
-                    [ngModel]="runDatasetId()"
-                    (ngModelChange)="onRunDatasetChange($event)"
-                    data-testid="run-dataset"
+                    id="targetModel"
+                    name="targetModel"
+                    [ngModel]="targetModel()"
+                    (ngModelChange)="targetModel.set($event)"
+                    [ngModelOptions]="{ standalone: true }"
+                    data-testid="target-model"
                   >
-                    <option value="">Select a dataset…</option>
-                    @for (d of datasets(); track d.id) {
-                      <option [value]="d.id">{{ d.name }}</option>
+                    @for (m of subjectModels(); track m.modelId) {
+                      <option [value]="m.modelId">
+                        {{ m.displayName }}{{ m.available ? '' : ' (unavailable)' }}
+                      </option>
                     }
                   </select>
+                  @if (targetModelChanged()) {
+                    <p class="model-warn" data-testid="model-change-warning">
+                      ⚠ This changes the subject model from the last version ({{
+                        modelDisplay(latestVersionModel())
+                      }}). Holding the model constant keeps a version-over-version comparison about
+                      the <em>prompt</em>, not a model swap — change it only on purpose.
+                    </p>
+                  }
+                </div>
+                <div class="sb-field">
+                  <label for="label">Label (optional description)</label>
+                  <input
+                    id="label"
+                    name="label"
+                    [ngModel]="label()"
+                    (ngModelChange)="label.set($event)"
+                  />
                 </div>
                 <div class="form-actions">
-                  <button
-                    class="sb-btn sb-btn--primary"
-                    type="submit"
-                    data-testid="run"
-                    [disabled]="running() || !runVersionId() || !runDatasetId()"
-                  >
-                    {{ running() ? 'Running…' : 'Run evaluation' }}
+                  <button class="sb-btn sb-btn--primary" type="submit" data-testid="add-version">
+                    Add version
                   </button>
                   <button
                     class="sb-btn sb-btn--ghost"
                     type="button"
-                    data-testid="cancel-run"
-                    (click)="cancelRun()"
+                    data-testid="cancel-add-version"
+                    (click)="cancelAddVersion()"
                   >
                     Cancel
                   </button>
                 </div>
               </form>
-
-              @if (recentRuns().length > 0) {
-                <table class="sb-table" data-testid="recent-runs">
-                  <thead>
-                    <tr>
-                      <th>Run</th>
-                      <th>Score</th>
-                      <th>Scorers</th>
-                      <th>Test cases</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (r of recentRuns(); track r.id) {
-                      <tr>
-                        <td>
-                          <a [routerLink]="['/eval-runs', r.id]" data-testid="recent-run-link">{{
-                            r.createdAt | date: 'medium'
-                          }}</a>
-                        </td>
-                        <td>
-                          {{ r.meanScore != null ? (r.meanScore | number: '1.2-2') : '—' }}
-                        </td>
-                        <td><app-chip-list [labels]="r.scorerKinds" /></td>
-                        <td>{{ r.fixtureCount }}</td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              }
             }
+
             <button
               foot
               class="sb-btn sb-btn--sm sb-btn--secondary"
               type="button"
-              data-testid="toggle-run"
-              (click)="showRun.set(!showRun())"
+              data-testid="toggle-add-version"
+              (click)="toggleAddVersion()"
             >
-              + Run a version
+              + Add version
             </button>
           </app-card>
-        }
+        </div>
 
-        <div class="card-grid">
+        <div class="tab-panel" [hidden]="tab() !== 'runs'">
+          @if (p.versions.length > 0 && datasets()?.length) {
+            <app-card heading="Run a version">
+              <p class="subtitle">Score a version against one of this prompt's datasets.</p>
+              @if (showRun()) {
+                <form
+                  class="form-stack add-version-form"
+                  (submit)="triggerRun($event)"
+                  (keydown.escape)="cancelRun()"
+                >
+                  <div class="sb-field">
+                    <label for="runVersion">Version</label>
+                    <select
+                      id="runVersion"
+                      name="runVersion"
+                      [ngModel]="runVersionId()"
+                      (ngModelChange)="runVersionId.set($event)"
+                      data-testid="run-version"
+                    >
+                      <option value="">Select a version…</option>
+                      @for (v of p.versions; track v.id) {
+                        <option [value]="v.id">v{{ v.versionNumber }} · {{ v.targetModel }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="sb-field">
+                    <label for="runDataset">Dataset</label>
+                    <select
+                      id="runDataset"
+                      name="runDataset"
+                      [ngModel]="runDatasetId()"
+                      (ngModelChange)="onRunDatasetChange($event)"
+                      data-testid="run-dataset"
+                    >
+                      <option value="">Select a dataset…</option>
+                      @for (d of datasets(); track d.id) {
+                        <option [value]="d.id">{{ d.name }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="form-actions">
+                    <button
+                      class="sb-btn sb-btn--primary"
+                      type="submit"
+                      data-testid="run"
+                      [disabled]="running() || !runVersionId() || !runDatasetId()"
+                    >
+                      {{ running() ? 'Running…' : 'Run evaluation' }}
+                    </button>
+                    <button
+                      class="sb-btn sb-btn--ghost"
+                      type="button"
+                      data-testid="cancel-run"
+                      (click)="cancelRun()"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+
+                @if (recentRuns().length > 0) {
+                  <table class="sb-table" data-testid="recent-runs">
+                    <thead>
+                      <tr>
+                        <th>Run</th>
+                        <th>Score</th>
+                        <th>Scorers</th>
+                        <th>Test cases</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (r of recentRuns(); track r.id) {
+                        <tr>
+                          <td>
+                            <a [routerLink]="['/eval-runs', r.id]" data-testid="recent-run-link">{{
+                              r.createdAt | date: 'medium'
+                            }}</a>
+                          </td>
+                          <td>
+                            {{ r.meanScore != null ? (r.meanScore | number: '1.2-2') : '—' }}
+                          </td>
+                          <td><app-chip-list [labels]="r.scorerKinds" /></td>
+                          <td>{{ r.fixtureCount }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
+              }
+              <button
+                foot
+                class="sb-btn sb-btn--sm sb-btn--secondary"
+                type="button"
+                data-testid="toggle-run"
+                (click)="showRun.set(!showRun())"
+              >
+                + Run a version
+              </button>
+            </app-card>
+          } @else {
+            <app-empty-state
+              message="Add a dataset (Datasets tab), then run a version to score it."
+              data-testid="no-run-target"
+            />
+          }
+        </div>
+
+        <div class="tab-panel" [hidden]="tab() !== 'datasets'">
           <app-card heading="Datasets">
             <p class="subtitle">
               This prompt's test sets — its test cases and the runs scored against them.
@@ -464,7 +484,9 @@ import { validateImportFile } from './import-file';
               + New dataset
             </button>
           </app-card>
+        </div>
 
+        <div class="tab-panel" [hidden]="tab() !== 'analytics'">
           <app-card heading="Analytics">
             @if (datasets()?.length) {
               <div class="sb-field">
@@ -492,23 +514,41 @@ import { validateImportFile } from './import-file';
             }
           </app-card>
         </div>
+
+        @if (showCompare()) {
+          <app-compare-drawer
+            [open]="true"
+            [promptId]="p.id"
+            [versions]="p.versions"
+            [datasetId]="compareDatasetId()"
+            (closed)="showCompare.set(false)"
+          />
+        }
       }
     </section>
   `,
   styleUrl: './prompts.css',
   styles: [
     `
-      .compare {
+      .ws-tabs {
         display: flex;
-        gap: var(--sb-space-lg);
-        font-size: var(--sb-type-small-size);
-        color: var(--sb-text-secondary);
-        margin-bottom: var(--sb-space-md);
+        gap: var(--sb-space-xs);
+        border-bottom: 1px solid var(--sb-border);
+        margin-bottom: var(--sb-space-lg);
       }
-      .compare label {
-        display: flex;
-        align-items: center;
-        gap: var(--sb-space-sm);
+      .ws-tabs__tab {
+        border: none;
+        background: transparent;
+        padding: var(--sb-space-sm) var(--sb-space-md);
+        cursor: pointer;
+        color: var(--sb-text-muted);
+        border-bottom: 2px solid transparent;
+        font-size: var(--sb-type-body-size);
+      }
+      .ws-tabs__tab--active {
+        color: var(--sb-text);
+        border-bottom-color: var(--sb-primary);
+        font-weight: 600;
       }
       .add-version-form,
       .create-dataset-form {
@@ -562,8 +602,20 @@ export class PromptDetail implements OnInit {
     { label: this.prompt()?.name ?? 'Prompt' },
   ]);
 
-  protected readonly fromNumber = signal(1);
-  protected readonly toNumber = signal(1);
+  // D2: the workspace hub tabs. Content-compare moved into the shared CompareDrawer (W7).
+  protected readonly tabs: { id: WorkspaceTab; label: string }[] = [
+    { id: 'versions', label: 'Versions' },
+    { id: 'datasets', label: 'Datasets' },
+    { id: 'analytics', label: 'Analytics' },
+    { id: 'runs', label: 'Runs' },
+  ];
+  protected readonly tab = signal<WorkspaceTab>('versions');
+  protected readonly showCompare = signal(false);
+  // The dataset context the Compare drawer's Scores/Rationale tabs use — the one picked in the
+  // Analytics tab, else this prompt's first dataset (Content compare needs none).
+  protected readonly compareDatasetId = computed(
+    () => this.selectedDatasetId() || this.datasets()?.[0]?.id || null,
+  );
 
   protected readonly content = signal('');
   protected readonly targetModel = signal('claude-sonnet-5');
@@ -617,8 +669,11 @@ export class PromptDetail implements OnInit {
 
   private id = '';
 
-  protected readonly fromContent = computed(() => this.contentOf(this.fromNumber()));
-  protected readonly toContent = computed(() => this.contentOf(this.toNumber()));
+  // Elevate Run (W11): the header action jumps to the Runs tab and opens the compact run form.
+  protected openRun(): void {
+    this.tab.set('runs');
+    this.showRun.set(true);
+  }
 
   ngOnInit(): void {
     this.id = this.route.snapshot.paramMap.get('id') ?? '';
@@ -632,10 +687,6 @@ export class PromptDetail implements OnInit {
       next: (p) => {
         this.prompt.set(p);
         this.loading.set(false);
-        if (p.versions.length >= 2) {
-          this.fromNumber.set(p.versions[p.versions.length - 2].versionNumber);
-          this.toNumber.set(p.versions[p.versions.length - 1].versionNumber);
-        }
       },
       error: () => {
         this.error.set('Could not load the prompt.');
@@ -704,10 +755,6 @@ export class PromptDetail implements OnInit {
       next: (series) => this.trends.set(series),
       error: () => this.error.set('Could not load analytics for the dataset.'),
     });
-  }
-
-  private contentOf(versionNumber: number): string {
-    return this.prompt()?.versions.find((v) => v.versionNumber === versionNumber)?.content ?? '';
   }
 
   protected async deletePrompt(p: Prompt): Promise<void> {

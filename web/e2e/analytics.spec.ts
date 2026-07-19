@@ -48,7 +48,8 @@ test('shows a score trend across versions and the regression section on the dash
   await page.getByTestId('add-version').click();
   await expect(page.getByTestId('versions').locator('tbody tr')).toHaveCount(2);
 
-  // 2. A dataset under the prompt with two captured fixtures.
+  // 2. A dataset under the prompt with two captured fixtures (Datasets tab, 2.19 D2).
+  await page.getByTestId('tab-datasets').click();
   await page.getByTestId('toggle-create-dataset').click();
   await page.fill('#datasetName', datasetName);
   await page.getByTestId('create-dataset').click();
@@ -91,9 +92,13 @@ test('shows a score trend across versions and the regression section on the dash
     page.getByTestId('regressions').or(page.getByTestId('no-regressions')),
   ).toBeVisible();
 
-  // 6. Version comparison defaults to the two latest versions and shows per-fixture deltas.
-  await expect(page.getByTestId('from-version')).toBeVisible();
-  await expect(page.getByTestId('to-version')).toBeVisible();
+  // 6. The unified Compare drawer (2.19 W7): open it, switch to the Scores tab, and confirm the
+  // per-fixture deltas render (From→To defaults to the two latest versions).
+  await page.getByTestId('open-compare').click();
+  await expect(page.getByTestId('drawer')).toBeVisible();
+  await expect(page.getByTestId('compare-from')).toBeVisible();
+  await expect(page.getByTestId('compare-to')).toBeVisible();
+  await page.getByTestId('compare-tab-scores').click();
   await expect(page.getByTestId('scorer-comparison').first()).toBeVisible();
   await expect(page.getByTestId('fixture-delta-row').first()).toBeVisible();
 });

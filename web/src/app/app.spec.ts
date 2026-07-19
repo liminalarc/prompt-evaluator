@@ -58,7 +58,7 @@ describe('App shell', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('renders Dashboard, Prompts and Analytics nav links (no Home) and a router outlet', () => {
+  it('renders Dashboard and Prompts nav links (no Home, no global Analytics/Datasets) [2.19 W37]', () => {
     configure();
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
@@ -66,8 +66,10 @@ describe('App shell', () => {
     const links = Array.from(compiled.querySelectorAll('a.nav__link')).map((a) =>
       a.textContent?.trim(),
     );
-    expect(links).toEqual(jasmine.arrayContaining(['Dashboard', 'Prompts', 'Analytics']));
+    expect(links).toEqual(jasmine.arrayContaining(['Dashboard', 'Prompts']));
     expect(links).not.toContain('Home');
+    // W37: Analytics + Datasets are per-prompt (workspace tabs), not top-nav items.
+    expect(links).not.toContain('Analytics');
     expect(links).not.toContain('Datasets');
     expect(compiled.querySelector('router-outlet')).toBeTruthy();
   });

@@ -33,6 +33,7 @@ test('generates synthetic fixtures from a captured seed', async ({ page, request
   await page.getByTestId('create-prompt').click();
   // Create-prompt lands on the new prompt's workspace (U1).
   await expect(page.getByRole('heading', { name: promptName })).toBeVisible();
+  await page.getByTestId('tab-datasets').click();
   await page.getByTestId('toggle-create-dataset').click();
   await page.fill('#datasetName', datasetName);
   await page.getByTestId('create-dataset').click();

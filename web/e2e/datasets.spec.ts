@@ -30,7 +30,8 @@ test('creates a dataset in a prompt workspace, captures a fixture, and filters b
   // Create-prompt lands on the new prompt's workspace (U1).
   await expect(page.getByRole('heading', { name: promptName })).toBeVisible();
 
-  // Create a dataset under the prompt, then open it.
+  // Create a dataset under the prompt (Datasets tab, 2.19 D2), then open it.
+  await page.getByTestId('tab-datasets').click();
   await page.getByTestId('toggle-create-dataset').click();
   await page.fill('#datasetName', datasetName);
   await page.getByTestId('create-dataset').click();

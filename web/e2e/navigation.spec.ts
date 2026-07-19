@@ -28,10 +28,12 @@ test('dashboard landing, topbar IA, and breadcrumb navigation form a coherent lo
   // Create-prompt lands on the new prompt's workspace (U1).
   await expect(page.getByRole('heading', { name: promptName })).toBeVisible();
 
-  // Topbar IA: Dashboard/Prompts/Analytics present; Datasets demoted off the primary nav.
+  // Topbar IA (2.19 W37): Dashboard/Prompts present; Analytics + Datasets are per-prompt
+  // workspace tabs now, off the primary nav.
   const nav = page.locator('.nav');
   await expect(nav.getByRole('link', { name: 'Dashboard' })).toBeVisible();
-  await expect(nav.getByRole('link', { name: 'Analytics' })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Prompts' })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Analytics' })).toHaveCount(0);
   await expect(nav.getByRole('link', { name: 'Datasets' })).toHaveCount(0);
 
   // The dashboard is the landing page and surfaces the org's prompt as a card.

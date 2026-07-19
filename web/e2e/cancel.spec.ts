@@ -28,6 +28,7 @@ test('Cancel on add-fixture discards input and leaves the fixture count unchange
   await page.getByTestId('create-prompt').click();
   await expect(page.getByRole('heading', { name: promptName })).toBeVisible();
 
+  await page.getByTestId('tab-datasets').click();
   await page.getByTestId('toggle-create-dataset').click();
   await page.fill('#datasetName', datasetName);
   await page.getByTestId('create-dataset').click();

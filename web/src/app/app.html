@@ -31,9 +31,6 @@
         >Dashboard</a
       >
       <a routerLink="/prompts" routerLinkActive="nav__link--active" class="nav__link">Prompts</a>
-      <a routerLink="/analytics" routerLinkActive="nav__link--active" class="nav__link"
-        >Analytics</a
-      >
       @if (auth.currentUser()?.isAdmin) {
         <details class="nav__admin" data-testid="nav-admin" #adminMenu>
           <summary class="nav__link nav__admin-summary">Admin</summary>

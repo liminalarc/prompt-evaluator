@@ -48,13 +48,15 @@ test('a prompt workspace shows its versions, datasets, and analytics together', 
   await expect(page.getByTestId('model-change-warning')).toHaveCount(0);
   await page.getByTestId('cancel-add-version').click();
 
-  // Datasets live here too — create one under the prompt.
+  // Datasets live under their own tab (2.19 D2) — create one under the prompt.
+  await page.getByTestId('tab-datasets').click();
   await page.getByTestId('toggle-create-dataset').click();
   await page.fill('#datasetName', datasetName);
   await page.getByTestId('create-dataset').click();
   await expect(page.getByTestId('datasets')).toContainText(datasetName);
 
-  // Analytics live here as well: pick the dataset; with no runs yet the chart shows its empty state.
+  // Analytics is its own tab as well: pick the dataset; with no runs yet the chart shows its empty state.
+  await page.getByTestId('tab-analytics').click();
   await page.getByTestId('analytics-dataset').selectOption({ label: datasetName });
   await expect(page.getByTestId('chart-empty')).toBeVisible();
 });

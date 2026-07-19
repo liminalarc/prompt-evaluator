@@ -43,7 +43,8 @@ test('runs a prompt version over a dataset and shows per-fixture scores', async 
   await page.getByTestId('add-version').click();
   await expect(page.getByTestId('versions').locator('tbody tr')).toHaveCount(1);
 
-  // 2. Create a dataset under the prompt (in its workspace), then open it.
+  // 2. Create a dataset under the prompt (Datasets tab, 2.19 D2), then open it.
+  await page.getByTestId('tab-datasets').click();
   await page.getByTestId('toggle-create-dataset').click();
   await page.fill('#datasetName', datasetName);
   await page.getByTestId('create-dataset').click();
