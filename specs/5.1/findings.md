@@ -80,8 +80,33 @@
   backport is a human action in the source app's *own* process — which **may not be our flow/spec system at
   all**, so the signal and its "done" state (a manual *mark-deployed*) must stand entirely inside LitmusAI,
   assuming nothing about the source system. Overlaps the **registry's** job of tracking version/deployment
-  state. → *home: candidate **3.1** (Zatomic-backed registry) or its own LitmusAI spec — **user to confirm**.
-  Not built in 5.1 (use what exists).*
+  state. → *home: **[1.16](../1.16.md)** — new standalone spec (user 2026-07-18). Not built in 5.1.*
+
+  **Feature detail (2026-07-18, user) — version-status marking + backport lifecycle:**
+  1. **`Current in source`** — a marker on exactly one version per prompt = the version the source app is
+     believed to be running. Visible/noticeable (a badge on the version, not buried).
+  2. **`Backport-eligible`** — auto-raised when a *higher-scoring* version exists above the `Current` one
+     (a better prompt sits unshipped in the harness).
+  3. **Mark-as-backported action** — after shipping, return to LitmusAI and move `Current` to the new
+     version; the `Backport-eligible` flag then **clears** (no longer an opportunity).
+  4. **Version-level badges** — surface status **on the version itself** in Version history, the way
+     regressions should be marked too. Unifies into one **version-status** concept:
+     `Current` · `Backport-eligible` · `Regressed`. (Note: today regressions live only in the Analytics
+     table — this adds a marker *on the version*, a related gap the user flagged.)
+- **F2 — No multimodal/image fixtures (domain-level).** `Fixture.Input` is a `string`
+  (`src/Domain/Fixture.cs:23`); there is no representation for image/vision input. So **vision/multimodal
+  prompts can't be walked end-to-end**. Blocks **6 Golf prompts**: `auto-map-centerline-detection`,
+  `course-layout-analysis`, `overview-map-registration`, `per-hole-polygon-detection`, `scorecard-extraction`
+  (HTML+images), `routing-review` (text+images). A real feature: `Fixture` carries multimodal input →
+  eval-runner sends image blocks to the provider → UI gets an image-upload affordance. → *home:
+  **[1.17](../1.17.md)** — new standalone spec (user 2026-07-18). Not built in 5.1.*
+- **F3 — No tool-use / live-web prompt execution.** The harness runs `system prompt + user input` against a
+  model; it does not replay an app's **tool loop** (`web_search`/`web_fetch`). Prompts whose real behavior
+  *is* the tool loop can't be faithfully evaluated. Affects **3 Golf prompts**: `facility-enrichment`,
+  `routing-hole-search`, `scorecard-search` (all `SearchModel` + web tools). Workaround: freeze tool
+  results into synthetic fixtures (evaluates the reasoning, not the retrieval) — partial fidelity only.
+  → *home: **[1.18](../1.18.md)** — new standalone spec (user 2026-07-18); or decline-with-reason per
+  prompt. Not built in 5.1.*
 - **Corollary (process, not a feature):** we do **not** create backport specs in source repos as a rule —
   can't assume a source app is on our process. The backport *process* is defined in 5.1 (playbook step 9:
   manual commit, or decline with reason); the *record* is the fill sheet + T3/T4 tick + source git history.
