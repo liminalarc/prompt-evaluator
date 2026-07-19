@@ -4,6 +4,11 @@
 > prompt (all 54). Generic steps here; each prompt's copy-paste values live in a fill sheet
 > (`fills/<name>.md`). All manual — no API automation (the maintainer learns the tool by driving it).
 > **Refreshed 2026-07-18 against the live 2.8 UI (dev v0.14.0)** — field labels/order below are literal.
+> **Dev now v0.16.0 (2026-07-19):** every reveal form has a **Cancel** (2.11); **Content** + LlmJudge
+> **Rubric** are a markdown editor with an **Edit ⇄ Preview** toggle (2.10 — paste into *Edit*); add-version
+> **defaults Target model to the latest version's** and **warns** if you change it (2.11/R5 — expected when a
+> validation deliberately switches models); a run failure now shows a **loud banner** (R2); and heavy runs no
+> longer time out at ~100s (R1 band-aid raised the limit to 5 min).
 >
 > **Dev:** `https://dytjmtfgmj.us-east-1.awsapprunner.com`
 > **Score identity:** `Prompt × Version × Dataset × Scorer` — a **Version** is immutable (content +
@@ -92,17 +97,28 @@ Possible); **`Compare versions`** (**`From`**/**`To`**) gives per-fixture deltas
 shows your fixture **label** (U7), not a GUID. Iterate **v3+** on the *same dataset + scorers* until satisfied
 or diminishing returns.
 
-## Step 9 — Backport (LitmusAI signals; the source app executes)
-LitmusAI **does not** edit source repos — it only tells you a better version exists. Closing the loop is a
-**manual action in the source app's own process** (which may not be our flow/spec system):
-copy the **winning version's text back into the source app** and commit there, **or decline with a recorded
-reason** (marginal gain, model-specific, cost). Use the source repo's own commit convention.
-> Golf → `AiService.WebApi/Prompts/<name>.md`. Stormboard `.md` → `StormBoard.Claude/Prompts/<name>.md`.
-> The 2 Stormboard **inline** prompts (`wizard-prompts`, `asset-mapping`): backport also **extracts them to
-> `Prompts/*.md`** routed through `FilePromptStore` (fixes the smell) — a structural change Stormboard may
-> track in its own system; see T4.
-> *(There's no "deployed" marker inside LitmusAI yet — tracked as finding **F1**; until then the fill sheet +
-> T3/T4 tick are the record of what's shipped.)*
+## Step 9 — Backport (prompts live here; a source-repo agent applies them)
+**Process (revised 2026-07-19): LitmusAI does NOT commit into the source repos.** The winning prompt is the
+**source of truth in `specs/5.1/backport/`**, and a source-repo agent applies it — LitmusAI never edits Golf/
+Stormboard directly:
+1. Copy the **winning version's exact content** into **`specs/5.1/backport/<name>.md`** — a clean, pure-prompt
+   drop-in (no LitmusAI metadata; byte-for-byte what the source file should hold). Update an existing file
+   when a better version wins.
+2. Record it in **`specs/5.1/backport/README.md`**: best version + eval evidence + the source-repo target path.
+3. A **source-repo agent** picks that up and applies it in the source app's own process/commit convention —
+   **or decline with a recorded reason** (marginal gain, model-specific, cost).
+> Target paths (for the README/agent): Golf → `server/src/AiService/AiService.WebApi/Prompts/<name>.md`;
+> Stormboard `.md` → `StormBoard.Claude/Prompts/<name>.md`. The 2 Stormboard **inline** prompts
+> (`wizard-prompts`, `asset-mapping`) also **extract to `Prompts/*.md`** via `FilePromptStore` (fixes the
+> smell) — Stormboard's call; see T4.
+> **Why the change:** we can't assume a source app runs our flow/spec system, and committing straight into a
+> source repo proved messy — an unrelated in-progress commit rode along on Golf `main`. This **supersedes** the
+> old "commit directly into the source repo" step (round-debrief walk, 2026-07-19).
+> **Before backporting, confirm on the *real* model + across runs:** hold the subject model (R5 now defaults
+> add-version to the latest version's model + warns on change), and remember a single run lies — a v6 F4 went
+> 0.82 then 0.72; read the **rationale**, not just the number (R4/R7), and run 2–3× on a noisy fixture.
+> *(No "deployed" marker inside LitmusAI yet — finding **F1** → [1.16]; until then the `backport/` file +
+> README + T3/T4 tick are the record of what's shipped.)*
 
 ## Step 10 — Log
 One line of learnings (what moved the needle). **Tick the prompt's row** in [T3](5.1.T3.md) (Golf) /
