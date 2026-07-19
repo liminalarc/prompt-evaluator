@@ -5,6 +5,25 @@ SemVer (pre-1.0 `0.x`) across the API, web, and eval-runner. A release is a tagg
 as of `0.13.0` it also deploys to a hosted **dev** environment on every push to `main` (spec 3.2).
 There is no prod target yet.
 
+## [0.15.0] — 2026-07-18
+
+Model-catalog fidelity for onboarding, plus the groundwork surfaced while dogfooding real prompts (5.1).
+
+### Added
+
+- **[#1.19] Model catalog — current Anthropic models** ([detail](specs/archive/1.19.md)): seed **Claude
+  Sonnet 4.6**, **Opus 4.7**, and **Opus 4.6** (Anthropic, all roles, priced) so an eval can baseline on
+  the model an app actually runs — Cortex Golf runs several prompts on Sonnet 4.6, which wasn't selectable.
+  Data-only EF migration (leaves the 1.13 seed untouched); Fable 5 held (thinking-always-on / retention / cost).
+
+### Dogfooding (5.1 — ongoing)
+
+- **[#5.1] Adopt LitmusAI across Cortex Golf & Stormboard** ([detail](specs/5.1/5.1.md)): daily-briefing
+  improvement **backported to Cortex Golf** (eval v1 0.55 → v2 0.88); run book refreshed to the live 2.8 UI;
+  findings **F1/F2/F3** promoted to specs **[#1.16]** (version status & backport lifecycle),
+  **[#1.17]** (multimodal / image fixtures), **[#1.18]** (tool-augmented eval); DoD re-scoped to *walkable*
+  prompts, with 9 blocked Golf prompts re-homed to 1.17/1.18; round-debrief prepped for the next walk.
+
 ## [0.14.0] — 2026-07-18
 
 Round 2 of the eval-loop UX, driven by the 5.1 dogfood findings: the loop now fails **loudly**, stays
