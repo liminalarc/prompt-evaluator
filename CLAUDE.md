@@ -54,7 +54,12 @@ improvements. An advisory layer (prompt-engineering advice) comes later.
   only fills coverage gaps — seeded from captured examples so the distribution matches.
   A fixture is a fixture regardless of origin; see `specs/1.2.md`.
 - **Score identity is `Prompt × Version × Dataset × Scorer`.** Every run is persisted;
-  nothing is overwritten. Regression detection compares versions over the same dataset.
+  nothing is overwritten. Regression detection compares versions over the same dataset. A prompt also
+  carries a nullable **`CurrentVersionId` "Current in source" marker** (1.16) — which version the source
+  app runs — from which `Backport-eligible` (a higher-scoring version above Current) and per-version
+  `Regressed` badges derive. All such comparisons key off `ScorerDescriptor.Identity` (same-scorer-config
+  only, never blended). **LitmusAI signals, never writes to a source repo**; mark-as-backported just moves
+  the marker. Weighted eligibility (scorers weighted, e.g. LLM-judge > RegEx) is future work in 2.9.
 - **Angular SPA** for dashboards (score trends, regression flags), prompt/version
   browsing, and the human-review labeling UI.
 - **PostgreSQL** via EF Core (Npgsql). JSONB stores fixtures and raw model outputs; scores

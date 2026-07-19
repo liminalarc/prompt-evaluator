@@ -11,7 +11,6 @@
 - **1.12** Modal SLM provider adapter — `NOT STARTED` — [detail](specs/1.12.md)
 - **1.14** Live model discovery (auto-sync the catalog from provider APIs) — `NOT STARTED` — [detail](specs/1.14.md)
 - **1.15** Per-org model catalogs (per-organization customization) — `NOT STARTED` — [detail](specs/1.15.md)
-- **1.16** Version status & backport lifecycle (deployed marker + backport-eligible signal) — `IN PROGRESS` — [detail](specs/1.16.md)
 - **1.17** Multimodal / image fixtures (vision-input prompts) — `NOT STARTED` — [detail](specs/1.17.md)
 - **1.18** Tool-augmented evaluation (web_search / tool-loop prompts) — `NOT STARTED` — [detail](specs/1.18.md)
 
@@ -37,6 +36,7 @@
 - **5.1** Adopt LitmusAI across Cortex Golf & Stormboard (discover → onboard → improve every prompt) — `IN PROGRESS` — [detail](specs/5.1/5.1.md)
 
 ## Archive
+- **1.16** Version status & backport lifecycle (deployed marker + backport-eligible signal) — `DONE` — [detail](specs/archive/1.16.md)
 - **2.21** Org lifecycle — deletable Default org, no-org onboarding, and request-to-join access — `DONE` — [detail](specs/archive/2.21.md)
 - **2.20** Deferred UX polish from the 2.19 cohesion pass (source editors, output height, trend gap, org rail + org tabs) — `DONE` — [detail](specs/archive/2.20.md)
 - **2.19** UI/UX cohesion pass (the app feels disjointed in places) — `DONE` — [detail](specs/archive/2.19.md)
