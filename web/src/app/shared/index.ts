@@ -6,6 +6,7 @@ export { EmptyState } from './empty-state';
 export { ErrorState } from './error-state';
 export { StatusBadge } from './status-badge';
 export { Chip } from './chip';
+export { ChipList } from './chip-list';
 export { Card, CardFoot } from './card';
 export { ConfirmDialog } from './confirm-dialog';
 export { ConfirmService, type ConfirmRequest } from './confirm.service';

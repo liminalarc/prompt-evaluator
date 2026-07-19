@@ -4,7 +4,7 @@ import { ModelCatalogEntry, ModelRole } from '../model';
 import {
   Breadcrumb,
   Card,
-  Chip,
+  ChipList,
   Crumb,
   EmptyState,
   ErrorState,
@@ -26,7 +26,7 @@ const PROVIDERS = ['Anthropic', 'OpenAi'];
     FormsModule,
     Breadcrumb,
     Card,
-    Chip,
+    ChipList,
     EmptyState,
     ErrorState,
     LoadingState,
@@ -71,11 +71,7 @@ const PROVIDERS = ['Anthropic', 'OpenAi'];
                     <div class="model-id">{{ m.modelId }}</div>
                   </td>
                   <td>{{ m.provider }}</td>
-                  <td>
-                    @for (r of m.roles; track r) {
-                      <app-chip [label]="r" />
-                    }
-                  </td>
+                  <td><app-chip-list [labels]="m.roles" /></td>
                   <td>
                     {{ m.inputPricePerMTokUsd ?? '—' }} / {{ m.outputPricePerMTokUsd ?? '—' }}
                   </td>

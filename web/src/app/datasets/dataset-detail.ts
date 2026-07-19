@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -13,6 +14,7 @@ import {
   Card,
   CardFoot,
   Chip,
+  ChipList,
   ConfirmService,
   Crumb,
   EmptyState,
@@ -38,6 +40,8 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
     Card,
     CardFoot,
     Chip,
+    ChipList,
+    DatePipe,
     EmptyState,
     ErrorState,
     LoadingState,
@@ -622,7 +626,7 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                     <tr>
                       <td>
                         <a [routerLink]="['/eval-runs', r.id]" data-testid="run-link">{{
-                          r.createdAt
+                          r.createdAt | date: 'medium'
                         }}</a>
                       </td>
                       <td>{{ versionLabelFor(r.promptVersionId) }}</td>
@@ -633,13 +637,7 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                           —
                         }
                       </td>
-                      <td>
-                        @for (k of r.scorerKinds; track k) {
-                          <app-chip [label]="k" />
-                        } @empty {
-                          —
-                        }
-                      </td>
+                      <td><app-chip-list [labels]="r.scorerKinds" /></td>
                       <td>{{ r.fixtureCount }}</td>
                     </tr>
                   }

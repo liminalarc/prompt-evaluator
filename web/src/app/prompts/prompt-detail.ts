@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -16,6 +17,7 @@ import {
   Card,
   CardFoot,
   Chip,
+  ChipList,
   ConfirmService,
   Crumb,
   EmptyState,
@@ -40,6 +42,8 @@ import { validateImportFile } from './import-file';
     Card,
     CardFoot,
     Chip,
+    ChipList,
+    DatePipe,
     EmptyState,
     ErrorState,
     LoadingState,
@@ -108,7 +112,7 @@ import { validateImportFile } from './import-file';
                         —
                       }
                     </td>
-                    <td>{{ v.createdAt }}</td>
+                    <td>{{ v.createdAt | date: 'medium' }}</td>
                   </tr>
                   @if (expandedVersionId() === v.id) {
                     <tr class="version-detail" data-testid="version-detail">
@@ -353,16 +357,10 @@ import { validateImportFile } from './import-file';
                       <tr>
                         <td>
                           <a [routerLink]="['/eval-runs', r.id]" data-testid="recent-run-link">{{
-                            r.createdAt
+                            r.createdAt | date: 'medium'
                           }}</a>
                         </td>
-                        <td>
-                          @for (k of r.scorerKinds; track k) {
-                            <app-chip [label]="k" />
-                          } @empty {
-                            —
-                          }
-                        </td>
+                        <td><app-chip-list [labels]="r.scorerKinds" /></td>
                         <td>{{ r.fixtureCount }}</td>
                       </tr>
                     }
