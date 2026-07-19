@@ -431,6 +431,7 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                     />
                   } @else {
                     <textarea
+                      class="config-source"
                       [attr.id]="'econfig-' + s.id"
                       rows="4"
                       [ngModel]="editScorerConfig()"
@@ -523,6 +524,7 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                   />
                 } @else {
                   <textarea
+                    class="config-source"
                     id="scorerConfig"
                     name="scorerConfig"
                     rows="3"
@@ -693,6 +695,17 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
       .fixture-row--open,
       .scorer-row--open {
         background: var(--sb-surface-raised);
+      }
+      /* W3/W21: Regex/JsonSchema configs are source (patterns/schemas) — monospace + resizable. */
+      .config-source {
+        width: 100%;
+        box-sizing: border-box;
+        resize: vertical;
+        min-height: 5rem;
+        font-family: var(--sb-font-mono);
+        font-size: var(--sb-type-small-size);
+        line-height: 1.5;
+        tab-size: 2;
       }
       /* W20: the CONFIG cell shows a one-line summary (a full rubric would be a wall of text);
          the row expands to reveal + edit the full config. */

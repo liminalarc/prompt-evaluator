@@ -222,7 +222,7 @@ type WorkspaceTab = 'versions' | 'datasets' | 'analytics' | 'runs';
                   <app-markdown-editor
                     inputId="content"
                     name="content"
-                    [rows]="8"
+                    [rows]="18"
                     [value]="content()"
                     (valueChange)="content.set($event)"
                   />

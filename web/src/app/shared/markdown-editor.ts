@@ -82,10 +82,18 @@ import DOMPurify from 'dompurify';
         color: var(--sb-primary);
         font-weight: 600;
       }
+      /* W3/W21: a roomy, monospace *source* editor — prompts/rubrics are raw text the model reads,
+         so exact source fidelity matters (no proportional font, no reflow). Tall by default and
+         resizable, so a ~55-line prompt isn't wrestled through an 8-row box. */
       .md-editor textarea {
         width: 100%;
         box-sizing: border-box;
         resize: vertical;
+        min-height: 12rem;
+        font-family: var(--sb-font-mono);
+        font-size: var(--sb-type-small-size);
+        line-height: 1.5;
+        tab-size: 2;
       }
       .md-preview {
         border: 1px solid var(--sb-border);
