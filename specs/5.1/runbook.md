@@ -82,7 +82,8 @@ On the run page, expand the **low-scoring fixtures** and read output + judge det
 ## Step 7 — Improve → v2
 Workspace → **`Version history`** → **`+ Add version`**: **`Content`** is **pre-seeded from the latest
 version** (U11) — edit it in place; **`Target model` = SAME** as v1 (hold the model constant — you're testing
-the *prompt*); **`Label`** = `v2 — <hypothesis>`. → **`Add version`**.
+the *prompt*); **`Label`** = the hypothesis only (e.g. `firm length + ban computed stats`) — the `v2` number
+is automatic (U4), don't repeat it in the label. → **`Add version`**.
 
 ## Step 8 — Compare
 **Analytics** (topbar → *Score Analytics*) → **`Prompt`** + **`Dataset`** (+ **`Regression threshold`**,

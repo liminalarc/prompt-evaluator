@@ -4,19 +4,14 @@
 > [../runbook.md](../runbook.md); paste these values. Study detail: [../catalog.md](../catalog.md).
 > Subject model **`claude-sonnet-4-6`** (Golf's default via `ClaudeOptions.Model`) — **see model-fidelity note below**.
 
-## ⚠️ Model fidelity — decide before ② (subject = Sonnet 4.6, not in the catalog)
-Golf runs round-debrief on **Claude Sonnet 4.6** (a real, active model), but LitmusAI's seeded catalog only
-has Opus 4.8 / Sonnet 5 / Haiku 4.5 / GPT-4o(-mini) — **no Sonnet 4.6**. Two options:
-- **(A) Add Sonnet 4.6 to the catalog (recommended — exact fidelity + dogfoods the Model Catalog / 1.13).**
-  Topbar → **Admin → Model Catalog** → add: **Model id** `claude-sonnet-4-6`, **Display** `Claude Sonnet 4.6`,
-  **Provider** Anthropic, subject+judge capable. Then pick it as the Target model in ②. (Global-admin surface;
-  the eval-runner's Anthropic provider accepts the alias server-side.)
-- **(B) Use Sonnet 5** as the closest available Sonnet-tier subject — newer than the deployed 4.6, so scores
-  are indicative, not a 1:1 transfer.
+## Model fidelity — subject = Sonnet 4.6 (now seeded)
+Golf runs round-debrief on **Claude Sonnet 4.6**. It's now in the catalog as of **v0.15.0** ([1.19](../../archive/1.19.md)),
+so just **select `Claude Sonnet 4.6` as the Target model** in ② — exact fidelity, no admin step. (Confirm dev is
+serving 0.15.0 first: `GET /api/version`.)
 
-**Judge = Opus 4.8 either way.** Rule: judge must be a *stronger tier*, never the same tier — Sonnet 4.6 and
-Sonnet 5 are the **same** tier, so Sonnet-5-as-judge is disqualified here (unlike daily-briefing's Haiku subject).
-Confirmed via the `claude-api` skill.
+**Judge = Opus 4.8.** Rule: judge must be a *stronger tier*, never the same tier — Sonnet 4.6 and Sonnet 5 are the
+**same** tier, so Sonnet-5-as-judge is disqualified here (unlike daily-briefing's Haiku subject). Confirmed via the
+`claude-api` skill.
 
 ## ② Prompt
 - **Name:** `round-debrief`
