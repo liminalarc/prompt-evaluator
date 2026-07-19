@@ -5,6 +5,47 @@ SemVer (pre-1.0 `0.x`) across the API, web, and eval-runner. A release is a tagg
 as of `0.13.0` it also deploys to a hosted **dev** environment on every push to `main` (spec 3.2).
 There is no prod target yet.
 
+## [0.16.0] — 2026-07-19
+
+Authoring & reliability polish for the eval loop: a **Cancel** on every reveal/expand form, a
+**sanitized markdown editor** for prompt/rubric content, and the round-3 dogfood quick-fixes
+(prompt-scoped analytics, subject-model hold, loud run failures).
+
+### Added
+
+- **[#2.11] Cancel on every reveal / expand-to-edit surface** ([detail](specs/archive/2.11.md)): every
+  inline reveal/expand form (new org/folder/prompt/import, add-version, edit version label, run-a-version,
+  create-dataset, add-fixture, generate-synthetic, edit-fixture, add-scorer, edit-scorer) now has a
+  **Cancel** paired with its submit that **discards unsaved input and collapses** back to the summary row /
+  closed toggle, plus **Esc-to-cancel**. Consistent label + placement via a shared `.form-actions` row.
+- **[#2.10] Markdown editor with sanitized preview** ([detail](specs/archive/2.10.md)): a reusable
+  **Edit ⇄ Preview** markdown editor wired into the version **Content** field and the **LlmJudge Rubric**
+  (add + reconfigure). Preview renders via `marked` → `DOMPurify` → Angular's `[innerHTML]` sanitizer
+  (defense in depth) — a `<script>`/`onerror`/`javascript:` payload is stripped and never executes. Source
+  text stays authoritative; content remains immutable-by-add.
+
+### Changed
+
+- **[#2.12] Eval-loop round 3 — reliability & fair scoring** (in progress; [detail](specs/2.12.md)):
+  quick-fix slices shipped —
+  - **[B8]** the Analytics dataset picker is now **prompt-scoped** (`Dataset.PromptId`), not just org —
+    no more foreign-prompt datasets leaking into a prompt's analytics.
+  - **[R5]** add-version **defaults the Target model to the latest version's** (holding the subject model
+    is the default) and **warns on a change**; Analytics **Compare flags a cross-model comparison** — so a
+    prompt-vs-prompt score delta isn't silently confounded by a model swap.
+  - **[R2]** any run failure is now **loud** — a timeout or non-JSON gateway 5xx (no structured `{error}`
+    body) shows a clear banner instead of failing silently.
+
+  Heavy slices remain (R1 async runs, R3 data-conditional rubric scoring, R4 variance/rationale-diff).
+
+### Dogfooding (5.1 — ongoing)
+
+- **[#5.1] Adopt LitmusAI across Cortex Golf & Stormboard** ([detail](specs/5.1/5.1.md)): **round-debrief**
+  walked (T3 **2/6 walkable**) — v2 wins on a data-conditional rubric (avg 0.79 → 0.88; sparse fixture
+  0.60 → 0.90), **backported to Cortex Golf** (`9ba2ad3c`). Surfaced findings B8/R1–R5 (all homed in 2.12;
+  B8/R2/R5 shipped here). Fill sheet condensed to its durable record; a **v4 real-model (Sonnet 4.6)
+  validation** remains owed. Spec enrichments logged for **[#1.16]** and **[#2.2]**.
+
 ## [0.15.0] — 2026-07-18
 
 Model-catalog fidelity for onboarding, plus the groundwork surfaced while dogfooding real prompts (5.1).
