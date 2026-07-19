@@ -206,6 +206,22 @@
   dropdowns dark-aware), or explicitly token the select's `color`/`background`. Not specific to 5.1 —
   a general dark-mode/design-system nit. → *home: **user decision** — a UI/dark-mode fix (2.6 brand-tokens or a UI round). Not built.*
 
+## Eval methodology — the biggest gap (2026-07-19, v4/v5 real-model validation)
+- **R7 — The tool throws away the judge's *reasons*; score ≠ risk.** Decisive evidence from the v4/v5 walk:
+  v1 (0.75) and v5 (0.72) scored a **dead heat**, but v1's rationale "**edges toward a 'cracking 95'
+  quasi-prediction**" + invents speculative detail, while v5 makes **no predictions** — a higher-severity
+  production risk that the **scalar score cannot see**. The whole call had to be made by reading prose by
+  hand. LitmusAI collapses a rich judge verdict to one 0-1 and discards the signal that matters. **Build a
+  structured-rationale layer:** (a) **per-criterion pass/fail** (the rubric already enumerates ~10 criteria)
+  instead of one scalar; (b) **failure-mode tagging** — each deduction categorised (score-prediction /
+  invented-stat / generic-benchmark / narrates-missing-data / over-inference — a recurring family, also hit
+  by daily-briefing) → a **version × failure-mode matrix**; (c) **severity weighting** so risk, not a flat
+  average, drives the verdict (a clean 0.72 can beat a fabricating 0.75); (d) **rationale-diff in Compare**
+  (R4's other half) — surface *what reasons changed*, not just the score delta. Distinct, sizeable capability
+  — bigger than R3 (per-fixture criteria) / R4 (variance+rationale-diff) / 2.9 (weighted *scorer* composite),
+  though it subsumes parts of each. → *home: **user decision — likely its own new spec** (structured/
+  severity-tagged judging), spun out of 5.1 like 1.16/1.17/1.18. Not built.*
+
 ## Ops / infra
 - **O1 — Dev deployed without the Anthropic key set.** Provisioning shipped the secret as a placeholder;
   the first eval was the first thing to exercise it. The next environment shouldn't repeat this — add a
