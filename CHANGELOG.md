@@ -5,6 +5,38 @@ SemVer (pre-1.0 `0.x`) across the API, web, and eval-runner. A release is a tagg
 as of `0.13.0` it also deploys to a hosted **dev** environment on every push to `main` (spec 3.2).
 There is no prod target yet.
 
+## [0.18.0] — 2026-07-19
+
+Deferred UX polish from the cohesion pass ([#2.20]), led by a new **persistent left organization
+rail** that replaces the topbar org dropdown, plus a tabbed org page, roomier source editors, and a
+couple of workspace fixes.
+
+### Added
+
+- **[#2.20] Deferred UX polish** ([detail](specs/archive/2.20.md)):
+  - **Organization rail** — a persistent left rail lists every org you can access (one active at a
+    time), replacing the cramped topbar `<select>`. **Collapsible** to a slim strip of initials
+    (persists), with **inline create-org** and a **settings gear** on the active org.
+  - **Organization detail is a tabbed page** — `/organizations/:id` is now **Overview · Members**
+    (reached via the rail's gear); the page follows org-switches instead of getting stuck.
+  - **Roomy monospace source editors** — the version **Content** and **rubric/config** editors are
+    monospace, tall, and drag-resizable (exact source fidelity for prompts).
+  - **Roomier eval-run output** — the model output (the primary artifact) gets more height and is
+    resizable.
+  - **Un-run versions named on the trend** — versions that have never run are listed beneath the
+    score trend, so the gap is explicit.
+
+### Fixed
+
+- **[#2.19]** ([detail](specs/archive/2.19.md)): the prompt-workspace **Runs tab** now lists every run
+  across the prompt's datasets (was empty until you opened the run form), and the active **tab persists
+  in the URL** so Back / breadcrumb from a dataset returns to the tab you left from.
+
+### Deferred
+
+- **[#2.21]** ([detail](specs/2.21.md)): make the auto-assigned "Default" org deletable and give a user
+  with **no organizations** a real create-your-first-org onboarding instead of a placeholder.
+
 ## [0.17.0] — 2026-07-19
 
 A **UI/UX cohesion pass** that makes the whole app read as one connected product, plus
