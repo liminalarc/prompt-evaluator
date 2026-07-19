@@ -113,6 +113,15 @@
   Exception: the 2 Stormboard inline-prompt extractions (`wizard-prompts`, `asset-mapping`) are a structural
   refactor Stormboard may choose to track in its own system — its call, not ours to impose (see T4).
 
+## Bugs (post-2.8, round-debrief walk)
+- **B8 — Analytics dataset picker isn't prompt-scoped (cross-prompt leak).** `analytics-dashboard.ts` loads
+  `datasetsApi.listDatasets()` (all) and filters only by **org** prompt ids (line ~312), never by the
+  **selected prompt** — so under prompt=`round-debrief` the Dataset dropdown also offers `Core player
+  scenarios`, which belongs to `daily-briefing`. A dataset belongs to exactly one prompt (1.7,
+  `Dataset.PromptId`); picking a foreign one yields empty/mismatched analytics. Same class as **B3** (the
+  run picker), same fix: filter `datasets()` by `d.promptId === promptId()`. → *home: **loud/scoping
+  follow-up** (2.8-adjacent) or a new UI-fix slice — **user to confirm**.*
+
 ## Reliability (2026-07-18, round-debrief walk)
 - **R1 — Synchronous eval runs time out on heavier prompts.** The run endpoint
   (`EvalHarnessEndpoints` `MapPost .../eval-runs`) executes the whole batch inline — every fixture's
