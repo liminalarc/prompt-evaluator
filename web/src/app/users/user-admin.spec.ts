@@ -135,6 +135,23 @@ describe('UserAdmin (admin user & access management)', () => {
     httpMock.expectOne('/api/admin/users').flush(users); // reload
   });
 
+  it('opens the org-access drawer for a user, revealing membership controls [2.19 W36]', () => {
+    const fixture = setup();
+    const el = fixture.nativeElement as HTMLElement;
+
+    // The dense per-row add/revoke controls are gone from the table; a "Manage access" button remains.
+    expect(el.querySelector('[data-testid="add-membership-org"]')).toBeFalsy();
+    const manage = el.querySelector('[data-testid="manage-access"]') as HTMLButtonElement;
+    expect(manage).toBeTruthy();
+
+    manage.click();
+    fixture.detectChanges();
+    // The drawer is open with the add-membership + revoke controls inside.
+    expect(el.querySelector('[data-testid="drawer"]')).toBeTruthy();
+    expect(el.querySelector('[data-testid="add-membership-org"]')).toBeTruthy();
+    expect(el.querySelector('[data-testid="revoke-membership"]')).toBeTruthy();
+  });
+
   it('sets a new password for a user', () => {
     const fixture = setup();
     const cmp = fixture.componentInstance as unknown as {

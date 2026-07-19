@@ -17,6 +17,7 @@ import {
   ChipList,
   ConfirmService,
   Crumb,
+  Drawer,
   EmptyState,
   ErrorState,
   LoadingState,
@@ -43,6 +44,7 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
     ChipList,
     DatePipe,
     DecimalPipe,
+    Drawer,
     EmptyState,
     ErrorState,
     LoadingState,
@@ -388,100 +390,102 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                       }
                     </td>
                   </tr>
-                  @if (expandedScorerId() === s.id) {
-                    <tr class="scorer-detail" data-testid="scorer-detail">
-                      <td colspan="3">
-                        <form
-                          class="form-stack"
-                          (submit)="saveScorer($event, s.id)"
-                          (keydown.escape)="cancelEditScorer()"
-                        >
-                          <div class="sb-field">
-                            <label [attr.for]="'ekind-' + s.id">Scorer</label>
-                            <select
-                              [attr.id]="'ekind-' + s.id"
-                              [ngModel]="editScorerKind()"
-                              (ngModelChange)="editScorerKind.set($event)"
-                              [ngModelOptions]="{ standalone: true }"
-                              data-testid="edit-scorer-kind"
-                            >
-                              @for (k of scorerKinds; track k) {
-                                <option [value]="k">{{ k }}</option>
-                              }
-                            </select>
-                          </div>
-                          <div class="sb-field">
-                            <label [attr.for]="'econfig-' + s.id">{{ editConfigLabel() }}</label>
-                            @if (editIsJudge()) {
-                              <app-markdown-editor
-                                [inputId]="'econfig-' + s.id"
-                                [rows]="6"
-                                testid="edit-scorer-config"
-                                [value]="editScorerConfig()"
-                                (valueChange)="editScorerConfig.set($event)"
-                              />
-                            } @else {
-                              <textarea
-                                [attr.id]="'econfig-' + s.id"
-                                rows="3"
-                                [ngModel]="editScorerConfig()"
-                                (ngModelChange)="editScorerConfig.set($event)"
-                                [ngModelOptions]="{ standalone: true }"
-                                data-testid="edit-scorer-config"
-                              ></textarea>
-                            }
-                          </div>
-                          @if (editIsJudge()) {
-                            <div class="sb-field">
-                              <label [attr.for]="'ejudge-' + s.id">Judge model</label>
-                              <select
-                                [attr.id]="'ejudge-' + s.id"
-                                [ngModel]="editJudgeModel()"
-                                (ngModelChange)="editJudgeModel.set($event)"
-                                [ngModelOptions]="{ standalone: true }"
-                                data-testid="edit-judge-model"
-                              >
-                                @for (m of judgeModels(); track m.modelId) {
-                                  <option [value]="m.modelId">
-                                    {{ m.displayName }}{{ m.available ? '' : ' (unavailable)' }}
-                                  </option>
-                                }
-                              </select>
-                            </div>
-                          }
-                          <div class="toolbar">
-                            <button
-                              class="sb-btn sb-btn--primary sb-btn--sm"
-                              type="submit"
-                              data-testid="save-scorer"
-                              [disabled]="!editConfigValid()"
-                            >
-                              Save
-                            </button>
-                            <button
-                              class="sb-btn sb-btn--ghost sb-btn--sm"
-                              type="button"
-                              data-testid="cancel-edit-scorer"
-                              (click)="cancelEditScorer()"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              class="sb-btn sb-btn--danger sb-btn--sm"
-                              type="button"
-                              data-testid="remove-scorer"
-                              (click)="removeScorer(s.id)"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        </form>
-                      </td>
-                    </tr>
-                  }
                 }
               </tbody>
             </table>
+          }
+
+          <!-- W22 (D1): editing a scorer is a focused task with a big rubric editor → it opens in
+               the shared right drawer instead of expanding inline and reflowing the table. -->
+          @if (editingScorer(); as s) {
+            <app-drawer [open]="true" heading="Edit scorer" (closed)="cancelEditScorer()">
+              <form
+                class="form-stack"
+                data-testid="scorer-detail"
+                (submit)="saveScorer($event, s.id)"
+                (keydown.escape)="cancelEditScorer()"
+              >
+                <div class="sb-field">
+                  <label [attr.for]="'ekind-' + s.id">Scorer</label>
+                  <select
+                    [attr.id]="'ekind-' + s.id"
+                    [ngModel]="editScorerKind()"
+                    (ngModelChange)="editScorerKind.set($event)"
+                    [ngModelOptions]="{ standalone: true }"
+                    data-testid="edit-scorer-kind"
+                  >
+                    @for (k of scorerKinds; track k) {
+                      <option [value]="k">{{ k }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="sb-field">
+                  <label [attr.for]="'econfig-' + s.id">{{ editConfigLabel() }}</label>
+                  @if (editIsJudge()) {
+                    <app-markdown-editor
+                      [inputId]="'econfig-' + s.id"
+                      [rows]="12"
+                      testid="edit-scorer-config"
+                      [value]="editScorerConfig()"
+                      (valueChange)="editScorerConfig.set($event)"
+                    />
+                  } @else {
+                    <textarea
+                      [attr.id]="'econfig-' + s.id"
+                      rows="4"
+                      [ngModel]="editScorerConfig()"
+                      (ngModelChange)="editScorerConfig.set($event)"
+                      [ngModelOptions]="{ standalone: true }"
+                      data-testid="edit-scorer-config"
+                    ></textarea>
+                  }
+                </div>
+                @if (editIsJudge()) {
+                  <div class="sb-field">
+                    <label [attr.for]="'ejudge-' + s.id">Judge model</label>
+                    <select
+                      [attr.id]="'ejudge-' + s.id"
+                      [ngModel]="editJudgeModel()"
+                      (ngModelChange)="editJudgeModel.set($event)"
+                      [ngModelOptions]="{ standalone: true }"
+                      data-testid="edit-judge-model"
+                    >
+                      @for (m of judgeModels(); track m.modelId) {
+                        <option [value]="m.modelId">
+                          {{ m.displayName }}{{ m.available ? '' : ' (unavailable)' }}
+                        </option>
+                      }
+                    </select>
+                  </div>
+                }
+                <div class="toolbar">
+                  <button
+                    class="sb-btn sb-btn--primary sb-btn--sm"
+                    type="submit"
+                    data-testid="save-scorer"
+                    [disabled]="!editConfigValid()"
+                  >
+                    Save
+                  </button>
+                  <button
+                    class="sb-btn sb-btn--ghost sb-btn--sm"
+                    type="button"
+                    data-testid="cancel-edit-scorer"
+                    (click)="cancelEditScorer()"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    class="sb-btn sb-btn--danger sb-btn--sm"
+                    type="button"
+                    data-testid="remove-scorer"
+                    (click)="removeScorer(s.id)"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </form>
+            </app-drawer>
           }
 
           @if (showAddScorer()) {
@@ -779,8 +783,13 @@ export class DatasetDetail implements OnInit {
   protected readonly scorerConfig = signal('');
   protected readonly judgeModel = signal('');
 
-  // Scorer rows expand to an inline edit form (U9): reconfigure the descriptor or remove the scorer.
+  // Clicking a scorer row opens its edit form in the shared right drawer (W22/D1): reconfigure the
+  // descriptor or remove the scorer. `expandedScorerId` names the open one; `editingScorer` resolves
+  // it to the row so the drawer (rendered outside the @for) can bind to it.
   protected readonly expandedScorerId = signal<string | null>(null);
+  protected readonly editingScorer = computed(() =>
+    this.scorers().find((s) => s.id === this.expandedScorerId()),
+  );
   protected readonly editScorerKind = signal<ScorerKind>('Regex');
   protected readonly editScorerConfig = signal('');
   protected readonly editJudgeModel = signal('');

@@ -5,6 +5,7 @@ import {
   Breadcrumb,
   Card,
   Crumb,
+  Drawer,
   EmptyState,
   ErrorState,
   LoadingState,
@@ -28,6 +29,7 @@ const ROLES = ['Owner', 'Member'];
     FormsModule,
     Breadcrumb,
     Card,
+    Drawer,
     EmptyState,
     ErrorState,
     LoadingState,
@@ -140,53 +142,25 @@ const ROLES = ['Owner', 'Member'];
                     </label>
                   </td>
                   <td>
+                    <!-- W36: the table shows a read-only membership summary; add/remove/role moves
+                         into the shared drawer so the row stays scannable. -->
                     <div class="memberships">
                       @for (m of u.memberships; track m.organizationId) {
                         <span class="membership-chip">
                           {{ orgName(m.organizationId) }} · {{ m.role }}
-                          <button
-                            type="button"
-                            class="chip-x"
-                            data-testid="revoke-membership"
-                            (click)="revokeMembership(u, m.organizationId)"
-                            aria-label="Remove"
-                          >
-                            ×
-                          </button>
                         </span>
+                      } @empty {
+                        <span class="muted">No organizations</span>
                       }
                     </div>
-                    <div class="add-membership">
-                      <select
-                        data-testid="add-membership-org"
-                        [ngModel]="addOrgFor(u.id)"
-                        (ngModelChange)="setAddOrg(u.id, $event)"
-                        [attr.name]="'org-' + u.id"
-                      >
-                        <option value="">Add org…</option>
-                        @for (o of orgs(); track o.id) {
-                          <option [value]="o.id">{{ o.name }}</option>
-                        }
-                      </select>
-                      <select
-                        data-testid="add-membership-role"
-                        [ngModel]="addRoleFor(u.id)"
-                        (ngModelChange)="setAddRole(u.id, $event)"
-                        [attr.name]="'role-' + u.id"
-                      >
-                        @for (r of roles; track r) {
-                          <option [value]="r">{{ r }}</option>
-                        }
-                      </select>
-                      <button
-                        type="button"
-                        class="sb-btn sb-btn--sm sb-btn--secondary"
-                        data-testid="add-membership"
-                        (click)="addMembership(u)"
-                      >
-                        Add
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      class="sb-btn sb-btn--sm sb-btn--secondary"
+                      data-testid="manage-access"
+                      (click)="manageAccess(u.id)"
+                    >
+                      Manage access
+                    </button>
                   </td>
                   <td>
                     @if (showPwdFor(u.id)) {
@@ -225,6 +199,70 @@ const ROLES = ['Owner', 'Member'];
           </table>
         }
       </app-card>
+
+      <!-- W36 (D1): focused org-access management for one user, off the dense table. -->
+      @if (managingUser(); as u) {
+        <app-drawer
+          [open]="true"
+          [heading]="'Access — ' + (u.displayName || u.email)"
+          (closed)="closeManageAccess()"
+        >
+          <div class="access-drawer">
+            <h3 class="access-drawer__label">Organizations</h3>
+            <div class="memberships" data-testid="drawer-memberships">
+              @for (m of u.memberships; track m.organizationId) {
+                <span class="membership-chip">
+                  {{ orgName(m.organizationId) }} · {{ m.role }}
+                  <button
+                    type="button"
+                    class="chip-x"
+                    data-testid="revoke-membership"
+                    (click)="revokeMembership(u, m.organizationId)"
+                    aria-label="Remove"
+                  >
+                    ×
+                  </button>
+                </span>
+              } @empty {
+                <span class="muted">No organizations yet.</span>
+              }
+            </div>
+
+            <h3 class="access-drawer__label">Add to an organization</h3>
+            <div class="add-membership">
+              <select
+                data-testid="add-membership-org"
+                [ngModel]="addOrgFor(u.id)"
+                (ngModelChange)="setAddOrg(u.id, $event)"
+                [attr.name]="'org-' + u.id"
+              >
+                <option value="">Select org…</option>
+                @for (o of orgs(); track o.id) {
+                  <option [value]="o.id">{{ o.name }}</option>
+                }
+              </select>
+              <select
+                data-testid="add-membership-role"
+                [ngModel]="addRoleFor(u.id)"
+                (ngModelChange)="setAddRole(u.id, $event)"
+                [attr.name]="'role-' + u.id"
+              >
+                @for (r of roles; track r) {
+                  <option [value]="r">{{ r }}</option>
+                }
+              </select>
+              <button
+                type="button"
+                class="sb-btn sb-btn--sm sb-btn--primary"
+                data-testid="add-membership"
+                (click)="addMembership(u)"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </app-drawer>
+      }
     </section>
   `,
   styles: [
@@ -253,11 +291,25 @@ const ROLES = ['Owner', 'Member'];
         align-items: center;
         gap: var(--sb-space-sm);
       }
+      .add-membership {
+        flex-wrap: wrap;
+      }
       .memberships {
         display: flex;
         flex-wrap: wrap;
         gap: var(--sb-space-xs);
-        margin-bottom: var(--sb-space-xs);
+        margin-bottom: var(--sb-space-sm);
+      }
+      .access-drawer__label {
+        margin: var(--sb-space-lg) 0 var(--sb-space-sm);
+        font-size: var(--sb-type-caption-size);
+        font-weight: var(--sb-type-caption-weight);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--sb-text-muted);
+      }
+      .access-drawer__label:first-child {
+        margin-top: 0;
       }
       .membership-chip {
         display: inline-flex;
@@ -298,6 +350,13 @@ export class UserAdmin implements OnInit {
   private readonly addRole = signal<Record<string, string>>({});
   private readonly pwd = signal<Record<string, string>>({});
   private readonly showPwd = signal<Record<string, boolean>>({});
+
+  // W36: which user's org-access drawer is open. Resolved to the live row so it re-renders with
+  // fresh memberships after each add/revoke reload.
+  protected readonly managingUserId = signal<string | null>(null);
+  protected readonly managingUser = computed(
+    () => this.users().find((u) => u.id === this.managingUserId()) ?? null,
+  );
 
   private readonly orgNames = computed(() => {
     const map = new Map<string, string>();
@@ -342,6 +401,13 @@ export class UserAdmin implements OnInit {
   }
   protected togglePwd(id: string): void {
     this.showPwd.update((m) => ({ ...m, [id]: !m[id] }));
+  }
+
+  protected manageAccess(id: string): void {
+    this.managingUserId.set(id);
+  }
+  protected closeManageAccess(): void {
+    this.managingUserId.set(null);
   }
 
   private load(): void {
