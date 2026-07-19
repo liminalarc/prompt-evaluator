@@ -90,7 +90,6 @@ import { validateImportFile } from './import-file';
                   <th>#</th>
                   <th>Target model</th>
                   <th>Label</th>
-                  <th>Source app</th>
                   <th>Created</th>
                 </tr>
               </thead>
@@ -105,18 +104,11 @@ import { validateImportFile } from './import-file';
                     <td>v{{ v.versionNumber }}</td>
                     <td><app-chip [label]="v.targetModel" /></td>
                     <td>{{ v.label ?? '—' }}</td>
-                    <td>
-                      @if (v.sourceApp; as s) {
-                        <app-chip [label]="s" />
-                      } @else {
-                        —
-                      }
-                    </td>
                     <td>{{ v.createdAt | date: 'medium' }}</td>
                   </tr>
                   @if (expandedVersionId() === v.id) {
                     <tr class="version-detail" data-testid="version-detail">
-                      <td colspan="5">
+                      <td colspan="4">
                         <div class="sb-field">
                           <label>Content (immutable — add a version to change it)</label>
                           <pre class="version-content">{{ v.content }}</pre>
@@ -284,9 +276,7 @@ import { validateImportFile } from './import-file';
 
         @if (p.versions.length > 0 && datasets()?.length) {
           <app-card heading="Run a version">
-            <p class="subtitle">
-              Score a version against one of this prompt's datasets — no page hop.
-            </p>
+            <p class="subtitle">Score a version against one of this prompt's datasets.</p>
             @if (showRun()) {
               <form
                 class="form-stack add-version-form"

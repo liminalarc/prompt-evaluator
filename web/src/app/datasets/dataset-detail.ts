@@ -677,6 +677,9 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        /* The label is the identifier; the raw-input preview is secondary (W19). */
+        color: var(--sb-text-muted);
+        font-size: var(--sb-type-small-size);
       }
       .facts {
         margin: 0 0 var(--sb-space-md);

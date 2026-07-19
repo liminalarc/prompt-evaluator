@@ -136,10 +136,7 @@ const ROLES = ['Owner', 'Member'];
                         (ngModelChange)="toggleAdmin(u)"
                         [attr.name]="'admin-' + u.id"
                       />
-                      <app-status-badge
-                        [variant]="u.isAdmin ? 'success' : 'neutral'"
-                        [label]="u.isAdmin ? 'Admin' : 'User'"
-                      />
+                      <span>Admin</span>
                     </label>
                   </td>
                   <td>
