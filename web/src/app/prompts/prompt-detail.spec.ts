@@ -72,6 +72,21 @@ describe('PromptDetail (unified workspace)', () => {
       syntheticCount: 0,
     },
   ];
+  // 1.16 — the derived per-version status loaded alongside the prompt (nothing current by default).
+  const versionStatus = {
+    promptId: 'p1',
+    currentVersionId: null,
+    versions: [
+      {
+        versionId: 'v1',
+        versionNumber: 1,
+        label: null,
+        isCurrent: false,
+        backportEligible: false,
+        regressed: false,
+      },
+    ],
+  };
 
   function setup() {
     TestBed.configureTestingModule({
@@ -93,6 +108,7 @@ describe('PromptDetail (unified workspace)', () => {
     httpMock = TestBed.inject(HttpTestingController);
     fixture.detectChanges(); // ngOnInit → load prompt + its datasets
     httpMock.expectOne('/api/prompts/p1').flush(prompt);
+    httpMock.expectOne('/api/prompts/p1/version-status').flush(versionStatus);
     httpMock.expectOne('/api/prompts/p1/datasets').flush(datasets);
     httpMock.expectOne('/api/models').flush(models);
     // Datasets load → the Runs tab fetches each dataset's runs (prompt-wide runs list).
@@ -203,6 +219,7 @@ describe('PromptDetail (unified workspace)', () => {
     httpMock = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
     httpMock.expectOne('/api/prompts/p1').flush(prompt);
+    httpMock.expectOne('/api/prompts/p1/version-status').flush(versionStatus);
     httpMock.expectOne('/api/prompts/p1/datasets').flush(datasets);
     httpMock.expectOne('/api/models').flush(models);
     // The Runs tab loads every dataset's runs on init — no need to open the run form.
@@ -336,6 +353,40 @@ describe('PromptDetail (unified workspace)', () => {
     expect(patch.request.body).toEqual({ label: 'renamed' });
     patch.flush({ ...prompt });
     httpMock.expectOne('/api/prompts/p1').flush(prompt); // reload
+    httpMock.expectOne('/api/prompts/p1/version-status').flush(versionStatus); // status reload
+  });
+
+  it('marks a version "Current in source" and shows the badge + deployment marker [1.16]', () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance as unknown as { setCurrent: (id: string) => void };
+    cmp.setCurrent('v1');
+
+    const post = httpMock.expectOne('/api/prompts/p1/versions/v1/set-current');
+    expect(post.request.method).toBe('POST');
+    expect(post.request.body).toEqual({ commitSha: null });
+    const currentStatus = {
+      promptId: 'p1',
+      currentVersionId: 'v1',
+      versions: [
+        {
+          versionId: 'v1',
+          versionNumber: 1,
+          label: null,
+          isCurrent: true,
+          backportEligible: false,
+          regressed: false,
+        },
+      ],
+    };
+    post.flush(currentStatus);
+    // set-current reloads the prompt (getPrompt + version-status again).
+    httpMock.expectOne('/api/prompts/p1').flush({ ...prompt, currentVersionId: 'v1' });
+    httpMock.expectOne('/api/prompts/p1/version-status').flush(currentStatus);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="version-status"]')?.textContent).toContain('Current');
+    expect(el.querySelector('[data-testid="deploy-current"]')?.textContent).toContain('v1');
   });
 
   it('defaults the add-version Target model to the latest version model, holding it [R5]', () => {

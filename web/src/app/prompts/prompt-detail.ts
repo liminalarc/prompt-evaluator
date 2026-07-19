@@ -3,7 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, forkJoin, map, of } from 'rxjs';
-import { Prompt } from '../prompt';
+import { Prompt, PromptVersionStatus } from '../prompt';
 import { DatasetSummary } from '../dataset';
 import { EvalRunSummary } from '../eval-run';
 import { ModelCatalogEntry } from '../model';
@@ -26,7 +26,10 @@ import {
   LoadingState,
   MarkdownEditor,
   PageHeader,
+  StatusBadge,
   runFailureMessage,
+  versionStatusBadges,
+  type BadgeSpec,
 } from '../shared';
 import { PromptsApiService } from './prompts-api.service';
 import { CompareDrawer } from '../analytics/compare-drawer';
@@ -53,6 +56,7 @@ type WorkspaceTab = 'versions' | 'datasets' | 'analytics' | 'runs';
     LoadingState,
     MarkdownEditor,
     PageHeader,
+    StatusBadge,
   ],
   template: `
     <section class="panel panel--wide">
@@ -117,6 +121,45 @@ type WorkspaceTab = 'versions' | 'datasets' | 'analytics' | 'runs';
         </nav>
 
         <div class="tab-panel" [hidden]="tab() !== 'versions'">
+          @if (p.versions.length > 0) {
+            <!-- 1.16 Deployment summary: which version the source app runs, and whether a better one
+                 is waiting to be backported. Mirrors the per-row badges, surfaced up-front. -->
+            <app-card heading="Deployment" data-testid="deployment-summary">
+              @if (currentVersionNumber(); as cur) {
+                <p class="deploy-line">
+                  <span class="muted">Current in source:</span>
+                  <strong data-testid="deploy-current">v{{ cur }}</strong>
+                  @if (p.currentVersionSha) {
+                    <code class="deploy-sha">{{ p.currentVersionSha }}</code>
+                  }
+                </p>
+              } @else {
+                <p class="muted" data-testid="deploy-none">
+                  No version is marked as current in source yet — set one from a version’s row
+                  below.
+                </p>
+              }
+              @if (eligibleVersion(); as elig) {
+                <div class="deploy-eligible" data-testid="deploy-eligible">
+                  <app-status-badge variant="success" label="Backport-eligible" />
+                  <span
+                    >v{{ elig.versionNumber }} scores higher than Current — ship it, then mark it
+                    backported.</span
+                  >
+                  <button
+                    type="button"
+                    class="sb-btn sb-btn--sm sb-btn--primary"
+                    data-testid="mark-backported"
+                    [disabled]="settingCurrentId() === elig.id"
+                    (click)="setCurrent(elig.id)"
+                  >
+                    Mark backported → v{{ elig.versionNumber }}
+                  </button>
+                </div>
+              }
+            </app-card>
+          }
+
           <app-card heading="Version history">
             <p class="subtitle">
               Each version is immutable — <strong>v1, v2…</strong> are the identity; the label is an
@@ -132,6 +175,7 @@ type WorkspaceTab = 'versions' | 'datasets' | 'analytics' | 'runs';
                 <thead>
                   <tr>
                     <th>#</th>
+                    <th>Status</th>
                     <th>Target model</th>
                     <th>Label</th>
                     <th>Created</th>
@@ -146,13 +190,18 @@ type WorkspaceTab = 'versions' | 'datasets' | 'analytics' | 'runs';
                       data-testid="version-row"
                     >
                       <td>v{{ v.versionNumber }}</td>
+                      <td class="version-status-cell" data-testid="version-status">
+                        @for (b of statusBadgesFor(v.id); track b.label) {
+                          <app-status-badge [variant]="b.variant" [label]="b.label" />
+                        }
+                      </td>
                       <td><app-chip [label]="v.targetModel" /></td>
                       <td>{{ v.label ?? '—' }}</td>
                       <td>{{ v.createdAt | date: 'medium' }}</td>
                     </tr>
                     @if (expandedVersionId() === v.id) {
                       <tr class="version-detail" data-testid="version-detail">
-                        <td colspan="4">
+                        <td colspan="5">
                           <div class="sb-field">
                             <label>Content (immutable — add a version to change it)</label>
                             <pre class="version-content">{{ v.content }}</pre>
@@ -193,6 +242,26 @@ type WorkspaceTab = 'versions' | 'datasets' | 'analytics' | 'runs';
                               </button>
                             </div>
                           </form>
+
+                          <!-- 1.16: the "Current in source" marker. Set-current and mark-as-backported
+                               are the same action — labelled contextually. -->
+                          <div class="version-deploy">
+                            @if (versionStatus()?.currentVersionId === v.id) {
+                              <span class="muted" data-testid="version-is-current">
+                                This is the version your source app runs (Current in source).
+                              </span>
+                            } @else {
+                              <button
+                                type="button"
+                                class="sb-btn sb-btn--sm sb-btn--secondary"
+                                data-testid="set-current"
+                                [disabled]="settingCurrentId() === v.id"
+                                (click)="setCurrent(v.id)"
+                              >
+                                Set as current in source
+                              </button>
+                            }
+                          </div>
                         </td>
                       </tr>
                     }
@@ -595,6 +664,39 @@ type WorkspaceTab = 'versions' | 'datasets' | 'analytics' | 'runs';
         font-size: var(--sb-type-small-size);
         color: var(--sb-warning-text, var(--sb-text-secondary));
       }
+      /* 1.16 version-status badges + deployment marker. */
+      .muted {
+        color: var(--sb-text-secondary);
+        font-size: var(--sb-type-small-size);
+      }
+      .version-status-cell {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      .version-deploy {
+        margin-top: var(--sb-space-md);
+        padding-top: var(--sb-space-sm);
+        border-top: 1px solid var(--sb-border);
+      }
+      .deploy-line {
+        display: flex;
+        align-items: center;
+        gap: var(--sb-space-sm);
+        margin: 0 0 var(--sb-space-xs);
+      }
+      .deploy-sha {
+        font-family: var(--sb-font-mono, monospace);
+        font-size: var(--sb-type-caption-size);
+        color: var(--sb-text-secondary);
+      }
+      .deploy-eligible {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--sb-space-sm);
+        margin-top: var(--sb-space-xs);
+      }
     `,
   ],
 })
@@ -668,6 +770,31 @@ export class PromptDetail implements OnInit {
   protected readonly expandedVersionId = signal<string | null>(null);
   protected readonly editLabel = signal('');
 
+  // Version status & backport lifecycle (1.16): Current-in-source pointer + derived per-version
+  // badges (Current / Backport-eligible / Regressed), loaded alongside the prompt.
+  protected readonly versionStatus = signal<PromptVersionStatus | null>(null);
+  protected readonly settingCurrentId = signal<string | null>(null);
+
+  /** The badges to render for one version row (0+). */
+  protected statusBadgesFor(versionId: string): BadgeSpec[] {
+    const s = this.versionStatus()?.versions.find((v) => v.versionId === versionId);
+    return s ? versionStatusBadges(s) : [];
+  }
+
+  /** The version number currently marked "Current in source", or null. */
+  protected readonly currentVersionNumber = computed<number | null>(() => {
+    const currentId = this.versionStatus()?.currentVersionId ?? null;
+    if (!currentId) return null;
+    return this.prompt()?.versions.find((v) => v.id === currentId)?.versionNumber ?? null;
+  });
+
+  /** The first backport-eligible version (a better one to ship), for the Deployment summary. */
+  protected readonly eligibleVersion = computed(() => {
+    const eligible = this.versionStatus()?.versions.find((v) => v.backportEligible);
+    if (!eligible) return null;
+    return { id: eligible.versionId, versionNumber: eligible.versionNumber };
+  });
+
   // Datasets + analytics — this prompt's, shown together with it (1.7).
   protected readonly datasets = signal<DatasetSummary[] | null>(null);
   protected readonly datasetName = signal('');
@@ -729,6 +856,38 @@ export class PromptDetail implements OnInit {
       error: () => {
         this.error.set('Could not load the prompt.');
         this.loading.set(false);
+      },
+    });
+    this.loadVersionStatus();
+  }
+
+  /** The derived per-version status (1.16). Non-fatal on error — the version list still renders. */
+  private loadVersionStatus(): void {
+    this.api.getVersionStatus(this.id).subscribe({
+      next: (s) => this.versionStatus.set(s),
+      error: () => {
+        /* leave status null; rows simply show no badges */
+      },
+    });
+  }
+
+  /**
+   * Mark a version "Current in source" (1.16) — also the mark-as-backported action. Updates the
+   * badges from the recomputed status the endpoint returns, and reloads the prompt for the pointer/SHA.
+   */
+  protected setCurrent(versionId: string): void {
+    if (this.settingCurrentId()) return;
+    this.settingCurrentId.set(versionId);
+    this.error.set(null);
+    this.api.setCurrentVersion(this.id, versionId).subscribe({
+      next: (status) => {
+        this.settingCurrentId.set(null);
+        this.versionStatus.set(status);
+        this.load(); // refresh the prompt's currentVersionId / SHA
+      },
+      error: () => {
+        this.settingCurrentId.set(null);
+        this.error.set('Could not update the current version.');
       },
     });
   }
