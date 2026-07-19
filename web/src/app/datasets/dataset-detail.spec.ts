@@ -436,4 +436,32 @@ describe('DatasetDetail run form + scorer config', () => {
     const banner = fixture.nativeElement.querySelector('[data-testid="error"]');
     expect(banner.textContent).toContain('eval-runner: Anthropic not configured');
   });
+
+  it('shows a loud banner on a timeout (no structured {error} body) [R2]', () => {
+    const fixture = render({
+      // A gateway/timeout 5xx returns a non-JSON body — the structured-error path finds nothing.
+      triggerRun: () => throwError(() => new HttpErrorResponse({ status: 504, error: null })),
+    });
+    const cmp = fixture.componentInstance as unknown as { triggerRun: (e: Event) => void };
+    cmp.triggerRun(new Event('submit'));
+    fixture.detectChanges();
+    const banner = fixture.nativeElement.querySelector('[data-testid="error"]');
+    expect(banner).not.toBeNull(); // never a silent no-op
+    expect(banner.textContent).toContain('timed out');
+  });
+
+  it('shows a loud banner on a non-JSON gateway 5xx [R2]', () => {
+    const fixture = render({
+      triggerRun: () =>
+        throwError(
+          () => new HttpErrorResponse({ status: 502, error: '<html>502 Bad Gateway</html>' }),
+        ),
+    });
+    const cmp = fixture.componentInstance as unknown as { triggerRun: (e: Event) => void };
+    cmp.triggerRun(new Event('submit'));
+    fixture.detectChanges();
+    const banner = fixture.nativeElement.querySelector('[data-testid="error"]');
+    expect(banner).not.toBeNull();
+    expect(banner.textContent).toContain('502');
+  });
 });

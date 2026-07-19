@@ -22,6 +22,7 @@ import {
   ErrorState,
   LoadingState,
   PageHeader,
+  runFailureMessage,
 } from '../shared';
 import { PromptsApiService } from './prompts-api.service';
 import { VersionDiff } from './version-diff';
@@ -688,8 +689,9 @@ export class PromptDetail implements OnInit {
         this.running.set(false);
         void this.router.navigate(['/eval-runs', run.id]);
       },
-      error: () => {
-        this.error.set('Could not run the evaluation.');
+      error: (err) => {
+        // R2: loud on any failure — a timeout / non-JSON 5xx yields a clear message, never a no-op.
+        this.error.set(runFailureMessage(err));
         this.running.set(false);
       },
     });

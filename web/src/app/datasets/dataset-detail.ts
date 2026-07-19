@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -22,6 +21,8 @@ import {
   PageHeader,
   StatusBadge,
   originBadge,
+  runFailureMessage,
+  serverError,
 } from '../shared';
 import { DatasetsApiService } from './datasets-api.service';
 
@@ -876,7 +877,7 @@ export class DatasetDetail implements OnInit {
           this.fixtureDescription.set('');
           this.fixtureOrigin.set('Captured');
         },
-        error: (err) => this.error.set(this.serverError(err) ?? 'Could not add the fixture.'),
+        error: (err) => this.error.set(serverError(err) ?? 'Could not add the fixture.'),
       });
   }
 
@@ -907,7 +908,7 @@ export class DatasetDetail implements OnInit {
           this.dataset.set(d);
           this.expandedFixtureId.set(null);
         },
-        error: (err) => this.error.set(this.serverError(err) ?? 'Could not update the fixture.'),
+        error: (err) => this.error.set(serverError(err) ?? 'Could not update the fixture.'),
       });
   }
 
@@ -959,7 +960,7 @@ export class DatasetDetail implements OnInit {
           this.loadScorers();
         },
         error: (err) =>
-          this.error.set(this.serverError(err) ?? 'Could not add the scorer — check the config.'),
+          this.error.set(serverError(err) ?? 'Could not add the scorer — check the config.'),
       });
   }
 
@@ -996,7 +997,7 @@ export class DatasetDetail implements OnInit {
           this.expandedScorerId.set(null);
           this.loadScorers();
         },
-        error: (err) => this.error.set(this.serverError(err) ?? 'Could not update the scorer.'),
+        error: (err) => this.error.set(serverError(err) ?? 'Could not update the scorer.'),
       });
   }
 
@@ -1014,15 +1015,8 @@ export class DatasetDetail implements OnInit {
         this.expandedScorerId.set(null);
         this.loadScorers();
       },
-      error: (err) => this.error.set(this.serverError(err) ?? 'Could not remove the scorer.'),
+      error: (err) => this.error.set(serverError(err) ?? 'Could not remove the scorer.'),
     });
-  }
-
-  // Surface the API's {error} message (e.g. "eval-runner: … not configured") when present, so a
-  // failed operation fails loudly with the real reason (B2/B5), not a generic line.
-  private serverError(err: unknown): string | null {
-    const body = (err as HttpErrorResponse)?.error;
-    return body && typeof body.error === 'string' ? body.error : null;
   }
 
   protected async deleteDataset(dataset: Dataset): Promise<void> {
@@ -1060,7 +1054,9 @@ export class DatasetDetail implements OnInit {
         this.router.navigate(['/eval-runs', run.id]);
       },
       error: (err) => {
-        this.error.set(this.serverError(err) ?? 'Could not run the evaluation.');
+        // R2: any run failure is loud — a timeout / non-JSON gateway 5xx has no structured {error}
+        // to show, so fall back to a clear timeout/server-error message rather than a silent no-op.
+        this.error.set(runFailureMessage(err));
         this.running.set(false);
       },
     });
