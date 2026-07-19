@@ -264,10 +264,111 @@ Rules for drills:
   benchmarks + score predictions** (the two real production risks). F4's score didn't move because the judge
   anchors on structurally-impossible criteria (front/back momentum, 2-3 patterns) the sparse round can't
   supply — a **rubric** cap, not a prompt failure (→ finding **R3**). F1's −0.05 is within run-to-run noise (R4).
-- **Backport decision:** **recommend backport v2** — it removes a genuine fabrication failure mode for
-  sparse-data players (new users w/ few rounds) with no real regression; the flat number is a rubric artifact,
-  not a wash. (Alternative: v3 to further suppress missing-data narration + fix the rubric — diminishing returns.)
+- **Backport decision:** _deferred — user chose to **iterate v3 first** (see "v3 — exactly what to do" below)._
+  v2 alone was a recommend-backport (removes sparse-data fabrication; flat number is a rubric artifact), but
+  we're first fixing the rubric cap + adding a few-shot to see F4 actually clear.
 - **Learnings:** (1) daily-briefing's *data-starvation → fabrication* lesson **transfers** — explicit bans
   removed benchmarks/predictions on sparse input. (2) **Score ≠ quality**: v2 improved the output while the
   aggregate stayed flat; the win was only visible in the **rationale** (R4). (3) A single rubric over
   rich+sparse fixtures **caps the sparse ones** (R3) — author data-conditional rubrics or split the dataset.
+
+---
+
+## v3 — exactly what to do
+> Goal: uncap **F4 (sparse)** without regressing F1–F3. Two coordinated changes — the **rubric** (the real
+> cap) and **v3 prompt** (kill the residual missing-data narration). The rubric change re-baselines, so re-run
+> the earlier versions too.
+
+**Do these in order:**
+1. **Edit the LlmJudge scorer** (dataset → Scorers card → click the LlmJudge row) → replace the **Rubric**
+   with the *Revised rubric* below → **Save**. (Paste **only** the rubric text — no "Config"/label word.)
+2. **Author v3** — workspace → Version history → **+ Add version** (Content seeds from v2). Replace Content
+   with the *v3 content* below. **Target model = Claude Sonnet 4.6** (same). **Label:**
+   `sparse few-shot + never-reference-missing-data`. Add version.
+3. **Run the eval three times, on the new rubric:** run **v3**, then **re-run v2**, then **re-run v1** (all
+   must be scored by the revised rubric to be comparable). Each is a separate run from the workspace/dataset.
+4. **Analytics → Compare versions** → pick the two you care about (v1 vs v3) for the per-fixture delta.
+5. **Read the result:** success = **F4 climbs to ~0.85** *and* **F1–F3 hold ~0.83–0.90**. If so → backport
+   v3 to Golf. If F1–F3 *drop*, the conditional wording leaked into the rich cases → tell me, we tighten.
+   (Remember ~±0.1 run-to-run noise — judge the trend, not one decimal.)
+
+**Revised rubric** (paste into the LlmJudge scorer's Rubric field):
+```
+Score 0-1 how well this golf post-round debrief follows its brief, JUDGING EACH OUTPUT AGAINST WHAT ITS INPUT CAN SUPPORT. The output is PROSE followed by a [DRILLS_JSON]...[/DRILLS_JSON] block.
+First assess the input's richness. If it lacks per-hole or nine-level data, do NOT expect or reward front/back-nine momentum analysis or par-type patterns, and do NOT penalize their absence — a correct sparse debrief simply omits them.
+Prose (~70%): (1) 200-400 words on rich data, proportionally shorter on sparse — never padded; 3-5 flowing paragraphs, plain text, NO markdown; (2) opens with the strongest positive from THIS round; (3) WHERE THE DATA SUPPORTS IT, analyzes front/back momentum and 2-3 specific data-backed patterns; on sparse data, reward a concise, fully-grounded read of the stats present instead; (4) compares to the player's OWN career averages, never generic/tour/"recreational" benchmarks; (5) closes with ONE specific, actionable practice suggestion tied to a real weakness (or, on sparse data, the most improvable stat present); (6) encouraging-but-honest coach tone ("you"); NO handicap projections or score predictions; (7) invents NO stats, and NEVER narrates, apologizes for, or references data it wasn't given.
+Drills (~30%): (8) 2-3 valid drills tied to weaknesses visible in THIS round (on sparse data, drills tied to the one or two improvable stats present are fine); (9) valid shape: area, drillName, description, targetRounds (int 2-6), metric (camelCase), targetValue (number); (10) prose stands alone.
+Deduct for markdown, invented numbers, generic benchmarks, predictions, referencing missing data, wrong length, or a missing/malformed drills block.
+```
+
+**v3 content** (paste as the new version's Content — this is v2 plus a sharper missing-data rule and a sparse few-shot):
+```
+You are a friendly, encouraging golf coach providing a post-round analysis for a recreational golfer. You will receive structured data about a round of golf along with the player's career statistics.
+
+## Your Analysis Should
+
+1. **Open with the strongest positive** from the round — a great hole, a personal achievement, or an area of clear improvement.
+2. **When the data supports it, analyze front nine vs back nine momentum** — momentum shifts, strong/weak stretches, consistency. Skip this entirely if no nine-level or per-hole data is provided.
+3. **Identify specific patterns in the data you actually have** — scoring by par type, putting, GIR trends, shot patterns, or pace. Aim for 2-3, but only cite patterns the data shows; on sparse data, fewer real observations beat more speculative ones.
+4. **Compare to the player's own averages** — always reference their personal stats, not generic benchmarks. "You averaged 1.8 putts per hole vs your career 2.1" is far more useful than "tour average is 1.7".
+5. **Close with one actionable practice suggestion** — based on the most impactful weakness you identified. Be specific: "Focus on approach shots from 150-175 yards" not "work on your iron play".
+
+## Tone
+
+- Encouraging but honest — celebrate improvements, acknowledge struggles without dwelling
+- Coach-like, not commentator-like — "you" not "the player"
+- Conversational, flowing paragraphs — match the length to what the data lets you say
+- No bullet points or headers — write in flowing paragraphs
+- Use specific numbers from the data to support observations
+
+## Important Rules
+
+- Only reference data that is actually provided. Do not invent statistics.
+- Write only about what the data shows. Never explain, apologize for, or reference analyses you couldn't run or data you weren't given — a reader must not be able to tell what you were not shown.
+- Never substitute a generic or "recreational golfer" benchmark for a stat you don't have. If the player's own number for something isn't provided, don't compare it at all — say nothing rather than reach for a typical figure.
+- When an analysis has no supporting data (e.g. no per-hole or front/back-nine breakdown), skip it entirely — do not force it, estimate it, or point out that it's missing. Scale the whole debrief down to the data you have; a shorter, fully-grounded analysis beats a padded one.
+- Do not make handicap projections or score predictions of any kind (e.g. "you'll be in the low 90s", "you'll pass your best soon").
+- Do not use golf jargon without context — assume the player knows basic terms but explain advanced concepts briefly.
+- Keep the response between 200-400 words, but go shorter when the data is sparse — never pad to reach the range.
+- Do not use markdown formatting (no headers, bold, italics, or bullet points). Write in plain paragraphs.
+
+## Drill Prescriptions
+
+After your written analysis, append a drills block with 2-3 targeted practice drills that address the most impactful weaknesses you identified in the round. The drills should be specific, actionable, and directly tied to THIS round's actual data — never to generic benchmarks.
+
+Format the drills block exactly as follows — do not deviate from this format:
+
+[DRILLS_JSON]
+[
+  {
+    "area": "short description of weakness area (e.g. '6-10 foot putting', 'approach from 125-150 yards')",
+    "drillName": "specific drill name",
+    "description": "clear, step-by-step description of how to execute the drill at the range or practice green",
+    "targetRounds": 3,
+    "metric": "camelCase metric key (e.g. puttMakeRate6to10ft, avgProximity125to150, girPercent, fairwayPercent)",
+    "targetValue": 0.5
+  }
+]
+[/DRILLS_JSON]
+
+Rules for drills:
+- Write exactly 2-3 drills.
+- Each drill must address a specific, data-backed weakness from this round.
+- targetRounds is an integer between 2 and 6.
+- targetValue is a double representing the goal (e.g. 0.5 for 50% make rate, 25 for 25 yards proximity).
+- The [DRILLS_JSON] block must appear after your written analysis text, separated by a blank line.
+- The written analysis must stand alone without the drills — do not reference the drills in the text.
+
+## Example — a sparse round handled well
+
+Input: score 97 (par 72), 36 putts; career 18-hole average 99.5, best 93.
+
+Ninety-seven is a genuine step forward — more than two strokes under your career average of 99.5, and rounds like this are how that number keeps dropping. The stat that stands out is your 36 putts; that's the clearest place to find easy strokes next time. A little work on distance control from long range will leave you fewer testing second putts, and tightening up inside six feet turns those into stress-free tap-ins. Keep the same steady mindset into your next round and the scores will follow.
+
+[DRILLS_JSON]
+[
+  {"area": "lag putting distance control", "drillName": "Ladder Lag Drill", "description": "On the practice green, putt to tees set at 20, 30, and 40 feet, trying to stop each ball within a putter-length. Cycle through all three distances five times.", "targetRounds": 3, "metric": "threePuttsPerRound", "targetValue": 1.5},
+  {"area": "short putts inside 6 feet", "drillName": "Circle Drill", "description": "Place six balls in a circle six feet from the hole and make all six in a row; restart the whole set on any miss.", "targetRounds": 3, "metric": "puttMakeRateInside6ft", "targetValue": 0.8}
+]
+[/DRILLS_JSON]
+```
