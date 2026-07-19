@@ -33,6 +33,7 @@
 - **5.1** Adopt LitmusAI across Cortex Golf & Stormboard (discover → onboard → improve every prompt) — `IN PROGRESS` — [detail](specs/5.1/5.1.md)
 
 ## Archive
+- **1.19** Catalog: add current Anthropic models (Sonnet 4.6, Opus 4.7, Opus 4.6) — `DONE` — [detail](specs/archive/1.19.md)
 - **2.8** Eval-loop UX round 2 (dogfood findings) — `DONE` — [detail](specs/archive/2.8.md)
 - **4.6** Admin-created users (create user, no email) — `DONE` — [detail](specs/archive/4.6.md)
 - **3.2** Production Deployment (AWS App Runner/ECR/RDS dev env, Prism-modeled) — `DONE` — [detail](specs/archive/3.2.md)
