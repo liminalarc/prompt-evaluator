@@ -239,7 +239,7 @@ import { BadgeVariant, Card, EmptyState, ErrorState, PageHeader, StatusBadge } f
                   <div class="unverified" data-testid="regression-unverified">
                     <p class="unverified__note">
                       Possible — the drop cleared the threshold but there isn't enough data to
-                      confirm significance. Add more fixtures to confirm.
+                      confirm significance. Add more test cases to confirm.
                     </p>
                     <table class="sb-table">
                       <thead>

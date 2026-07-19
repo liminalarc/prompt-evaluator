@@ -73,7 +73,11 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
           </button>
         </app-page-header>
 
-        <app-card heading="Fixtures">
+        <app-card heading="Test cases">
+          <p class="subtitle">
+            A dataset is its <strong>test cases</strong> × its <strong>scorers</strong> — every run
+            produces a score per test case per scorer.
+          </p>
           <div class="field-inline fixtures-filter">
             <label for="origin">Origin</label>
             <select
@@ -89,9 +93,9 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
           </div>
 
           @if (filteredFixtures().length === 0) {
-            <app-empty-state message="No fixtures for this filter." data-testid="no-fixtures" />
+            <app-empty-state message="No test cases for this filter." data-testid="no-fixtures" />
           } @else {
-            <p class="subtitle">Select a row to view the full fixture and edit its label.</p>
+            <p class="subtitle">Select a row to view the full test case and edit its label.</p>
             <table class="sb-table" data-testid="fixtures">
               <thead>
                 <tr>
@@ -256,7 +260,7 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
               </div>
               <div class="form-actions">
                 <button class="sb-btn sb-btn--primary" type="submit" data-testid="capture">
-                  Add fixture
+                  Add test case
                 </button>
                 <button
                   class="sb-btn sb-btn--ghost"
@@ -277,7 +281,7 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
               (keydown.escape)="cancelGenerate()"
             >
               <p class="subtitle">
-                Seeded from this dataset's captured fixtures; steer with guidance.
+                Seeded from this dataset's captured test cases; steer with guidance.
               </p>
               <div class="sb-field">
                 <label for="coverageGoals">Coverage goals (optional)</label>
@@ -336,7 +340,7 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
               data-testid="toggle-capture"
               (click)="showCapture.set(!showCapture())"
             >
-              + Add fixture
+              + Add test case
             </button>
             <button
               class="sb-btn sb-btn--sm sb-btn--secondary"
@@ -620,7 +624,7 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                     <th>Model</th>
                     <th>Score</th>
                     <th>Scorers</th>
-                    <th>Fixtures</th>
+                    <th>Test cases</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -919,7 +923,7 @@ export class DatasetDetail implements OnInit {
           this.fixtureDescription.set('');
           this.fixtureOrigin.set('Captured');
         },
-        error: (err) => this.error.set(serverError(err) ?? 'Could not add the fixture.'),
+        error: (err) => this.error.set(serverError(err) ?? 'Could not add the test case.'),
       });
   }
 
@@ -950,7 +954,7 @@ export class DatasetDetail implements OnInit {
           this.dataset.set(d);
           this.expandedFixtureId.set(null);
         },
-        error: (err) => this.error.set(serverError(err) ?? 'Could not update the fixture.'),
+        error: (err) => this.error.set(serverError(err) ?? 'Could not update the test case.'),
       });
   }
 
@@ -974,7 +978,7 @@ export class DatasetDetail implements OnInit {
           this.generating.set(false);
         },
         error: () => {
-          this.error.set('Could not generate fixtures — a captured seed is required.');
+          this.error.set('Could not generate test cases — a captured seed is required.');
           this.generating.set(false);
         },
       });
@@ -1066,7 +1070,7 @@ export class DatasetDetail implements OnInit {
     const ok = await this.confirm.ask({
       title: 'Delete dataset',
       message:
-        `Deletes “${dataset.name}” and its ${fixtures} fixture(s), its scorers, ` +
+        `Deletes “${dataset.name}” and its ${fixtures} test case(s), its scorers, ` +
         `and all runs and scores against it. This cannot be undone.`,
       confirmLabel: 'Delete dataset',
     });

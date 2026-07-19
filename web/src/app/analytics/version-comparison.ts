@@ -37,7 +37,7 @@ import {
             <table class="sb-table" data-testid="fixture-deltas">
               <thead>
                 <tr>
-                  <th>Fixture</th>
+                  <th>Test case</th>
                   <th>v{{ cmp.fromVersionNumber }}</th>
                   <th>v{{ cmp.toVersionNumber }}</th>
                   <th>Δ</th>

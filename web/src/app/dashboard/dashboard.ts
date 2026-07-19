@@ -90,7 +90,7 @@ import { DashboardView } from './dashboard.model';
                 <th>Prompt</th>
                 <th>Dataset</th>
                 <th>When</th>
-                <th>Fixtures</th>
+                <th>Test cases</th>
                 <th>Scores</th>
               </tr>
             </thead>

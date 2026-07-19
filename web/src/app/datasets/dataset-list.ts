@@ -30,7 +30,7 @@ import { DatasetsApiService } from './datasets-api.service';
             <thead>
               <tr>
                 <th>Name</th>
-                <th>Fixtures</th>
+                <th>Test cases</th>
                 <th>Captured</th>
                 <th>Synthetic</th>
               </tr>

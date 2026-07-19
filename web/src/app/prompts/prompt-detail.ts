@@ -341,7 +341,7 @@ import { validateImportFile } from './import-file';
                       <th>Run</th>
                       <th>Score</th>
                       <th>Scorers</th>
-                      <th>Fixtures</th>
+                      <th>Test cases</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -378,7 +378,7 @@ import { validateImportFile } from './import-file';
         <div class="card-grid">
           <app-card heading="Datasets">
             <p class="subtitle">
-              This prompt's test sets — its fixtures and the runs scored against them.
+              This prompt's test sets — its test cases and the runs scored against them.
             </p>
             @if (datasets(); as ds) {
               @if (ds.length === 0) {
@@ -391,7 +391,7 @@ import { validateImportFile } from './import-file';
                   <thead>
                     <tr>
                       <th>Name</th>
-                      <th>Fixtures</th>
+                      <th>Test cases</th>
                       <th>Captured</th>
                       <th>Synthetic</th>
                     </tr>

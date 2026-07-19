@@ -54,7 +54,7 @@ import { EvalRunsApiService } from './eval-runs-api.service';
         </app-page-header>
 
         @if (r.results.length === 0) {
-          <app-empty-state message="This run has no fixture results." data-testid="no-results" />
+          <app-empty-state message="This run has no test case results." data-testid="no-results" />
         } @else {
           @for (fixtureRun of r.results; track fixtureRun.fixtureId) {
             <div class="sb-card fixture-run" data-testid="fixture-run">
@@ -83,7 +83,7 @@ import { EvalRunsApiService } from './eval-runs-api.service';
                 <div class="sb-card__body" data-testid="fixture-run-detail">
                   <div class="io-grid">
                     <div class="io-block">
-                      <span class="result__key">Fixture input</span>
+                      <span class="result__key">Test case input</span>
                       <pre class="io-text">{{ fixtureInput(fixtureRun.fixtureId) }}</pre>
                     </div>
                     <div class="io-block">
@@ -319,7 +319,7 @@ export class EvalRunDetail implements OnInit {
   }
 
   protected summary(run: EvalRun): string {
-    const base = `${run.results.length} fixture(s) · ${this.scoreCount(run)} score(s)`;
+    const base = `${run.results.length} test case(s) · ${this.scoreCount(run)} score(s)`;
     const mean = this.meanScore(run);
     return mean ? `${base} · mean ${mean.value.toFixed(2)}${mean.judge ? ' (judge)' : ''}` : base;
   }
