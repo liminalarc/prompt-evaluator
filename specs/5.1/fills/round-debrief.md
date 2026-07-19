@@ -259,6 +259,15 @@ Rules for drills:
 - The [DRILLS_JSON] block must appear after your written analysis text, separated by a blank line.
 - The written analysis must stand alone without the drills — do not reference the drills in the text.
 ```
-- **Backport decision:** _pending v2 result_ (LitmusAI signals; edit Golf `AiService.WebApi/Prompts/round-debrief.md` by hand, or decline).
-- **Learnings:** _pending v2_ — early read: daily-briefing's data-starvation→fabrication lesson **transfers**,
-  here as *adaptive structure* for the sparse case rather than a length reframe.
+- **v2 result** (subject Sonnet 4.6, judge Opus 4.8): F1 0.85, F2 0.93, F3 0.82, F4 **0.62** — avg **≈0.81**,
+  Regex 8/8. **Aggregate flat vs v1**, but the F4 **rationale** confirms v2 **eliminated the fabricated generic
+  benchmarks + score predictions** (the two real production risks). F4's score didn't move because the judge
+  anchors on structurally-impossible criteria (front/back momentum, 2-3 patterns) the sparse round can't
+  supply — a **rubric** cap, not a prompt failure (→ finding **R3**). F1's −0.05 is within run-to-run noise (R4).
+- **Backport decision:** **recommend backport v2** — it removes a genuine fabrication failure mode for
+  sparse-data players (new users w/ few rounds) with no real regression; the flat number is a rubric artifact,
+  not a wash. (Alternative: v3 to further suppress missing-data narration + fix the rubric — diminishing returns.)
+- **Learnings:** (1) daily-briefing's *data-starvation → fabrication* lesson **transfers** — explicit bans
+  removed benchmarks/predictions on sparse input. (2) **Score ≠ quality**: v2 improved the output while the
+  aggregate stayed flat; the win was only visible in the **rationale** (R4). (3) A single rubric over
+  rich+sparse fixtures **caps the sparse ones** (R3) — author data-conditional rubrics or split the dataset.

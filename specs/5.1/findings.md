@@ -130,6 +130,25 @@
   timeout). Fix: surface **any** run failure loudly — a generic banner on a non-JSON/timeout 5xx, not only the
   `{error}` shape. → *home: **loud-error follow-up** (2.8-adjacent bug) or a new spec — **user to confirm**.*
 
+## Eval methodology (2026-07-18, round-debrief walk)
+- **R3 — One rubric over a heterogeneous dataset caps the "hard" fixtures, hiding real prompt gains.** The
+  round-debrief rubric rewards "front/back-nine momentum" + "2-3 patterns" — analyses a **sparse** fixture
+  (score+putts only, no per-hole/nine data) physically can't support. So the sparse fixture (F4) is capped
+  ~0.62 **no matter how good the prose is**: even after v2 eliminated the real defects (fabricated benchmarks +
+  score predictions — confirmed in the judge rationale), the fixture score didn't move, because the judge
+  anchors on the structurally-impossible criteria. Net: the **aggregate said "v2 = no gain" while v2 genuinely
+  removed a production fabrication risk** — you only see it by reading the rationale, not the number. Options:
+  (a) **rubric-authoring guidance** — write data-conditional rubrics ("if no nine-level data, don't penalize
+  its absence; reward graceful sparse-handling"); (b) keep datasets **homogeneous** (split sparse fixtures into
+  their own dataset+rubric); (c) a tool feature — **per-fixture / conditional criteria** so one dataset can
+  fairly score mixed-richness fixtures. → *home: runbook rubric-authoring note now + candidate **new LitmusAI
+  spec** (conditional/per-fixture rubric criteria) — **user to confirm**.*
+- **R4 — Score ≠ quality on a single run; read the rationale + expect noise.** Fixture scores wobble ~±0.1
+  run-to-run (F1 0.90→0.85, F2 0.88→0.93) and a real prompt improvement can land as a **flat number** (v2). A
+  stable baseline / regression call wants **repeated runs or a variance view**, and a diff should surface the
+  **rationale delta**, not just the score delta. → *home: methodology note + candidate analytics feature
+  (multi-run/variance, rationale-diff) — **user to confirm**.*
+
 ## Ops / infra
 - **O1 — Dev deployed without the Anthropic key set.** Provisioning shipped the secret as a placeholder;
   the first eval was the first thing to exercise it. The next environment shouldn't repeat this — add a
