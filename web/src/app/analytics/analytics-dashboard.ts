@@ -69,7 +69,7 @@ import { BadgeVariant, Card, EmptyState, ErrorState, PageHeader, StatusBadge } f
               (ngModelChange)="datasetId.set($event)"
             >
               <option [ngValue]="null">Select a dataset…</option>
-              @for (d of datasets(); track d.id) {
+              @for (d of datasetsForPrompt(); track d.id) {
                 <option [ngValue]="d.id">{{ d.name }}</option>
               }
             </select>
@@ -239,6 +239,14 @@ export class AnalyticsDashboard {
   protected readonly prompts = signal<PromptSummary[]>([]);
   protected readonly datasets = signal<DatasetSummary[]>([]);
   protected readonly promptId = signal<string | null>(null);
+
+  // B8: the dataset picker is scoped to the *selected prompt*, not just the org. A dataset belongs
+  // to exactly one prompt (1.7, Dataset.PromptId), so a foreign-prompt dataset must never appear —
+  // picking one yields empty/mismatched analytics. Same fix shape as the run picker (B3).
+  protected readonly datasetsForPrompt = computed(() => {
+    const pid = this.promptId();
+    return pid ? this.datasets().filter((d) => d.promptId === pid) : [];
+  });
   protected readonly datasetId = signal<string | null>(null);
   protected readonly threshold = signal<number>(0.05);
   protected readonly trends = signal<TrendSeries[]>([]);
@@ -337,6 +345,12 @@ export class AnalyticsDashboard {
   // Selecting a prompt loads its versions and defaults the comparison to the two most recent.
   protected selectPrompt(promptId: string | null): void {
     this.promptId.set(promptId);
+    // B8: drop a dataset selection that belongs to a different prompt — the picker is now
+    // prompt-scoped, so a carried-over foreign dataset would analyze against the wrong prompt.
+    const currentDataset = this.datasets().find((d) => d.id === this.datasetId());
+    if (!promptId || (currentDataset && currentDataset.promptId !== promptId)) {
+      this.datasetId.set(null);
+    }
     this.versions.set([]);
     this.fromVersionId.set(null);
     this.toVersionId.set(null);

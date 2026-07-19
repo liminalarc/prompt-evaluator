@@ -63,6 +63,94 @@ describe('AnalyticsDashboard', () => {
     return fixture;
   }
 
+  // B8: the dataset picker must show only the selected prompt's datasets, not every org dataset.
+  function createWithTwoPrompts() {
+    const fixture = TestBed.createComponent(AnalyticsDashboard);
+    fixture.detectChanges();
+    http.expectOne('/api/organizations/o1/prompts').flush([
+      {
+        id: 'p1',
+        folderId: null,
+        name: 'Summarizer',
+        description: null,
+        versionCount: 2,
+        latestTargetModel: 'claude-opus-4-8',
+      },
+      {
+        id: 'p2',
+        folderId: null,
+        name: 'Debrief',
+        description: null,
+        versionCount: 1,
+        latestTargetModel: 'claude-sonnet-4-6',
+      },
+    ]);
+    http.expectOne('/api/datasets').flush([
+      {
+        id: 'd1',
+        promptId: 'p1',
+        name: 'Summaries',
+        description: null,
+        fixtureCount: 4,
+        capturedCount: 4,
+        syntheticCount: 0,
+      },
+      {
+        id: 'd2',
+        promptId: 'p2',
+        name: 'Core round scenarios',
+        description: null,
+        fixtureCount: 4,
+        capturedCount: 0,
+        syntheticCount: 4,
+      },
+    ]);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('scopes the dataset picker to the selected prompt (no cross-prompt leak) [B8]', () => {
+    const fixture = createWithTwoPrompts();
+    const cmp = fixture.componentInstance as unknown as { selectPrompt(id: string): void };
+
+    cmp.selectPrompt('p1');
+    fixture.detectChanges();
+    http.expectOne('/api/prompts/p1').flush({
+      id: 'p1',
+      name: 'Summarizer',
+      description: null,
+      versions: [],
+    });
+    fixture.detectChanges();
+
+    const options = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('[data-testid="dataset-select"] option'),
+    ).map((o) => o.textContent?.trim());
+    // Only p1's dataset is offered; p2's dataset must not leak in.
+    expect(options).toContain('Summaries');
+    expect(options).not.toContain('Core round scenarios');
+  });
+
+  it('clears a carried-over foreign dataset when switching prompts [B8]', () => {
+    const fixture = createWithTwoPrompts();
+    const cmp = fixture.componentInstance as unknown as {
+      datasetId: { set(v: string): void } & (() => string | null);
+      selectPrompt(id: string): void;
+    };
+    // Pretend d2 (belongs to p2) was selected, then switch to p1.
+    cmp.datasetId.set('d2');
+    cmp.selectPrompt('p1');
+    fixture.detectChanges();
+    http.expectOne('/api/prompts/p1').flush({
+      id: 'p1',
+      name: 'Summarizer',
+      description: null,
+      versions: [],
+    });
+    // The foreign dataset selection is dropped (no analytics fetched for a mismatched pair).
+    expect(cmp.datasetId()).toBeNull();
+  });
+
   it('prompts the user to choose before a prompt + dataset are selected', () => {
     const fixture = createAndLoadLists();
     const el = fixture.nativeElement as HTMLElement;
