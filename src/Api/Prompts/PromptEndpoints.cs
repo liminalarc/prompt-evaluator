@@ -1,4 +1,5 @@
 using Api.Auth;
+using Application.Analytics;
 using Application.Folders;
 using Application.Ports;
 using Application.Prompts;
@@ -109,6 +110,34 @@ public static class PromptEndpoints
                     return problem;
                 var prompt = await handler.HandleAsync(id, versionId, request.Label, ct);
                 return prompt is null ? Results.NotFound() : Results.Ok(PromptResponse.From(prompt));
+            });
+
+        // The derived per-version lifecycle status (1.16): Current / Backport-eligible / Regressed.
+        group.MapGet("/{id:guid}/version-status",
+            async (Guid id, VersionStatusHandler handler, OrgAccess access, CancellationToken ct) =>
+            {
+                if ((await access.CanAccessPromptAsync(id, ct)).ToProblem() is { } problem)
+                    return problem;
+                var status = await handler.HandleAsync(id, ct);
+                return status is null ? Results.NotFound() : Results.Ok(PromptVersionStatusResponse.From(status));
+            });
+
+        // Mark a version "Current in source" (1.16) — also the mark-as-backported action (move Current
+        // to a shipped, higher-scoring version). Returns the recomputed status so badges update at once.
+        group.MapPost("/{id:guid}/versions/{versionId:guid}/set-current",
+            async (Guid id, Guid versionId, SetCurrentVersionRequest request, SetCurrentVersionHandler handler,
+                VersionStatusHandler status, OrgAccess access, CancellationToken ct) =>
+            {
+                if ((await access.CanAccessPromptAsync(id, ct)).ToProblem() is { } problem)
+                    return problem;
+                var outcome = await handler.HandleAsync(id, versionId, request.CommitSha, ct);
+                return outcome switch
+                {
+                    SetCurrentVersionHandler.Outcome.PromptNotFound => Results.NotFound(),
+                    SetCurrentVersionHandler.Outcome.VersionNotFound =>
+                        Results.NotFound(new { error = "That version is not part of this prompt." }),
+                    _ => Results.Ok(PromptVersionStatusResponse.From((await status.HandleAsync(id, ct))!)),
+                };
             });
 
         return app;

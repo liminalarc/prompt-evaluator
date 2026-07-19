@@ -60,6 +60,7 @@ if (!string.IsNullOrWhiteSpace(postgres))
 builder.Services.AddScoped<CreatePromptHandler>();
 builder.Services.AddScoped<AddPromptVersionHandler>();
 builder.Services.AddScoped<EditPromptVersionHandler>();
+builder.Services.AddScoped<SetCurrentVersionHandler>();
 builder.Services.AddScoped<CreateFolderHandler>();
 builder.Services.AddScoped<RenameFolderHandler>();
 builder.Services.AddScoped<MoveFolderHandler>();
@@ -77,6 +78,7 @@ builder.Services.AddScoped<TrendAnalyticsHandler>();
 builder.Services.AddScoped<RegressionAnalyticsHandler>();
 builder.Services.AddScoped<ComparisonAnalyticsHandler>();
 builder.Services.AddScoped<VarianceAnalyticsHandler>();
+builder.Services.AddScoped<VersionStatusHandler>();
 builder.Services.AddSingleton<RegressionDetector>();
 builder.Services.AddSingleton<FixtureRedactor>();
 

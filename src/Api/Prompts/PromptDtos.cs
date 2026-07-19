@@ -1,3 +1,4 @@
+using Application.Analytics;
 using Domain;
 
 namespace Api.Prompts;
@@ -28,10 +29,34 @@ public sealed record PromptResponse(
     Guid? FolderId,
     string Name,
     string? Description,
-    IReadOnlyList<PromptVersionResponse> Versions)
+    IReadOnlyList<PromptVersionResponse> Versions,
+    Guid? CurrentVersionId,
+    string? CurrentVersionSha,
+    DateTimeOffset? CurrentVersionSetAt)
 {
     public static PromptResponse From(Prompt p) =>
-        new(p.Id, p.FolderId, p.Name, p.Description, p.Versions.Select(PromptVersionResponse.From).ToList());
+        new(p.Id, p.FolderId, p.Name, p.Description,
+            p.Versions.Select(PromptVersionResponse.From).ToList(),
+            p.CurrentVersionId, p.CurrentVersionSha, p.CurrentVersionSetAt);
+}
+
+/// <summary>Request to mark a version Current in source (1.16); optional commit SHA of what shipped.</summary>
+public sealed record SetCurrentVersionRequest(string? CommitSha);
+
+/// <summary>One version's derived lifecycle status (1.16) — the badges the UI renders.</summary>
+public sealed record VersionStatusResponse(
+    Guid VersionId, int VersionNumber, string? Label, bool IsCurrent, bool BackportEligible, bool Regressed)
+{
+    public static VersionStatusResponse From(VersionStatus s) =>
+        new(s.VersionId, s.VersionNumber, s.Label, s.IsCurrent, s.BackportEligible, s.Regressed);
+}
+
+/// <summary>A prompt's per-version status set + its Current-in-source pointer (1.16).</summary>
+public sealed record PromptVersionStatusResponse(
+    Guid PromptId, Guid? CurrentVersionId, IReadOnlyList<VersionStatusResponse> Versions)
+{
+    public static PromptVersionStatusResponse From(PromptVersionStatus s) =>
+        new(s.PromptId, s.CurrentVersionId, s.Versions.Select(VersionStatusResponse.From).ToList());
 }
 
 /// <summary>Lightweight projection for the browse/list view — no version bodies.</summary>
