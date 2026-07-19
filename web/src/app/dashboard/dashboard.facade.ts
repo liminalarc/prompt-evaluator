@@ -70,6 +70,7 @@ export class DashboardFacade {
         createdAt: string;
         fixtureCount: number;
         scoreCount: number;
+        meanScore: number | null;
       }[];
       regressions: {
         scorer: { identity: string; kind: string; judgeModel: string | null };
@@ -120,6 +121,7 @@ export class DashboardFacade {
           createdAt: r.createdAt,
           fixtureCount: r.fixtureCount,
           scoreCount: r.scoreCount,
+          meanScore: r.meanScore ?? null,
         })),
       )
       .sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0))

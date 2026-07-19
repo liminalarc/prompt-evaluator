@@ -28,6 +28,7 @@ const view: DashboardView = {
       createdAt: '2026-01-02T00:00:00Z',
       fixtureCount: 3,
       scoreCount: 6,
+      meanScore: 0.62,
     },
   ],
   openRegressions: [
@@ -77,6 +78,7 @@ describe('Dashboard', () => {
     const runRows = el.querySelectorAll('[data-testid="dash-runs"] tbody tr');
     expect(runRows.length).toBe(1);
     expect(runRows[0].querySelector('a')?.getAttribute('href')).toContain('/eval-runs/r1');
+    expect(runRows[0].textContent).toContain('0.62'); // W34: recent activity carries the score
 
     const regRows = el.querySelectorAll('[data-testid="dash-regression-row"]');
     expect(regRows.length).toBe(1);

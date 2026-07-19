@@ -19,6 +19,8 @@ export interface DashboardRunRow {
   createdAt: string;
   fixtureCount: number;
   scoreCount: number;
+  /** The run's meaningful headline mean (LLM-judge, else overall); null when unscored (W34/W23). */
+  meanScore: number | null;
 }
 
 /** An open regression flag, joined to its prompt + dataset. */

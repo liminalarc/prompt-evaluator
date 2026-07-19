@@ -42,6 +42,49 @@ import { DashboardView } from './dashboard.model';
       } @else if (error(); as message) {
         <app-error-state [message]="message" [retryable]="true" (retry)="reload()" />
       } @else if (view(); as v) {
+        <!-- W34: lead with what needs attention (open regressions), then prompt status, then
+             activity — so the operator sees problems first, not a wall of cards. -->
+        <h2 class="section-title">Needs attention</h2>
+        @if (v.openRegressions.length === 0) {
+          <app-empty-state
+            message="All good — no open regressions. Scores are holding."
+            data-testid="no-regressions"
+          />
+        } @else {
+          <table class="sb-table" data-testid="dash-regressions">
+            <thead>
+              <tr>
+                <th>Prompt</th>
+                <th>Dataset</th>
+                <th>Scorer</th>
+                <th>Change</th>
+                <th>Δ</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (
+                f of v.openRegressions;
+                track f.promptId + f.datasetId + f.scorer + f.toVersionNumber
+              ) {
+                <tr data-testid="dash-regression-row">
+                  <td>
+                    <a [routerLink]="['/prompts', f.promptId]">{{ f.promptName }}</a>
+                  </td>
+                  <td>{{ f.datasetName }}</td>
+                  <td>{{ f.scorer }}</td>
+                  <td>v{{ f.fromVersionNumber }} → v{{ f.toVersionNumber }}</td>
+                  <td>
+                    <app-status-badge
+                      [variant]="f.delta <= -0.1 ? 'error' : 'warn'"
+                      [label]="fmtDelta(f.delta)"
+                    />
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+
         <h2 class="section-title">Prompts</h2>
         @if (v.prompts.length === 0) {
           <app-empty-state message="No prompts in this organization yet." data-testid="no-prompts">
@@ -77,7 +120,7 @@ import { DashboardView } from './dashboard.model';
           </div>
         }
 
-        <h2 class="section-title">Recent runs</h2>
+        <h2 class="section-title">Recent activity</h2>
         @if (v.recentRuns.length === 0) {
           <app-empty-state
             message="No eval runs yet — run a prompt over a dataset to see activity."
@@ -90,8 +133,8 @@ import { DashboardView } from './dashboard.model';
                 <th>Prompt</th>
                 <th>Dataset</th>
                 <th>When</th>
+                <th>Score</th>
                 <th>Test cases</th>
-                <th>Scores</th>
               </tr>
             </thead>
             <tbody>
@@ -102,49 +145,8 @@ import { DashboardView } from './dashboard.model';
                   </td>
                   <td>{{ r.datasetName }}</td>
                   <td>{{ r.createdAt | date: 'medium' }}</td>
+                  <td>{{ r.meanScore != null ? fmt(r.meanScore) : '—' }}</td>
                   <td>{{ r.fixtureCount }}</td>
-                  <td>{{ r.scoreCount }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        }
-
-        <h2 class="section-title">Open regressions</h2>
-        @if (v.openRegressions.length === 0) {
-          <app-empty-state
-            message="No open regressions — scores are holding."
-            data-testid="no-regressions"
-          />
-        } @else {
-          <table class="sb-table" data-testid="dash-regressions">
-            <thead>
-              <tr>
-                <th>Prompt</th>
-                <th>Dataset</th>
-                <th>Scorer</th>
-                <th>Change</th>
-                <th>Δ</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (
-                f of v.openRegressions;
-                track f.promptId + f.datasetId + f.scorer + f.toVersionNumber
-              ) {
-                <tr data-testid="dash-regression-row">
-                  <td>
-                    <a routerLink="/analytics">{{ f.promptName }}</a>
-                  </td>
-                  <td>{{ f.datasetName }}</td>
-                  <td>{{ f.scorer }}</td>
-                  <td>v{{ f.fromVersionNumber }} → v{{ f.toVersionNumber }}</td>
-                  <td>
-                    <app-status-badge
-                      [variant]="f.delta <= -0.1 ? 'error' : 'warn'"
-                      [label]="fmtDelta(f.delta)"
-                    />
-                  </td>
                 </tr>
               }
             </tbody>
