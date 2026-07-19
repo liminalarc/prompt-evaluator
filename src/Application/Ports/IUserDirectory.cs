@@ -81,7 +81,50 @@ public interface IUserDirectory
     /// <summary>Change a user's own password after verifying the current one (4.3, self-service).</summary>
     Task<PasswordResetResult> ChangePasswordAsync(
         Guid userId, string currentPassword, string newPassword, CancellationToken ct = default);
+
+    // ── Request-to-join access (2.21) ─────────────────────────────────────────────────────────────
+    // The pull path: a user requests access to an existing org; an owner/admin approves (→ a grant)
+    // or denies. Domain rules: can't request an org you're already in; no duplicate open request;
+    // approve is idempotent (re-approving re-grants the same membership without error).
+
+    /// <summary>Create a Pending access request. Rejects when the user is already a member or already has an open request.</summary>
+    Task<AccessRequestCreateResult> RequestOrganizationAccessAsync(
+        Guid requesterId, Guid organizationId, OrgRole requestedRole, CancellationToken ct = default);
+
+    /// <summary>The still-Pending requests for one org — the owner's Requests queue (projected with requester email/name).</summary>
+    Task<IReadOnlyList<AccessRequestInfo>> ListPendingAccessRequestsAsync(Guid organizationId, CancellationToken ct = default);
+
+    /// <summary>A requester's own access requests across all orgs — backs the requester-side state (e.g. "pending").</summary>
+    Task<IReadOnlyList<AccessRequestInfo>> ListAccessRequestsByRequesterAsync(Guid requesterId, CancellationToken ct = default);
+
+    /// <summary>Fetch one access request by id (projected), or null. Lets an endpoint check it belongs to the route's org.</summary>
+    Task<AccessRequestInfo?> GetAccessRequestAsync(Guid requestId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Approve a request: grant the requester membership (at <paramref name="role"/>, or the requested
+    /// role when null) and mark it Approved — atomically, one SaveChanges. Idempotent.
+    /// </summary>
+    Task<AccessRequestDecisionResult> ApproveAccessRequestAsync(
+        Guid requestId, Guid deciderId, OrgRole? role, CancellationToken ct = default);
+
+    /// <summary>Deny a Pending request. A no-op-conflict when it was already approved (a grant can't be un-made here).</summary>
+    Task<AccessRequestDecisionResult> DenyAccessRequestAsync(Guid requestId, Guid deciderId, CancellationToken ct = default);
 }
+
+/// <summary>One access request projected with the requester's email/name — the owner's Requests queue (2.21).</summary>
+public sealed record AccessRequestInfo(
+    Guid Id, Guid RequesterId, string RequesterEmail, string RequesterDisplayName,
+    Guid OrganizationId, OrgRole RequestedRole, AccessRequestStatus Status, DateTimeOffset CreatedAt);
+
+public enum AccessRequestCreateOutcome { Created, AlreadyMember, DuplicateOpenRequest }
+
+/// <summary>The outcome of creating an access request; <see cref="RequestId"/> is set for Created and the existing-open case.</summary>
+public sealed record AccessRequestCreateResult(AccessRequestCreateOutcome Outcome, Guid RequestId);
+
+public enum AccessRequestDecisionOutcome { Approved, Denied, NotFound, AlreadyApproved }
+
+/// <summary>The outcome of an approve/deny; <see cref="Request"/> carries the updated projection on success.</summary>
+public sealed record AccessRequestDecisionResult(AccessRequestDecisionOutcome Outcome, AccessRequestInfo? Request);
 
 /// <summary>A user projected with their admin flag and org memberships — the admin list view (4.3).</summary>
 public sealed record UserAccountDetail(

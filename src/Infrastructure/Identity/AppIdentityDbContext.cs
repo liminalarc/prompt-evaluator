@@ -19,6 +19,8 @@ public sealed class AppIdentityDbContext(DbContextOptions<AppIdentityDbContext> 
 {
     public DbSet<OrganizationMembership> OrganizationMemberships => Set<OrganizationMembership>();
 
+    public DbSet<OrganizationAccessRequest> OrganizationAccessRequests => Set<OrganizationAccessRequest>();
+
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -27,6 +29,7 @@ public sealed class AppIdentityDbContext(DbContextOptions<AppIdentityDbContext> 
         // Only this context's own configurations — NOT the whole assembly, which would drag the
         // domain entities (prompts, organizations, …) into the identity store's model.
         builder.ApplyConfiguration(new Configurations.OrganizationMembershipConfiguration());
+        builder.ApplyConfiguration(new Configurations.OrganizationAccessRequestConfiguration());
 
         // Snake-case the identity tables to match the rest of the schema.
         builder.Entity<AppUser>().ToTable("users");
