@@ -11,7 +11,7 @@
 - **1.12** Modal SLM provider adapter — `NOT STARTED` — [detail](specs/1.12.md)
 - **1.14** Live model discovery (auto-sync the catalog from provider APIs) — `NOT STARTED` — [detail](specs/1.14.md)
 - **1.15** Per-org model catalogs (per-organization customization) — `NOT STARTED` — [detail](specs/1.15.md)
-- **1.16** Version status & backport lifecycle (deployed marker + backport-eligible signal) — `NOT STARTED` — [detail](specs/1.16.md)
+- **1.16** Version status & backport lifecycle (deployed marker + backport-eligible signal) — `IN PROGRESS` — [detail](specs/1.16.md)
 - **1.17** Multimodal / image fixtures (vision-input prompts) — `NOT STARTED` — [detail](specs/1.17.md)
 - **1.18** Tool-augmented evaluation (web_search / tool-loop prompts) — `NOT STARTED` — [detail](specs/1.18.md)
 
