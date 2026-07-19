@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Organization } from '../organization';
 import { OrgRole } from '../users/user';
-import { OrgMember } from './org-admin.model';
+import { AccessRequest, OrgDirectoryEntry, OrgMember } from './org-admin.model';
 
 /**
  * The single API client for the organizations bounded area (1.9) — the top-level container and
@@ -51,5 +51,38 @@ export class OrganizationsApiService {
   /** Remove a member. Blocked server-side if they are the org's last owner. */
   removeMember(id: string, userId: string): Observable<void> {
     return this.http.delete<void>(`/api/organizations/${id}/members/${userId}`);
+  }
+
+  // --- Request-to-join access (2.21): the pull path, distinct from the add-by-email push above. ---
+
+  /** Every org with the caller's relationship to it — backs the no-org onboarding's "request to join". */
+  listDirectory(): Observable<OrgDirectoryEntry[]> {
+    return this.http.get<OrgDirectoryEntry[]>('/api/organizations/directory');
+  }
+
+  /** Request access to an org (any authenticated non-member); an owner/admin approves or denies. */
+  requestAccess(id: string, role: OrgRole = 'Member'): Observable<{ id: string }> {
+    return this.http.post<{ id: string }>(`/api/organizations/${id}/access-requests`, { role });
+  }
+
+  /** The org's pending join requests — the owner's Requests queue (owner-or-admin gated server-side). */
+  listAccessRequests(id: string): Observable<AccessRequest[]> {
+    return this.http.get<AccessRequest[]>(`/api/organizations/${id}/access-requests`);
+  }
+
+  /** Approve a request → grants membership at the chosen (or requested) role. */
+  approveAccessRequest(id: string, requestId: string, role?: OrgRole): Observable<AccessRequest> {
+    return this.http.post<AccessRequest>(
+      `/api/organizations/${id}/access-requests/${requestId}/approve`,
+      { role: role ?? null },
+    );
+  }
+
+  /** Deny a pending request. */
+  denyAccessRequest(id: string, requestId: string): Observable<AccessRequest> {
+    return this.http.post<AccessRequest>(
+      `/api/organizations/${id}/access-requests/${requestId}/deny`,
+      {},
+    );
   }
 }

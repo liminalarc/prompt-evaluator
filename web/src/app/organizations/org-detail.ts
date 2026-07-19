@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
@@ -13,11 +14,11 @@ import {
   PageHeader,
 } from '../shared';
 import { OrgRole } from '../users/user';
-import { OrgMember } from './org-admin.model';
+import { AccessRequest, OrgMember } from './org-admin.model';
 import { OrganizationsApiService } from './organizations-api.service';
 
 const ROLES: OrgRole[] = ['Owner', 'Member'];
-type OrgTab = 'overview' | 'members';
+type OrgTab = 'overview' | 'members' | 'requests';
 
 /**
  * The owner-facing organization detail page (spec 4.5, tabbed in 2.20 W40). Reached at
@@ -29,7 +30,16 @@ type OrgTab = 'overview' | 'members';
  */
 @Component({
   selector: 'app-org-detail',
-  imports: [FormsModule, Breadcrumb, Card, EmptyState, ErrorState, LoadingState, PageHeader],
+  imports: [
+    DatePipe,
+    FormsModule,
+    Breadcrumb,
+    Card,
+    EmptyState,
+    ErrorState,
+    LoadingState,
+    PageHeader,
+  ],
   template: `
     <section class="panel panel--wide">
       <app-breadcrumb [items]="crumbs()" />
@@ -59,6 +69,9 @@ type OrgTab = 'overview' | 'members';
               (click)="selectTab(t.id)"
             >
               {{ t.label }}
+              @if (t.id === 'requests' && pendingCount() > 0) {
+                <span class="tab-count" data-testid="requests-count">{{ pendingCount() }}</span>
+              }
             </button>
           }
         </nav>
@@ -184,6 +197,79 @@ type OrgTab = 'overview' | 'members';
             </app-card>
           }
         </div>
+
+        <div [hidden]="tab() !== 'requests'">
+          @if (!canManage()) {
+            <app-card heading="Requests">
+              <p class="muted" data-testid="no-permission-requests">
+                You don’t have permission to review this organization’s access requests. Only an
+                owner (or a workspace admin) can.
+              </p>
+            </app-card>
+          } @else {
+            <app-card heading="Access requests">
+              @if (requests().length === 0) {
+                <app-empty-state message="No pending requests." data-testid="no-requests" />
+              } @else {
+                <table class="sb-table" data-testid="requests-table">
+                  <thead>
+                    <tr>
+                      <th>Requester</th>
+                      <th>Requested</th>
+                      <th>When</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (r of requests(); track r.id) {
+                      <tr [attr.data-request-id]="r.id">
+                        <td>
+                          <strong>{{ r.requesterDisplayName || r.requesterEmail }}</strong>
+                          <span class="muted">{{ r.requesterEmail }}</span>
+                        </td>
+                        <td>
+                          <select
+                            data-testid="approve-role"
+                            [ngModel]="approveRoleFor(r)"
+                            (ngModelChange)="setApproveRole(r.id, $event)"
+                            [attr.name]="'approve-role-' + r.id"
+                          >
+                            @for (role of roles; track role) {
+                              <option [value]="role">{{ role }}</option>
+                            }
+                          </select>
+                        </td>
+                        <td>{{ r.createdAt | date: 'medium' }}</td>
+                        <td class="req-actions">
+                          <button
+                            type="button"
+                            class="sb-btn sb-btn--sm sb-btn--primary"
+                            data-testid="approve-request"
+                            (click)="approve(r.id)"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            type="button"
+                            class="sb-btn sb-btn--sm sb-btn--danger"
+                            data-testid="deny-request"
+                            (click)="deny(r.id)"
+                          >
+                            Deny
+                          </button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+              <p class="muted hint">
+                Approving grants membership at the chosen role. This is the pull counterpart to
+                adding a member by email.
+              </p>
+            </app-card>
+          }
+        </div>
       }
     </section>
   `,
@@ -258,6 +344,25 @@ type OrgTab = 'overview' | 'members';
       .hint {
         margin: var(--sb-space-xs) 0 0;
       }
+      .req-actions {
+        display: flex;
+        gap: var(--sb-space-xs);
+      }
+      /* A small count pill on the Requests tab when there are pending requests. */
+      .tab-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 1.25rem;
+        height: 1.25rem;
+        margin-left: var(--sb-space-xs);
+        padding: 0 var(--sb-space-xs);
+        border-radius: var(--sb-radius-full, 999px);
+        background: var(--sb-primary);
+        color: var(--sb-on-primary, #fff);
+        font-size: var(--sb-type-caption-size);
+        line-height: 1;
+      }
     `,
   ],
 })
@@ -287,13 +392,17 @@ export class OrgDetail implements OnInit {
   protected readonly tabs: { id: OrgTab; label: string }[] = [
     { id: 'overview', label: 'Overview' },
     { id: 'members', label: 'Members' },
+    { id: 'requests', label: 'Requests' },
   ];
   protected readonly tab = signal<OrgTab>('overview');
-  private readonly tabIds: OrgTab[] = ['overview', 'members'];
+  private readonly tabIds: OrgTab[] = ['overview', 'members', 'requests'];
   private readonly orgId = signal('');
   protected readonly orgName = signal('');
   protected readonly myRole = signal<OrgRole | undefined>(undefined);
   protected readonly members = signal<OrgMember[]>([]);
+  protected readonly requests = signal<AccessRequest[]>([]);
+  protected readonly pendingCount = computed(() => this.requests().length);
+  private readonly approveRoles = signal<Record<string, OrgRole>>({});
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
 
@@ -341,8 +450,10 @@ export class OrgDetail implements OnInit {
         }
         if (this.canManage()) {
           this.loadMembers();
+          this.loadRequests();
         } else {
           this.members.set([]);
+          this.requests.set([]);
           this.loading.set(false);
         }
       },
@@ -363,6 +474,45 @@ export class OrgDetail implements OnInit {
         this.error.set('Could not load members.');
         this.loading.set(false);
       },
+    });
+  }
+
+  /** The pending access-request queue for this org (owner-or-admin gated on the server). */
+  private loadRequests(): void {
+    this.api.listAccessRequests(this.orgId()).subscribe({
+      next: (list) => this.requests.set(list),
+      error: () => {
+        /* Non-fatal: the members view is the primary surface; leave the queue empty on error. */
+      },
+    });
+  }
+
+  /** The role selected to approve a request at — defaults to the requested role. */
+  protected approveRoleFor(r: AccessRequest): OrgRole {
+    return this.approveRoles()[r.id] ?? r.requestedRole;
+  }
+
+  protected setApproveRole(requestId: string, role: OrgRole): void {
+    this.approveRoles.update((m) => ({ ...m, [requestId]: role }));
+  }
+
+  protected approve(requestId: string): void {
+    const role = this.approveRoles()[requestId];
+    this.error.set(null);
+    this.api.approveAccessRequest(this.orgId(), requestId, role).subscribe({
+      next: () => {
+        this.loadRequests(); // clears it from the pending queue
+        this.loadMembers(); // the approved user is now a member
+      },
+      error: (res) => this.error.set(res?.error?.error ?? 'Could not approve the request.'),
+    });
+  }
+
+  protected deny(requestId: string): void {
+    this.error.set(null);
+    this.api.denyAccessRequest(this.orgId(), requestId).subscribe({
+      next: () => this.loadRequests(),
+      error: (res) => this.error.set(res?.error?.error ?? 'Could not deny the request.'),
     });
   }
 

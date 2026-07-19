@@ -12,7 +12,8 @@ import { AuthService } from './auth.service';
       <div class="auth__head">
         <h1 class="auth__title">Create account</h1>
         <p class="auth__subtitle">
-          Register for LitmusAI. An administrator grants organization access after sign-up.
+          Register for LitmusAI. After signing up you can create an organization or request to join
+          an existing one.
         </p>
       </div>
 

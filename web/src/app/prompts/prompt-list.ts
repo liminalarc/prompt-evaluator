@@ -8,6 +8,7 @@ import { FoldersApiService } from '../folders/folders-api.service';
 import { OrganizationsApiService } from '../organizations/organizations-api.service';
 import { OrgContextStore } from '../shared/org-context.store';
 import { Card, ConfirmService, EmptyState, ErrorState, PageHeader } from '../shared';
+import { NoOrgOnboarding } from '../onboarding/no-org-onboarding';
 import { PromptsApiService } from './prompts-api.service';
 import { BulkPrompt, parseBulkImport } from './bulk-import';
 
@@ -25,23 +26,27 @@ interface ImportRowResult {
 
 @Component({
   selector: 'app-prompt-list',
-  imports: [FormsModule, RouterLink, Card, EmptyState, ErrorState, PageHeader],
+  imports: [FormsModule, RouterLink, Card, EmptyState, ErrorState, PageHeader, NoOrgOnboarding],
   template: `
     <section class="panel panel--wide">
-      <app-page-header
-        heading="Prompts"
-        subtitle="Navigate this organization's folders — each prompt keeps its versions, datasets, and analytics together. Switch organizations from the top bar."
-      >
-        <button
-          actions
-          class="sb-btn sb-btn--secondary"
-          type="button"
-          data-testid="toggle-new-org"
-          (click)="showNewOrg.set(!showNewOrg())"
+      @if (!currentOrgId()) {
+        <!-- Zero-org onboarding (2.21): create an org or request to join one, instead of an empty
+             file explorer. Creating one makes it current and flips back to the browse view. -->
+        <app-no-org-onboarding />
+      } @else {
+        <app-page-header
+          heading="Prompts"
+          subtitle="Navigate this organization's folders — each prompt keeps its versions, datasets, and analytics together. Switch organizations from the top bar."
         >
-          + New org
-        </button>
-        @if (currentOrgId()) {
+          <button
+            actions
+            class="sb-btn sb-btn--secondary"
+            type="button"
+            data-testid="toggle-new-org"
+            (click)="showNewOrg.set(!showNewOrg())"
+          >
+            + New org
+          </button>
           <button
             actions
             class="sb-btn sb-btn--danger sb-btn--sm"
@@ -51,121 +56,284 @@ interface ImportRowResult {
           >
             Delete org
           </button>
+        </app-page-header>
+
+        @if (showNewOrg()) {
+          <app-card heading="New organization">
+            <form class="form-stack" (submit)="createOrg($event)" (keydown.escape)="cancelNewOrg()">
+              <div class="sb-field">
+                <label for="orgName">Organization name</label>
+                <input
+                  id="orgName"
+                  name="orgName"
+                  [ngModel]="orgName()"
+                  (ngModelChange)="orgName.set($event)"
+                />
+              </div>
+              <div class="form-actions">
+                <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-org">
+                  Create
+                </button>
+                <button
+                  class="sb-btn sb-btn--ghost"
+                  type="button"
+                  data-testid="cancel-org"
+                  (click)="cancelNewOrg()"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </app-card>
         }
-      </app-page-header>
 
-      @if (showNewOrg()) {
-        <app-card heading="New organization">
-          <form class="form-stack" (submit)="createOrg($event)" (keydown.escape)="cancelNewOrg()">
-            <div class="sb-field">
-              <label for="orgName">Organization name</label>
-              <input
-                id="orgName"
-                name="orgName"
-                [ngModel]="orgName()"
-                (ngModelChange)="orgName.set($event)"
-              />
-            </div>
-            <div class="form-actions">
-              <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-org">
-                Create
+        @if (error(); as message) {
+          <app-error-state [message]="message" />
+        }
+
+        @if (currentOrgId()) {
+          <nav class="breadcrumb" data-testid="breadcrumb">
+            @for (c of breadcrumb(); track c.id; let last = $last) {
+              <button class="crumb" type="button" [disabled]="last" (click)="navigateTo(c.id)">
+                {{ c.name }}
               </button>
-              <button
-                class="sb-btn sb-btn--ghost"
-                type="button"
-                data-testid="cancel-org"
-                (click)="cancelNewOrg()"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </app-card>
-      }
-
-      @if (error(); as message) {
-        <app-error-state [message]="message" />
-      }
-
-      @if (currentOrgId()) {
-        <nav class="breadcrumb" data-testid="breadcrumb">
-          @for (c of breadcrumb(); track c.id; let last = $last) {
-            <button class="crumb" type="button" [disabled]="last" (click)="navigateTo(c.id)">
-              {{ c.name }}
-            </button>
-            @if (!last) {
-              <span class="crumb__sep">/</span>
+              @if (!last) {
+                <span class="crumb__sep">/</span>
+              }
             }
+          </nav>
+
+          <div class="toolbar">
+            <button
+              class="sb-btn sb-btn--secondary"
+              type="button"
+              data-testid="toggle-new-folder"
+              (click)="showNewFolder.set(!showNewFolder())"
+            >
+              + New folder
+            </button>
+            <button
+              class="sb-btn sb-btn--secondary"
+              type="button"
+              data-testid="toggle-new-prompt"
+              (click)="showNewPrompt.set(!showNewPrompt())"
+            >
+              + New prompt
+            </button>
+            <button
+              class="sb-btn sb-btn--secondary"
+              type="button"
+              data-testid="toggle-import"
+              (click)="showImport.set(!showImport())"
+            >
+              + Import prompts
+            </button>
+          </div>
+
+          @if (showImport()) {
+            <app-card heading="Import prompts from a file">
+              <p class="subtitle">
+                Pick a JSON file — an array of prompts, each with an optional description and a
+                <code>versions</code> list. They import into {{ currentFolderName() }}.
+              </p>
+              <div class="sb-field">
+                <label for="importFile">Prompts JSON</label>
+                <input
+                  id="importFile"
+                  type="file"
+                  accept=".json,application/json"
+                  data-testid="import-file"
+                  [disabled]="importing()"
+                  (change)="importPrompts($event)"
+                />
+              </div>
+              <div class="form-actions">
+                <button
+                  class="sb-btn sb-btn--ghost sb-btn--sm"
+                  type="button"
+                  data-testid="cancel-import"
+                  (click)="cancelImport()"
+                >
+                  Cancel
+                </button>
+              </div>
+              @if (importResults().length > 0) {
+                <table class="sb-table" data-testid="import-results">
+                  <thead>
+                    <tr>
+                      <th>Prompt</th>
+                      <th>Result</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (r of importResults(); track $index) {
+                      <tr [attr.data-testid]="r.ok ? 'import-ok' : 'import-error'">
+                        <td>{{ r.name }}</td>
+                        <td>{{ r.message }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            </app-card>
           }
-        </nav>
 
-        <div class="toolbar">
-          <button
-            class="sb-btn sb-btn--secondary"
-            type="button"
-            data-testid="toggle-new-folder"
-            (click)="showNewFolder.set(!showNewFolder())"
-          >
-            + New folder
-          </button>
-          <button
-            class="sb-btn sb-btn--secondary"
-            type="button"
-            data-testid="toggle-new-prompt"
-            (click)="showNewPrompt.set(!showNewPrompt())"
-          >
-            + New prompt
-          </button>
-          <button
-            class="sb-btn sb-btn--secondary"
-            type="button"
-            data-testid="toggle-import"
-            (click)="showImport.set(!showImport())"
-          >
-            + Import prompts
-          </button>
-        </div>
-
-        @if (showImport()) {
-          <app-card heading="Import prompts from a file">
-            <p class="subtitle">
-              Pick a JSON file — an array of prompts, each with an optional description and a
-              <code>versions</code> list. They import into {{ currentFolderName() }}.
-            </p>
-            <div class="sb-field">
-              <label for="importFile">Prompts JSON</label>
-              <input
-                id="importFile"
-                type="file"
-                accept=".json,application/json"
-                data-testid="import-file"
-                [disabled]="importing()"
-                (change)="importPrompts($event)"
-              />
-            </div>
-            <div class="form-actions">
-              <button
-                class="sb-btn sb-btn--ghost sb-btn--sm"
-                type="button"
-                data-testid="cancel-import"
-                (click)="cancelImport()"
+          @if (showNewFolder()) {
+            <app-card heading="New folder">
+              <form
+                class="form-stack"
+                (submit)="createFolder($event)"
+                (keydown.escape)="cancelNewFolder()"
               >
-                Cancel
-              </button>
+                <div class="sb-field">
+                  <label for="folderName">Folder name in {{ currentFolderName() }}</label>
+                  <input
+                    id="folderName"
+                    name="folderName"
+                    [ngModel]="folderName()"
+                    (ngModelChange)="folderName.set($event)"
+                  />
+                </div>
+                <div class="form-actions">
+                  <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-folder">
+                    Add folder
+                  </button>
+                  <button
+                    class="sb-btn sb-btn--ghost"
+                    type="button"
+                    data-testid="cancel-folder"
+                    (click)="cancelNewFolder()"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </app-card>
+          }
+
+          @if (showNewPrompt()) {
+            <app-card heading="New prompt">
+              <form
+                class="form-stack"
+                (submit)="createPrompt($event)"
+                (keydown.escape)="cancelNewPrompt()"
+              >
+                <div class="sb-field">
+                  <label for="name">Prompt name in {{ currentFolderName() }}</label>
+                  <input
+                    id="name"
+                    name="name"
+                    [ngModel]="name()"
+                    (ngModelChange)="name.set($event)"
+                  />
+                </div>
+                <div class="sb-field">
+                  <label for="description">Description (optional)</label>
+                  <input
+                    id="description"
+                    name="description"
+                    [ngModel]="description()"
+                    (ngModelChange)="description.set($event)"
+                  />
+                </div>
+                <div class="form-actions">
+                  <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-prompt">
+                    Create prompt
+                  </button>
+                  <button
+                    class="sb-btn sb-btn--ghost"
+                    type="button"
+                    data-testid="cancel-prompt"
+                    (click)="cancelNewPrompt()"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </app-card>
+          }
+
+          @if (subfolders().length > 0) {
+            <div class="folders-grid" data-testid="subfolders">
+              @for (f of subfolders(); track f.id) {
+                <div class="folder-tile">
+                  <button
+                    class="folder-card sb-card"
+                    type="button"
+                    [attr.data-testid]="'subfolder-' + f.id"
+                    (click)="openFolder(f.id)"
+                  >
+                    <span class="folder-card__badge" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                        <path
+                          d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"
+                        />
+                      </svg>
+                    </span>
+                    <span class="folder-card__name">{{ f.name }}</span>
+                  </button>
+                  <button
+                    class="folder-tile__delete sb-btn sb-btn--ghost sb-btn--sm"
+                    type="button"
+                    [attr.data-testid]="'delete-folder-' + f.id"
+                    [attr.aria-label]="'Delete folder ' + f.name"
+                    (click)="deleteFolder(f)"
+                  >
+                    Delete
+                  </button>
+                </div>
+              }
             </div>
-            @if (importResults().length > 0) {
-              <table class="sb-table" data-testid="import-results">
+          }
+
+          <app-card heading="Prompts">
+            @if (currentPrompts().length === 0) {
+              <app-empty-state
+                [message]="'No prompts in ' + currentFolderName() + '.'"
+                data-testid="empty"
+              />
+            } @else {
+              <table class="sb-table" data-testid="prompts">
                 <thead>
                   <tr>
-                    <th>Prompt</th>
-                    <th>Result</th>
+                    <th>Name</th>
+                    <th>Versions</th>
+                    <th>Latest target model</th>
+                    <th>Move to</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  @for (r of importResults(); track $index) {
-                    <tr [attr.data-testid]="r.ok ? 'import-ok' : 'import-error'">
-                      <td>{{ r.name }}</td>
-                      <td>{{ r.message }}</td>
+                  @for (p of currentPrompts(); track p.id) {
+                    <tr>
+                      <td>
+                        <a [routerLink]="['/prompts', p.id]">{{ p.name }}</a>
+                      </td>
+                      <td>{{ p.versionCount }}</td>
+                      <td>{{ p.latestTargetModel ?? '—' }}</td>
+                      <td>
+                        <select
+                          [ngModel]="p.folderId ?? ''"
+                          [attr.name]="'move-' + p.id"
+                          [attr.data-testid]="'move-' + p.id"
+                          (ngModelChange)="move(p, $event)"
+                        >
+                          <option value="">{{ currentOrgName() }} (root)</option>
+                          @for (f of folders(); track f.id) {
+                            <option [value]="f.id">{{ f.name }}</option>
+                          }
+                        </select>
+                      </td>
+                      <td>
+                        <button
+                          class="sb-btn sb-btn--ghost sb-btn--sm"
+                          type="button"
+                          [attr.data-testid]="'delete-prompt-' + p.id"
+                          (click)="deletePrompt(p)"
+                        >
+                          Delete
+                        </button>
+                      </td>
                     </tr>
                   }
                 </tbody>
@@ -173,169 +341,6 @@ interface ImportRowResult {
             }
           </app-card>
         }
-
-        @if (showNewFolder()) {
-          <app-card heading="New folder">
-            <form
-              class="form-stack"
-              (submit)="createFolder($event)"
-              (keydown.escape)="cancelNewFolder()"
-            >
-              <div class="sb-field">
-                <label for="folderName">Folder name in {{ currentFolderName() }}</label>
-                <input
-                  id="folderName"
-                  name="folderName"
-                  [ngModel]="folderName()"
-                  (ngModelChange)="folderName.set($event)"
-                />
-              </div>
-              <div class="form-actions">
-                <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-folder">
-                  Add folder
-                </button>
-                <button
-                  class="sb-btn sb-btn--ghost"
-                  type="button"
-                  data-testid="cancel-folder"
-                  (click)="cancelNewFolder()"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </app-card>
-        }
-
-        @if (showNewPrompt()) {
-          <app-card heading="New prompt">
-            <form
-              class="form-stack"
-              (submit)="createPrompt($event)"
-              (keydown.escape)="cancelNewPrompt()"
-            >
-              <div class="sb-field">
-                <label for="name">Prompt name in {{ currentFolderName() }}</label>
-                <input
-                  id="name"
-                  name="name"
-                  [ngModel]="name()"
-                  (ngModelChange)="name.set($event)"
-                />
-              </div>
-              <div class="sb-field">
-                <label for="description">Description (optional)</label>
-                <input
-                  id="description"
-                  name="description"
-                  [ngModel]="description()"
-                  (ngModelChange)="description.set($event)"
-                />
-              </div>
-              <div class="form-actions">
-                <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-prompt">
-                  Create prompt
-                </button>
-                <button
-                  class="sb-btn sb-btn--ghost"
-                  type="button"
-                  data-testid="cancel-prompt"
-                  (click)="cancelNewPrompt()"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </app-card>
-        }
-
-        @if (subfolders().length > 0) {
-          <div class="folders-grid" data-testid="subfolders">
-            @for (f of subfolders(); track f.id) {
-              <div class="folder-tile">
-                <button
-                  class="folder-card sb-card"
-                  type="button"
-                  [attr.data-testid]="'subfolder-' + f.id"
-                  (click)="openFolder(f.id)"
-                >
-                  <span class="folder-card__badge" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                      <path
-                        d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"
-                      />
-                    </svg>
-                  </span>
-                  <span class="folder-card__name">{{ f.name }}</span>
-                </button>
-                <button
-                  class="folder-tile__delete sb-btn sb-btn--ghost sb-btn--sm"
-                  type="button"
-                  [attr.data-testid]="'delete-folder-' + f.id"
-                  [attr.aria-label]="'Delete folder ' + f.name"
-                  (click)="deleteFolder(f)"
-                >
-                  Delete
-                </button>
-              </div>
-            }
-          </div>
-        }
-
-        <app-card heading="Prompts">
-          @if (currentPrompts().length === 0) {
-            <app-empty-state
-              [message]="'No prompts in ' + currentFolderName() + '.'"
-              data-testid="empty"
-            />
-          } @else {
-            <table class="sb-table" data-testid="prompts">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Versions</th>
-                  <th>Latest target model</th>
-                  <th>Move to</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (p of currentPrompts(); track p.id) {
-                  <tr>
-                    <td>
-                      <a [routerLink]="['/prompts', p.id]">{{ p.name }}</a>
-                    </td>
-                    <td>{{ p.versionCount }}</td>
-                    <td>{{ p.latestTargetModel ?? '—' }}</td>
-                    <td>
-                      <select
-                        [ngModel]="p.folderId ?? ''"
-                        [attr.name]="'move-' + p.id"
-                        [attr.data-testid]="'move-' + p.id"
-                        (ngModelChange)="move(p, $event)"
-                      >
-                        <option value="">{{ currentOrgName() }} (root)</option>
-                        @for (f of folders(); track f.id) {
-                          <option [value]="f.id">{{ f.name }}</option>
-                        }
-                      </select>
-                    </td>
-                    <td>
-                      <button
-                        class="sb-btn sb-btn--ghost sb-btn--sm"
-                        type="button"
-                        [attr.data-testid]="'delete-prompt-' + p.id"
-                        (click)="deletePrompt(p)"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          }
-        </app-card>
       }
     </section>
   `,

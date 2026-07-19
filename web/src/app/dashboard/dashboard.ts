@@ -11,6 +11,7 @@ import {
   PageHeader,
   StatusBadge,
 } from '../shared';
+import { NoOrgOnboarding } from '../onboarding/no-org-onboarding';
 import { DashboardFacade } from './dashboard.facade';
 import { DashboardView } from './dashboard.model';
 
@@ -30,130 +31,138 @@ import { DashboardView } from './dashboard.model';
     ErrorState,
     StatusBadge,
     Chip,
+    NoOrgOnboarding,
   ],
   template: `
-    <section class="panel">
-      <app-page-header heading="Dashboard" [subtitle]="subtitle()">
-        <a actions class="sb-btn sb-btn--primary" routerLink="/prompts">Browse prompts</a>
-      </app-page-header>
+    @if (!currentOrgId()) {
+      <app-no-org-onboarding />
+    } @else {
+      <section class="panel">
+        <app-page-header heading="Dashboard" [subtitle]="subtitle()">
+          <a actions class="sb-btn sb-btn--primary" routerLink="/prompts">Browse prompts</a>
+        </app-page-header>
 
-      @if (loading()) {
-        <app-loading-state label="Loading your workspace…" />
-      } @else if (error(); as message) {
-        <app-error-state [message]="message" [retryable]="true" (retry)="reload()" />
-      } @else if (view(); as v) {
-        <!-- W34: lead with what needs attention (open regressions), then prompt status, then
+        @if (loading()) {
+          <app-loading-state label="Loading your workspace…" />
+        } @else if (error(); as message) {
+          <app-error-state [message]="message" [retryable]="true" (retry)="reload()" />
+        } @else if (view(); as v) {
+          <!-- W34: lead with what needs attention (open regressions), then prompt status, then
              activity — so the operator sees problems first, not a wall of cards. -->
-        <h2 class="section-title">Needs attention</h2>
-        @if (v.openRegressions.length === 0) {
-          <app-empty-state
-            message="All good — no open regressions. Scores are holding."
-            data-testid="no-regressions"
-          />
-        } @else {
-          <table class="sb-table" data-testid="dash-regressions">
-            <thead>
-              <tr>
-                <th>Prompt</th>
-                <th>Dataset</th>
-                <th>Scorer</th>
-                <th>Change</th>
-                <th>Δ</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (
-                f of v.openRegressions;
-                track f.promptId + f.datasetId + f.scorer + f.toVersionNumber
-              ) {
-                <tr data-testid="dash-regression-row">
-                  <td>
-                    <a [routerLink]="['/prompts', f.promptId]">{{ f.promptName }}</a>
-                  </td>
-                  <td>{{ f.datasetName }}</td>
-                  <td>{{ f.scorer }}</td>
-                  <td>v{{ f.fromVersionNumber }} → v{{ f.toVersionNumber }}</td>
-                  <td>
-                    <app-status-badge
-                      [variant]="f.delta <= -0.1 ? 'error' : 'warn'"
-                      [label]="fmtDelta(f.delta)"
-                    />
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        }
-
-        <h2 class="section-title">Prompts</h2>
-        @if (v.prompts.length === 0) {
-          <app-empty-state message="No prompts in this organization yet." data-testid="no-prompts">
-            <a class="sb-btn sb-btn--primary sb-btn--sm" routerLink="/prompts">Create one</a>
-          </app-empty-state>
-        } @else {
-          <div class="dash-grid" data-testid="dash-prompts">
-            @for (p of v.prompts; track p.id) {
-              <a
-                class="sb-card dash-prompt"
-                [routerLink]="['/prompts', p.id]"
-                data-testid="dash-prompt-card"
-              >
-                <div class="dash-prompt__head">
-                  <span class="dash-prompt__name">{{ p.name }}</span>
-                  @if (p.latestScore; as s) {
-                    <app-status-badge
-                      [variant]="scoreVariant(s.passRate)"
-                      [label]="fmt(s.meanValue)"
-                    />
-                  } @else {
-                    <app-status-badge variant="neutral" label="No runs" />
-                  }
-                </div>
-                <div class="dash-prompt__meta">
-                  <app-chip [label]="versionLabel(p.versionCount)" />
-                  @if (p.latestTargetModel) {
-                    <app-chip [label]="p.latestTargetModel" />
-                  }
-                </div>
-              </a>
-            }
-          </div>
-        }
-
-        <h2 class="section-title">Recent activity</h2>
-        @if (v.recentRuns.length === 0) {
-          <app-empty-state
-            message="No eval runs yet — run a prompt over a dataset to see activity."
-            data-testid="no-runs"
-          />
-        } @else {
-          <table class="sb-table" data-testid="dash-runs">
-            <thead>
-              <tr>
-                <th>Prompt</th>
-                <th>Dataset</th>
-                <th>When</th>
-                <th>Score</th>
-                <th>Test cases</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (r of v.recentRuns; track r.runId) {
+          <h2 class="section-title">Needs attention</h2>
+          @if (v.openRegressions.length === 0) {
+            <app-empty-state
+              message="All good — no open regressions. Scores are holding."
+              data-testid="no-regressions"
+            />
+          } @else {
+            <table class="sb-table" data-testid="dash-regressions">
+              <thead>
                 <tr>
-                  <td>
-                    <a [routerLink]="['/eval-runs', r.runId]">{{ r.promptName }}</a>
-                  </td>
-                  <td>{{ r.datasetName }}</td>
-                  <td>{{ r.createdAt | date: 'medium' }}</td>
-                  <td>{{ r.meanScore != null ? fmt(r.meanScore) : '—' }}</td>
-                  <td>{{ r.fixtureCount }}</td>
+                  <th>Prompt</th>
+                  <th>Dataset</th>
+                  <th>Scorer</th>
+                  <th>Change</th>
+                  <th>Δ</th>
                 </tr>
+              </thead>
+              <tbody>
+                @for (
+                  f of v.openRegressions;
+                  track f.promptId + f.datasetId + f.scorer + f.toVersionNumber
+                ) {
+                  <tr data-testid="dash-regression-row">
+                    <td>
+                      <a [routerLink]="['/prompts', f.promptId]">{{ f.promptName }}</a>
+                    </td>
+                    <td>{{ f.datasetName }}</td>
+                    <td>{{ f.scorer }}</td>
+                    <td>v{{ f.fromVersionNumber }} → v{{ f.toVersionNumber }}</td>
+                    <td>
+                      <app-status-badge
+                        [variant]="f.delta <= -0.1 ? 'error' : 'warn'"
+                        [label]="fmtDelta(f.delta)"
+                      />
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+
+          <h2 class="section-title">Prompts</h2>
+          @if (v.prompts.length === 0) {
+            <app-empty-state
+              message="No prompts in this organization yet."
+              data-testid="no-prompts"
+            >
+              <a class="sb-btn sb-btn--primary sb-btn--sm" routerLink="/prompts">Create one</a>
+            </app-empty-state>
+          } @else {
+            <div class="dash-grid" data-testid="dash-prompts">
+              @for (p of v.prompts; track p.id) {
+                <a
+                  class="sb-card dash-prompt"
+                  [routerLink]="['/prompts', p.id]"
+                  data-testid="dash-prompt-card"
+                >
+                  <div class="dash-prompt__head">
+                    <span class="dash-prompt__name">{{ p.name }}</span>
+                    @if (p.latestScore; as s) {
+                      <app-status-badge
+                        [variant]="scoreVariant(s.passRate)"
+                        [label]="fmt(s.meanValue)"
+                      />
+                    } @else {
+                      <app-status-badge variant="neutral" label="No runs" />
+                    }
+                  </div>
+                  <div class="dash-prompt__meta">
+                    <app-chip [label]="versionLabel(p.versionCount)" />
+                    @if (p.latestTargetModel) {
+                      <app-chip [label]="p.latestTargetModel" />
+                    }
+                  </div>
+                </a>
               }
-            </tbody>
-          </table>
+            </div>
+          }
+
+          <h2 class="section-title">Recent activity</h2>
+          @if (v.recentRuns.length === 0) {
+            <app-empty-state
+              message="No eval runs yet — run a prompt over a dataset to see activity."
+              data-testid="no-runs"
+            />
+          } @else {
+            <table class="sb-table" data-testid="dash-runs">
+              <thead>
+                <tr>
+                  <th>Prompt</th>
+                  <th>Dataset</th>
+                  <th>When</th>
+                  <th>Score</th>
+                  <th>Test cases</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of v.recentRuns; track r.runId) {
+                  <tr>
+                    <td>
+                      <a [routerLink]="['/eval-runs', r.runId]">{{ r.promptName }}</a>
+                    </td>
+                    <td>{{ r.datasetName }}</td>
+                    <td>{{ r.createdAt | date: 'medium' }}</td>
+                    <td>{{ r.meanScore != null ? fmt(r.meanScore) : '—' }}</td>
+                    <td>{{ r.fixtureCount }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
         }
-      }
-    </section>
+      </section>
+    }
   `,
   styleUrls: ['../prompts/prompts.css', './dashboard.css'],
 })
@@ -164,6 +173,8 @@ export class Dashboard {
   protected readonly view = signal<DashboardView | null>(null);
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
+  /** Null when the user is in no organization (2.21) — swap the dashboard for the onboarding surface. */
+  protected readonly currentOrgId = this.orgStore.currentOrgId;
 
   protected readonly subtitle = computed(() => {
     const name = this.orgStore.currentOrg()?.name;

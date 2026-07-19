@@ -14,6 +14,25 @@ describe('OrgDetail (owner-facing member management, spec 4.5)', () => {
     { userId: 'u1', email: 'alice@test.local', displayName: 'Alice', role: 'Owner' },
     { userId: 'u2', email: 'bob@test.local', displayName: 'Bob', role: 'Member' },
   ];
+  const requests = [
+    {
+      id: 'r1',
+      requesterId: 'u3',
+      requesterEmail: 'carol@test.local',
+      requesterDisplayName: 'Carol',
+      organizationId: 'o1',
+      requestedRole: 'Member',
+      status: 'Pending',
+      createdAt: '2026-07-19T00:00:00Z',
+    },
+  ];
+
+  // The owner-path load fans out to members + the pending access-request queue (2.21). Flush both.
+  function flushOwnerLoad(reqs: unknown[] = requests) {
+    httpMock.expectOne('/api/organizations').flush(orgsAsOwner);
+    httpMock.expectOne('/api/organizations/o1/members').flush(members);
+    httpMock.expectOne('/api/organizations/o1/access-requests').flush(reqs);
+  }
 
   function setup() {
     TestBed.configureTestingModule({
@@ -40,8 +59,7 @@ describe('OrgDetail (owner-facing member management, spec 4.5)', () => {
 
   it('lists the org’s members when the caller is an owner', () => {
     const fixture = setup();
-    httpMock.expectOne('/api/organizations').flush(orgsAsOwner);
-    httpMock.expectOne('/api/organizations/o1/members').flush(members);
+    flushOwnerLoad();
     fixture.detectChanges();
 
     const table = fixture.nativeElement.querySelector('[data-testid="members-table"]');
@@ -52,8 +70,7 @@ describe('OrgDetail (owner-facing member management, spec 4.5)', () => {
 
   it('adds a member by email, then reloads members', () => {
     const fixture = setup();
-    httpMock.expectOne('/api/organizations').flush(orgsAsOwner);
-    httpMock.expectOne('/api/organizations/o1/members').flush(members);
+    flushOwnerLoad();
 
     const cmp = fixture.componentInstance as unknown as {
       setAddEmail: (v: string) => void;
@@ -73,8 +90,7 @@ describe('OrgDetail (owner-facing member management, spec 4.5)', () => {
 
   it('sets a member’s role, then reloads', () => {
     const fixture = setup();
-    httpMock.expectOne('/api/organizations').flush(orgsAsOwner);
-    httpMock.expectOne('/api/organizations/o1/members').flush(members);
+    flushOwnerLoad();
 
     const cmp = fixture.componentInstance as unknown as {
       setRole: (userId: string, role: string) => void;
@@ -90,8 +106,7 @@ describe('OrgDetail (owner-facing member management, spec 4.5)', () => {
 
   it('removes a member, then reloads', () => {
     const fixture = setup();
-    httpMock.expectOne('/api/organizations').flush(orgsAsOwner);
-    httpMock.expectOne('/api/organizations/o1/members').flush(members);
+    flushOwnerLoad();
 
     const cmp = fixture.componentInstance as unknown as { removeMember: (userId: string) => void };
     cmp.removeMember('u2');
@@ -115,8 +130,7 @@ describe('OrgDetail (owner-facing member management, spec 4.5)', () => {
 
   it('surfaces an add error (e.g. unknown email)', () => {
     const fixture = setup();
-    httpMock.expectOne('/api/organizations').flush(orgsAsOwner);
-    httpMock.expectOne('/api/organizations/o1/members').flush(members);
+    flushOwnerLoad();
 
     const cmp = fixture.componentInstance as unknown as {
       setAddEmail: (v: string) => void;
@@ -133,10 +147,50 @@ describe('OrgDetail (owner-facing member management, spec 4.5)', () => {
   });
 
   it('does not depend on the global admin flag to gate — owner role alone suffices', () => {
-    const fixture = setup();
+    setup();
     const auth = TestBed.inject(AuthService);
     expect(auth.currentUser()).toBeNull(); // not admin
-    httpMock.expectOne('/api/organizations').flush(orgsAsOwner);
-    httpMock.expectOne('/api/organizations/o1/members').flush(members); // still allowed as owner
+    flushOwnerLoad(); // still allowed as owner (members + requests both load)
+  });
+
+  it('lists the org’s pending access requests and approves one (2.21)', () => {
+    const fixture = setup();
+    flushOwnerLoad();
+    fixture.detectChanges();
+
+    // The Requests tab shows the pending queue with a count.
+    const table = fixture.nativeElement.querySelector('[data-testid="requests-table"]');
+    expect(table.textContent).toContain('carol@test.local');
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="requests-count"]')?.textContent,
+    ).toContain('1');
+
+    const cmp = fixture.componentInstance as unknown as {
+      setApproveRole: (id: string, role: string) => void;
+      approve: (id: string) => void;
+    };
+    cmp.setApproveRole('r1', 'Owner');
+    cmp.approve('r1');
+
+    const req = httpMock.expectOne('/api/organizations/o1/access-requests/r1/approve');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ role: 'Owner' });
+    req.flush({ ...requests[0], status: 'Approved' });
+    // Approve reloads both the queue and the member list.
+    httpMock.expectOne('/api/organizations/o1/access-requests').flush([]);
+    httpMock.expectOne('/api/organizations/o1/members').flush(members);
+  });
+
+  it('denies a pending access request (2.21)', () => {
+    const fixture = setup();
+    flushOwnerLoad();
+
+    const cmp = fixture.componentInstance as unknown as { deny: (id: string) => void };
+    cmp.deny('r1');
+
+    const req = httpMock.expectOne('/api/organizations/o1/access-requests/r1/deny');
+    expect(req.request.method).toBe('POST');
+    req.flush({ ...requests[0], status: 'Denied' });
+    httpMock.expectOne('/api/organizations/o1/access-requests').flush([]); // reload queue
   });
 });
