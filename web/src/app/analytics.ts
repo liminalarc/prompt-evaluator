@@ -117,3 +117,14 @@ export interface ScorerVariance {
 export function scorerLabel(scorer: ScorerRef): string {
   return scorer.judgeModel ? `${scorer.kind} (${scorer.judgeModel})` : scorer.kind;
 }
+
+/**
+ * Whether a scorer is stochastic (varies run-to-run) vs deterministic (fixed for a given output).
+ * Only the LLM judge is stochastic; Regex/JsonSchema/ExactMatch/etc. are deterministic, so their
+ * run-to-run spread is always 0 and their "score" is near-always 1.0. Variance and headline-mean
+ * both key off this (2.19 W30/W33) — deterministic scorers are noise for stability and inflate a
+ * naive mean, so they're hidden from stability and never the headline score.
+ */
+export function isStochasticScorer(kind: string): boolean {
+  return kind === 'LlmJudge';
+}

@@ -27,6 +27,26 @@
   font-size: var(--sb-type-small-size);
 }
 
+/* W30/W29 — deterministic & stale scorer-stability blocks, folded behind a reveal below the
+   stochastic ones. Muted so the meaningful (LLM-judge) blocks stay the focus. */
+.variance-block--muted {
+  opacity: 0.7;
+}
+
+.variance-block--muted .scorer-title {
+  display: flex;
+  align-items: center;
+  gap: var(--sb-space-sm);
+}
+
+/* A lightweight "deterministic" tag beside a folded scorer title (stale uses a StatusBadge). */
+.scorer-tag {
+  font-size: var(--sb-type-caption-size);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--sb-text-muted);
+}
+
 /* R5 — cross-model comparison flag: the two versions ran on different subject models, so the score
    delta confounds prompt vs model. Muted brand warning treatment, consistent with `.unverified`. */
 .cross-model-warn {

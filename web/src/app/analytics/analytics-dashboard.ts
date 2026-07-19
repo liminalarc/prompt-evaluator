@@ -1,16 +1,19 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import {
   RegressionFlag,
+  ScorerRef,
   ScorerVariance,
   TrendSeries,
   VarianceStat,
   VersionComparison as VersionComparisonData,
+  isStochasticScorer,
   scorerLabel,
 } from '../analytics';
 import { AnalyticsApiService } from './analytics-api.service';
+import { EvalRunsApiService } from '../eval-runs/eval-runs-api.service';
 import { PromptsApiService } from '../prompts/prompts-api.service';
 import { DatasetsApiService } from '../datasets/datasets-api.service';
 import { OrgContextStore } from '../shared/org-context.store';
@@ -29,6 +32,7 @@ import { BadgeVariant, Card, EmptyState, ErrorState, PageHeader, StatusBadge } f
   imports: [
     FormsModule,
     DecimalPipe,
+    NgTemplateOutlet,
     TrendChart,
     VersionComparison,
     Card,
@@ -99,43 +103,95 @@ import { BadgeVariant, Card, EmptyState, ErrorState, PageHeader, StatusBadge } f
 
       @if (promptId() && datasetId()) {
         <app-card heading="Score trend">
-          <app-trend-chart [series]="trends()" />
+          <app-trend-chart [series]="visibleTrends()" />
         </app-card>
 
-        @if (variance().length > 0) {
+        @if (stochasticVariance().length > 0 || hiddenVariance().length > 0) {
           <app-card heading="Score stability">
             <p class="subtitle">
-              Mean ± spread over each version's <strong>repeated runs</strong> — a run-to-run wobble
-              is noise, not signal. Run a version more than once to build the distribution.
+              Mean ± spread over each version's <strong>repeated runs</strong>. Only
+              <strong>LLM-judge</strong> scorers vary run-to-run; deterministic scorers are always
+              ±0.000, so they're hidden below. Run a version more than once to build the
+              distribution.
             </p>
-            @for (sv of variance(); track sv.scorer.identity) {
+
+            @for (sv of stochasticVariance(); track sv.scorer.identity) {
               <div class="variance-block" data-testid="variance-scorer">
-                <h3 class="scorer-title">{{ varianceLabel(sv) }}</h3>
-                <table class="sb-table" data-testid="variance">
-                  <thead>
-                    <tr>
-                      <th>Version</th>
-                      <th>Runs</th>
-                      <th>Mean ± spread</th>
-                      <th>Range</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (v of sv.versions; track v.promptVersionId) {
-                      <tr data-testid="variance-row">
-                        <td>
-                          v{{ v.versionNumber }}{{ v.versionLabel ? ' · ' + v.versionLabel : '' }}
-                        </td>
-                        <td>{{ v.runCount }}</td>
-                        <td>{{ fmtStat(v.aggregate) }}</td>
-                        <td>{{ v.aggregate.min.toFixed(3) }}–{{ v.aggregate.max.toFixed(3) }}</td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
+                <h3 class="scorer-title">{{ scorerBlockLabel(sv.scorer) }}</h3>
+                <ng-container
+                  [ngTemplateOutlet]="varianceTable"
+                  [ngTemplateOutletContext]="{ $implicit: sv }"
+                />
               </div>
+            } @empty {
+              @if (hiddenVariance().length > 0) {
+                <app-empty-state
+                  message="No stochastic scorers to track — stability applies to LLM-judge scorers."
+                  data-testid="no-stochastic-variance"
+                />
+              }
+            }
+
+            @if (hiddenVariance().length > 0) {
+              <button
+                type="button"
+                class="sb-btn sb-btn--sm sb-btn--ghost"
+                (click)="showHiddenVariance.set(!showHiddenVariance())"
+                data-testid="toggle-hidden-variance"
+              >
+                {{ showHiddenVariance() ? 'Hide' : 'Show' }}
+                {{ hiddenVariance().length }} deterministic / stale scorer{{
+                  hiddenVariance().length === 1 ? '' : 's'
+                }}
+              </button>
+              @if (showHiddenVariance()) {
+                @for (sv of hiddenVariance(); track sv.scorer.identity) {
+                  <div
+                    class="variance-block variance-block--muted"
+                    data-testid="variance-scorer-hidden"
+                  >
+                    <h3 class="scorer-title">
+                      {{ scorerBlockLabel(sv.scorer) }}
+                      @if (isStale(sv.scorer)) {
+                        <app-status-badge variant="warn" label="stale config" />
+                      } @else {
+                        <span class="scorer-tag">deterministic</span>
+                      }
+                    </h3>
+                    <ng-container
+                      [ngTemplateOutlet]="varianceTable"
+                      [ngTemplateOutletContext]="{ $implicit: sv }"
+                    />
+                  </div>
+                }
+              }
             }
           </app-card>
+
+          <ng-template #varianceTable let-sv>
+            <table class="sb-table" data-testid="variance">
+              <thead>
+                <tr>
+                  <th>Version</th>
+                  <th>Runs</th>
+                  <th>Mean ± spread</th>
+                  <th>Range</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (v of sv.versions; track v.promptVersionId) {
+                  <tr data-testid="variance-row">
+                    <td>
+                      v{{ v.versionNumber }}{{ v.versionLabel ? ' · ' + v.versionLabel : '' }}
+                    </td>
+                    <td>{{ v.runCount }}</td>
+                    <td>{{ fmtStat(v.aggregate) }}</td>
+                    <td>{{ v.aggregate.min.toFixed(3) }}–{{ v.aggregate.max.toFixed(3) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </ng-template>
         }
 
         <div class="card-grid">
@@ -286,6 +342,7 @@ import { BadgeVariant, Card, EmptyState, ErrorState, PageHeader, StatusBadge } f
 })
 export class AnalyticsDashboard {
   private readonly api = inject(AnalyticsApiService);
+  private readonly evalApi = inject(EvalRunsApiService);
   private readonly promptsApi = inject(PromptsApiService);
   private readonly datasetsApi = inject(DatasetsApiService);
   private readonly orgStore = inject(OrgContextStore);
@@ -320,6 +377,33 @@ export class AnalyticsDashboard {
   // wobble reads as spread, not signal. Aggregates ALL runs of a version (trends takes only latest).
   protected readonly variance = signal<ScorerVariance[]>([]);
 
+  // The dataset's *current* scorer identities (2.19 W29). Editing a scorer's config mints a new
+  // identity, so old runs accumulate stale identities that pollute trend/stability/compare. We
+  // fetch the live set to mark those blocks stale (empty until loaded → nothing marked stale).
+  private readonly currentScorerIds = signal<Set<string>>(new Set());
+  protected readonly showHiddenVariance = signal(false);
+
+  // W30: stability is only signal for *stochastic* (LLM-judge) scorers — deterministic scorers are
+  // always ±0.000, pure noise here. Show the stochastic, current ones prominently; fold the rest
+  // (deterministic and/or stale identities, W29) behind a reveal so the card stays scannable.
+  protected readonly stochasticVariance = computed(() =>
+    this.variance().filter((v) => isStochasticScorer(v.scorer.kind) && !this.isStale(v.scorer)),
+  );
+  protected readonly hiddenVariance = computed(() =>
+    this.variance().filter((v) => !isStochasticScorer(v.scorer.kind) || this.isStale(v.scorer)),
+  );
+
+  // Trend lines from a removed/edited scorer config are stale phantoms (W29) — drop them so the
+  // chart shows only the dataset's live scorers.
+  protected readonly visibleTrends = computed(() =>
+    this.trends().filter((s) => !this.isStale(s.scorer)),
+  );
+
+  protected isStale(scorer: ScorerRef): boolean {
+    const ids = this.currentScorerIds();
+    return ids.size > 0 && !ids.has(scorer.identity);
+  }
+
   protected readonly versions = signal<PromptVersion[]>([]);
   protected readonly fromVersionId = signal<string | null>(null);
   protected readonly toVersionId = signal<string | null>(null);
@@ -353,8 +437,13 @@ export class AnalyticsDashboard {
     return `${s.mean.toFixed(3)} ± ${s.stdDev.toFixed(3)}`;
   }
 
-  protected varianceLabel(sv: ScorerVariance): string {
-    return scorerLabel(sv.scorer);
+  // W29(a): label a scorer block by its config, not just kind. When the same kind+model appears
+  // more than once (an edited config minted a second identity), append a short identity hash so the
+  // otherwise-identical blocks are distinguishable; a lone block stays clean.
+  protected scorerBlockLabel(scorer: ScorerRef): string {
+    const base = scorerLabel(scorer);
+    const duplicated = this.variance().filter((v) => scorerLabel(v.scorer) === base).length > 1;
+    return duplicated ? `${base} · #${scorer.identity.slice(0, 6)}` : base;
   }
 
   // R5: flag a cross-model comparison. If the two selected versions ran on different subject models,
@@ -485,6 +574,13 @@ export class AnalyticsDashboard {
     this.api.getVariance(promptId, datasetId).subscribe({
       next: (v) => this.variance.set(v),
       error: () => this.error.set('Could not load score stability.'),
+    });
+    // W29: the dataset's live scorer set — used to mark stale identities. Best-effort: a failure
+    // just means nothing is marked stale, never a blocked analytics view.
+    this.showHiddenVariance.set(false);
+    this.evalApi.listScorers(datasetId).subscribe({
+      next: (scorers) => this.currentScorerIds.set(new Set(scorers.map((s) => s.identity))),
+      error: () => this.currentScorerIds.set(new Set()),
     });
   }
 

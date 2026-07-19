@@ -217,6 +217,7 @@ describe('AnalyticsDashboard', () => {
     http.expectOne((r) => r.url === '/api/analytics/trends').flush(trends);
     http.expectOne((r) => r.url === '/api/analytics/regressions').flush(flags);
     http.expectOne((r) => r.url === '/api/analytics/variance').flush([]);
+    http.expectOne('/api/datasets/d1/scorers').flush([]);
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
@@ -261,6 +262,7 @@ describe('AnalyticsDashboard', () => {
     http.expectOne((r) => r.url === '/api/analytics/trends').flush([]);
     http.expectOne((r) => r.url === '/api/analytics/regressions').flush(flags);
     http.expectOne((r) => r.url === '/api/analytics/variance').flush([]);
+    http.expectOne('/api/datasets/d1/scorers').flush([]);
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
@@ -317,6 +319,7 @@ describe('AnalyticsDashboard', () => {
     http.expectOne((r) => r.url === '/api/analytics/trends').flush([]);
     http.expectOne((r) => r.url === '/api/analytics/regressions').flush([]);
     http.expectOne((r) => r.url === '/api/analytics/variance').flush([]);
+    http.expectOne('/api/datasets/d1/scorers').flush([]);
     http
       .expectOne((r) => r.url === '/api/analytics/comparison')
       .flush({
@@ -352,6 +355,7 @@ describe('AnalyticsDashboard', () => {
     http.expectOne((r) => r.url === '/api/analytics/trends').flush([]);
     http.expectOne((r) => r.url === '/api/analytics/regressions').flush([]);
     http.expectOne((r) => r.url === '/api/analytics/variance').flush([]);
+    http.expectOne('/api/datasets/d1/scorers').flush([]);
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
@@ -387,6 +391,7 @@ describe('AnalyticsDashboard', () => {
           ],
         },
       ]);
+    http.expectOne('/api/datasets/d1/scorers').flush([]);
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
@@ -395,6 +400,79 @@ describe('AnalyticsDashboard', () => {
     expect(row.textContent).toContain('v1');
     expect(row.textContent).toContain('2'); // run count
     expect(row.textContent).toContain('0.750 ± 0.050'); // mean ± spread
+  });
+
+  it('hides deterministic + stale scorers in Score stability, revealing on demand [2.19 W30/W29]', () => {
+    const fixture = createAndLoadLists();
+    const cmp = fixture.componentInstance as unknown as {
+      promptId: { set(v: string): void };
+      datasetId: { set(v: string): void };
+    };
+    cmp.promptId.set('p1');
+    cmp.datasetId.set('d1');
+    fixture.detectChanges();
+
+    const version = {
+      promptVersionId: 'v1',
+      versionNumber: 1,
+      versionLabel: null,
+      runCount: 2,
+      aggregate: { mean: 0.8, stdDev: 0.04, sampleCount: 2, min: 0.76, max: 0.84 },
+      fixtures: [],
+    };
+
+    http.expectOne((r) => r.url === '/api/analytics/trends').flush([]);
+    http.expectOne((r) => r.url === '/api/analytics/regressions').flush([]);
+    http
+      .expectOne((r) => r.url === '/api/analytics/variance')
+      .flush([
+        // stochastic + current → shown prominently
+        {
+          scorer: { identity: 'j-current', kind: 'LlmJudge', judgeModel: 'claude-opus-4-8' },
+          versions: [version],
+        },
+        // deterministic → folded away (always ±0.000, pure noise)
+        { scorer: { identity: 'x', kind: 'Regex', judgeModel: null }, versions: [version] },
+        // an LLM-judge identity from an edited/removed config → stale, folded + badged
+        {
+          scorer: { identity: 'j-old', kind: 'LlmJudge', judgeModel: 'claude-opus-4-8' },
+          versions: [version],
+        },
+      ]);
+    // The dataset's *live* scorer set = current judge + current Regex → only j-old (an edited-out
+    // judge config) is stale. The current Regex is folded as "deterministic", not stale.
+    http.expectOne('/api/datasets/d1/scorers').flush([
+      {
+        id: 's1',
+        kind: 'LlmJudge',
+        config: 'r',
+        judgeModel: 'claude-opus-4-8',
+        identity: 'j-current',
+        createdAt: '',
+      },
+      { id: 's2', kind: 'Regex', config: '[0-9]', judgeModel: null, identity: 'x', createdAt: '' },
+    ]);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    // Only the current stochastic scorer is shown; the other two are folded.
+    expect(el.querySelectorAll('[data-testid="variance-scorer"]').length).toBe(1);
+    expect(el.querySelectorAll('[data-testid="variance-scorer-hidden"]').length).toBe(0);
+
+    const toggle = el.querySelector('[data-testid="toggle-hidden-variance"]') as HTMLButtonElement;
+    expect(toggle).toBeTruthy();
+    expect(toggle.textContent).toContain('2'); // deterministic + stale
+
+    toggle.click();
+    fixture.detectChanges();
+    const hidden = el.querySelectorAll('[data-testid="variance-scorer-hidden"]');
+    expect(hidden.length).toBe(2);
+    // The stale (edited-config) judge is badged; the deterministic Regex isn't.
+    const hiddenText = Array.from(hidden)
+      .map((h) => h.textContent)
+      .join(' ');
+    expect(hiddenText).toContain('stale config');
+    expect(hiddenText).toContain('deterministic');
   });
 
   it('flags a version delta that is within run-to-run noise [2.14]', () => {
@@ -463,6 +541,7 @@ describe('AnalyticsDashboard', () => {
           ],
         },
       ]);
+    http.expectOne('/api/datasets/d1/scorers').flush([]);
     http
       .expectOne((r) => r.url === '/api/analytics/comparison')
       .flush({
@@ -532,6 +611,7 @@ describe('AnalyticsDashboard', () => {
     http.expectOne((r) => r.url === '/api/analytics/trends').flush([]);
     http.expectOne((r) => r.url === '/api/analytics/regressions').flush([]);
     http.expectOne((r) => r.url === '/api/analytics/variance').flush([]);
+    http.expectOne('/api/datasets/d1/scorers').flush([]);
     const comparisonReq = http.expectOne((r) => r.url === '/api/analytics/comparison');
     expect(comparisonReq.request.params.get('fromVersionId')).toBe('v1');
     expect(comparisonReq.request.params.get('toVersionId')).toBe('v2');
