@@ -123,7 +123,11 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                           <dt>Expected output</dt>
                           <dd>{{ f.expectedOutput ?? '—' }}</dd>
                         </dl>
-                        <form class="form-stack" (submit)="saveFixtureMeta($event, f.id)">
+                        <form
+                          class="form-stack"
+                          (submit)="saveFixtureMeta($event, f.id)"
+                          (keydown.escape)="cancelEditFixture()"
+                        >
                           <div class="sb-field">
                             <label [attr.for]="'flabel-' + f.id">Label</label>
                             <input
@@ -145,13 +149,23 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                               data-testid="edit-fixture-description"
                             ></textarea>
                           </div>
-                          <button
-                            class="sb-btn sb-btn--primary sb-btn--sm"
-                            type="submit"
-                            data-testid="save-fixture"
-                          >
-                            Save
-                          </button>
+                          <div class="form-actions">
+                            <button
+                              class="sb-btn sb-btn--primary sb-btn--sm"
+                              type="submit"
+                              data-testid="save-fixture"
+                            >
+                              Save
+                            </button>
+                            <button
+                              class="sb-btn sb-btn--ghost sb-btn--sm"
+                              type="button"
+                              data-testid="cancel-edit-fixture"
+                              (click)="cancelEditFixture()"
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         </form>
                       </td>
                     </tr>
@@ -162,7 +176,11 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
           }
 
           @if (showCapture()) {
-            <form class="form-stack reveal-form" (submit)="capture($event)">
+            <form
+              class="form-stack reveal-form"
+              (submit)="capture($event)"
+              (keydown.escape)="cancelCapture()"
+            >
               <div class="sb-field">
                 <label for="fixtureLabel">Label (optional)</label>
                 <input
@@ -228,14 +246,28 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                   data-testid="expected-output"
                 ></textarea>
               </div>
-              <button class="sb-btn sb-btn--primary" type="submit" data-testid="capture">
-                Add fixture
-              </button>
+              <div class="form-actions">
+                <button class="sb-btn sb-btn--primary" type="submit" data-testid="capture">
+                  Add fixture
+                </button>
+                <button
+                  class="sb-btn sb-btn--ghost"
+                  type="button"
+                  data-testid="cancel-capture"
+                  (click)="cancelCapture()"
+                >
+                  Cancel
+                </button>
+              </div>
             </form>
           }
 
           @if (showGenerate()) {
-            <form class="form-stack reveal-form" (submit)="generate($event)">
+            <form
+              class="form-stack reveal-form"
+              (submit)="generate($event)"
+              (keydown.escape)="cancelGenerate()"
+            >
               <p class="subtitle">
                 Seeded from this dataset's captured fixtures; steer with guidance.
               </p>
@@ -268,14 +300,24 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                   (ngModelChange)="count.set(+$event)"
                 />
               </div>
-              <button
-                class="sb-btn sb-btn--primary"
-                type="submit"
-                data-testid="generate"
-                [disabled]="generating()"
-              >
-                {{ generating() ? 'Generating…' : 'Generate' }}
-              </button>
+              <div class="form-actions">
+                <button
+                  class="sb-btn sb-btn--primary"
+                  type="submit"
+                  data-testid="generate"
+                  [disabled]="generating()"
+                >
+                  {{ generating() ? 'Generating…' : 'Generate' }}
+                </button>
+                <button
+                  class="sb-btn sb-btn--ghost"
+                  type="button"
+                  data-testid="cancel-generate"
+                  (click)="cancelGenerate()"
+                >
+                  Cancel
+                </button>
+              </div>
             </form>
           }
 
@@ -335,7 +377,11 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                   @if (expandedScorerId() === s.id) {
                     <tr class="scorer-detail" data-testid="scorer-detail">
                       <td colspan="3">
-                        <form class="form-stack" (submit)="saveScorer($event, s.id)">
+                        <form
+                          class="form-stack"
+                          (submit)="saveScorer($event, s.id)"
+                          (keydown.escape)="cancelEditScorer()"
+                        >
                           <div class="sb-field">
                             <label [attr.for]="'ekind-' + s.id">Scorer</label>
                             <select
@@ -389,6 +435,14 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                               Save
                             </button>
                             <button
+                              class="sb-btn sb-btn--ghost sb-btn--sm"
+                              type="button"
+                              data-testid="cancel-edit-scorer"
+                              (click)="cancelEditScorer()"
+                            >
+                              Cancel
+                            </button>
+                            <button
                               class="sb-btn sb-btn--danger sb-btn--sm"
                               type="button"
                               data-testid="remove-scorer"
@@ -407,7 +461,11 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
           }
 
           @if (showAddScorer()) {
-            <form class="form-stack reveal-form" (submit)="addScorer($event)">
+            <form
+              class="form-stack reveal-form"
+              (submit)="addScorer($event)"
+              (keydown.escape)="cancelAddScorer()"
+            >
               <div class="sb-field">
                 <label for="scorerKind">Scorer</label>
                 <select
@@ -451,14 +509,24 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                   </select>
                 </div>
               }
-              <button
-                class="sb-btn sb-btn--primary"
-                type="submit"
-                data-testid="add-scorer"
-                [disabled]="!configValid()"
-              >
-                Add scorer
-              </button>
+              <div class="form-actions">
+                <button
+                  class="sb-btn sb-btn--primary"
+                  type="submit"
+                  data-testid="add-scorer"
+                  [disabled]="!configValid()"
+                >
+                  Add scorer
+                </button>
+                <button
+                  class="sb-btn sb-btn--ghost"
+                  type="button"
+                  data-testid="cancel-add-scorer"
+                  (click)="cancelAddScorer()"
+                >
+                  Cancel
+                </button>
+              </div>
             </form>
           }
 
@@ -996,5 +1064,39 @@ export class DatasetDetail implements OnInit {
         this.running.set(false);
       },
     });
+  }
+
+  // Cancel handlers (2.11): discard the reveal/expand form's unsaved input and collapse back to the
+  // summary row / closed toggle. Consistent across every surface — back out without submitting or
+  // losing your place. Expand-to-edit rows re-seed their editor on open, so cancel just closes.
+  protected cancelCapture(): void {
+    this.showCapture.set(false);
+    this.promptInput.set('');
+    this.slmOutput.set('');
+    this.expectedOutput.set('');
+    this.fixtureLabel.set('');
+    this.fixtureDescription.set('');
+    this.fixtureOrigin.set('Captured');
+  }
+
+  protected cancelGenerate(): void {
+    this.showGenerate.set(false);
+    this.coverageGoals.set('');
+    this.edgeCases.set('');
+    this.count.set(5);
+  }
+
+  protected cancelEditFixture(): void {
+    this.expandedFixtureId.set(null);
+  }
+
+  protected cancelAddScorer(): void {
+    this.showAddScorer.set(false);
+    this.scorerConfig.set('');
+    this.scorerKind.set('Regex');
+  }
+
+  protected cancelEditScorer(): void {
+    this.expandedScorerId.set(null);
   }
 }

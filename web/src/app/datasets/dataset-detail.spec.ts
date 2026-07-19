@@ -268,6 +268,60 @@ describe('DatasetDetail run form + scorer config', () => {
     ]);
   });
 
+  // 2.11 — Cancel on the reveal/expand surfaces (add-fixture, generate, edit-fixture, scorers).
+  it('cancels the add-fixture form, discarding input and collapsing it without a capture [2.11]', () => {
+    let captureCalled = false;
+    const fixture = render();
+    const api = TestBed.inject(DatasetsApiService) as unknown as {
+      captureFixtures: (id: string, t: unknown) => unknown;
+    };
+    api.captureFixtures = () => {
+      captureCalled = true;
+      return of(dataset);
+    };
+    const cmp = fixture.componentInstance as unknown as {
+      showCapture: { set: (v: boolean) => void } & (() => boolean);
+      promptInput: { set: (v: string) => void } & (() => string);
+      fixtureLabel: { set: (v: string) => void } & (() => string);
+      cancelCapture: () => void;
+    };
+    cmp.showCapture.set(true);
+    fixture.detectChanges();
+    // Cancel paired with the submit.
+    expect(fixture.nativeElement.querySelector('[data-testid="cancel-capture"]')).not.toBeNull();
+
+    cmp.promptInput.set('half-typed case');
+    cmp.fixtureLabel.set('draft');
+    cmp.cancelCapture();
+    fixture.detectChanges();
+
+    expect(cmp.showCapture()).toBe(false); // collapsed
+    expect(cmp.promptInput()).toBe(''); // input discarded
+    expect(cmp.fixtureLabel()).toBe('');
+    expect(captureCalled).toBe(false); // nothing persisted
+    expect(fixture.nativeElement.querySelector('[data-testid="capture"]')).toBeNull();
+  });
+
+  it('cancels an open fixture-metadata editor, collapsing the row [2.11]', () => {
+    const fixture = render();
+    const cmp = fixture.componentInstance as unknown as {
+      toggleFixture: (id: string) => void;
+      cancelEditFixture: () => void;
+      expandedFixtureId: () => string | null;
+    };
+    cmp.toggleFixture('f1');
+    fixture.detectChanges();
+    expect(cmp.expandedFixtureId()).toBe('f1');
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="cancel-edit-fixture"]'),
+    ).not.toBeNull();
+
+    cmp.cancelEditFixture();
+    fixture.detectChanges();
+    expect(cmp.expandedFixtureId()).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="fixture-detail"]')).toBeNull();
+  });
+
   it('expands a fixture row and edits its label via PATCH [U6/U7]', () => {
     let patched: { id: string; fixtureId: string; label: string | null } | null = null;
     const fixture = render();

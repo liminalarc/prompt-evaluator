@@ -56,7 +56,7 @@ interface ImportRowResult {
 
       @if (showNewOrg()) {
         <app-card heading="New organization">
-          <form class="form-stack" (submit)="createOrg($event)">
+          <form class="form-stack" (submit)="createOrg($event)" (keydown.escape)="cancelNewOrg()">
             <div class="sb-field">
               <label for="orgName">Organization name</label>
               <input
@@ -66,9 +66,19 @@ interface ImportRowResult {
                 (ngModelChange)="orgName.set($event)"
               />
             </div>
-            <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-org">
-              Create
-            </button>
+            <div class="form-actions">
+              <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-org">
+                Create
+              </button>
+              <button
+                class="sb-btn sb-btn--ghost"
+                type="button"
+                data-testid="cancel-org"
+                (click)="cancelNewOrg()"
+              >
+                Cancel
+              </button>
+            </div>
           </form>
         </app-card>
       }
@@ -133,6 +143,16 @@ interface ImportRowResult {
                 (change)="importPrompts($event)"
               />
             </div>
+            <div class="form-actions">
+              <button
+                class="sb-btn sb-btn--ghost sb-btn--sm"
+                type="button"
+                data-testid="cancel-import"
+                (click)="cancelImport()"
+              >
+                Cancel
+              </button>
+            </div>
             @if (importResults().length > 0) {
               <table class="sb-table" data-testid="import-results">
                 <thead>
@@ -156,7 +176,11 @@ interface ImportRowResult {
 
         @if (showNewFolder()) {
           <app-card heading="New folder">
-            <form class="form-stack" (submit)="createFolder($event)">
+            <form
+              class="form-stack"
+              (submit)="createFolder($event)"
+              (keydown.escape)="cancelNewFolder()"
+            >
               <div class="sb-field">
                 <label for="folderName">Folder name in {{ currentFolderName() }}</label>
                 <input
@@ -166,16 +190,30 @@ interface ImportRowResult {
                   (ngModelChange)="folderName.set($event)"
                 />
               </div>
-              <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-folder">
-                Add folder
-              </button>
+              <div class="form-actions">
+                <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-folder">
+                  Add folder
+                </button>
+                <button
+                  class="sb-btn sb-btn--ghost"
+                  type="button"
+                  data-testid="cancel-folder"
+                  (click)="cancelNewFolder()"
+                >
+                  Cancel
+                </button>
+              </div>
             </form>
           </app-card>
         }
 
         @if (showNewPrompt()) {
           <app-card heading="New prompt">
-            <form class="form-stack" (submit)="createPrompt($event)">
+            <form
+              class="form-stack"
+              (submit)="createPrompt($event)"
+              (keydown.escape)="cancelNewPrompt()"
+            >
               <div class="sb-field">
                 <label for="name">Prompt name in {{ currentFolderName() }}</label>
                 <input
@@ -194,9 +232,19 @@ interface ImportRowResult {
                   (ngModelChange)="description.set($event)"
                 />
               </div>
-              <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-prompt">
-                Create prompt
-              </button>
+              <div class="form-actions">
+                <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-prompt">
+                  Create prompt
+                </button>
+                <button
+                  class="sb-btn sb-btn--ghost"
+                  type="button"
+                  data-testid="cancel-prompt"
+                  (click)="cancelNewPrompt()"
+                >
+                  Cancel
+                </button>
+              </div>
             </form>
           </app-card>
         }
@@ -473,6 +521,29 @@ export class PromptList {
 
   protected navigateTo(id: string | null): void {
     this.currentFolderId.set(id);
+  }
+
+  // Cancel handlers (2.11): discard the reveal form's unsaved input and collapse it. Consistent
+  // across every reveal/expand surface — a way to back out without submitting or navigating away.
+  protected cancelNewOrg(): void {
+    this.orgName.set('');
+    this.showNewOrg.set(false);
+  }
+
+  protected cancelNewFolder(): void {
+    this.folderName.set('');
+    this.showNewFolder.set(false);
+  }
+
+  protected cancelNewPrompt(): void {
+    this.name.set('');
+    this.description.set('');
+    this.showNewPrompt.set(false);
+  }
+
+  protected cancelImport(): void {
+    this.importResults.set([]);
+    this.showImport.set(false);
   }
 
   protected createOrg(event: Event): void {

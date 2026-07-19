@@ -77,6 +77,23 @@
   align-self: flex-start;
 }
 
+/* Submit + Cancel pairing on every reveal/expand form (2.11). Cancel sits beside the submit with
+   consistent placement + label everywhere; the row shrinks to its content and stays left-aligned. */
+.form-actions {
+  display: flex;
+  gap: var(--sb-space-sm);
+  align-items: center;
+}
+
+.form-stack > .form-actions {
+  align-self: flex-start;
+}
+
+/* Buttons inside a pairing row align on the row's cross-axis, not the column's start. */
+.form-actions .sb-btn {
+  align-self: auto;
+}
+
 /* An inline label+control field (control sits beside its label) — e.g. an origin filter. */
 .field-inline {
   display: flex;

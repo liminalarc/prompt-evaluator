@@ -114,7 +114,11 @@ import { validateImportFile } from './import-file';
                           <label>Content (immutable — add a version to change it)</label>
                           <pre class="version-content">{{ v.content }}</pre>
                         </div>
-                        <form class="form-stack" (submit)="saveLabel($event, v.id)">
+                        <form
+                          class="form-stack"
+                          (submit)="saveLabel($event, v.id)"
+                          (keydown.escape)="cancelEditLabel()"
+                        >
                           <div class="sb-field">
                             <label [attr.for]="'label-' + v.id">Label (optional description)</label>
                             <input
@@ -126,13 +130,23 @@ import { validateImportFile } from './import-file';
                               data-testid="edit-label"
                             />
                           </div>
-                          <button
-                            class="sb-btn sb-btn--primary sb-btn--sm"
-                            type="submit"
-                            data-testid="save-label"
-                          >
-                            Save label
-                          </button>
+                          <div class="form-actions">
+                            <button
+                              class="sb-btn sb-btn--primary sb-btn--sm"
+                              type="submit"
+                              data-testid="save-label"
+                            >
+                              Save label
+                            </button>
+                            <button
+                              class="sb-btn sb-btn--ghost sb-btn--sm"
+                              type="button"
+                              data-testid="cancel-edit-label"
+                              (click)="cancelEditLabel()"
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         </form>
                       </td>
                     </tr>
@@ -143,7 +157,11 @@ import { validateImportFile } from './import-file';
           }
 
           @if (showAddVersion()) {
-            <form class="form-stack add-version-form" (submit)="addVersion($event)">
+            <form
+              class="form-stack add-version-form"
+              (submit)="addVersion($event)"
+              (keydown.escape)="cancelAddVersion()"
+            >
               <div class="sb-field">
                 <label for="importFile">Import content from a file (optional)</label>
                 <input
@@ -189,9 +207,19 @@ import { validateImportFile } from './import-file';
                   (ngModelChange)="label.set($event)"
                 />
               </div>
-              <button class="sb-btn sb-btn--primary" type="submit" data-testid="add-version">
-                Add version
-              </button>
+              <div class="form-actions">
+                <button class="sb-btn sb-btn--primary" type="submit" data-testid="add-version">
+                  Add version
+                </button>
+                <button
+                  class="sb-btn sb-btn--ghost"
+                  type="button"
+                  data-testid="cancel-add-version"
+                  (click)="cancelAddVersion()"
+                >
+                  Cancel
+                </button>
+              </div>
             </form>
           }
 
@@ -244,7 +272,11 @@ import { validateImportFile } from './import-file';
               Score a version against one of this prompt's datasets — no page hop.
             </p>
             @if (showRun()) {
-              <form class="form-stack add-version-form" (submit)="triggerRun($event)">
+              <form
+                class="form-stack add-version-form"
+                (submit)="triggerRun($event)"
+                (keydown.escape)="cancelRun()"
+              >
                 <div class="sb-field">
                   <label for="runVersion">Version</label>
                   <select
@@ -275,14 +307,24 @@ import { validateImportFile } from './import-file';
                     }
                   </select>
                 </div>
-                <button
-                  class="sb-btn sb-btn--primary"
-                  type="submit"
-                  data-testid="run"
-                  [disabled]="running() || !runVersionId() || !runDatasetId()"
-                >
-                  {{ running() ? 'Running…' : 'Run evaluation' }}
-                </button>
+                <div class="form-actions">
+                  <button
+                    class="sb-btn sb-btn--primary"
+                    type="submit"
+                    data-testid="run"
+                    [disabled]="running() || !runVersionId() || !runDatasetId()"
+                  >
+                    {{ running() ? 'Running…' : 'Run evaluation' }}
+                  </button>
+                  <button
+                    class="sb-btn sb-btn--ghost"
+                    type="button"
+                    data-testid="cancel-run"
+                    (click)="cancelRun()"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </form>
 
               @if (recentRuns().length > 0) {
@@ -366,7 +408,11 @@ import { validateImportFile } from './import-file';
             }
 
             @if (showCreateDataset()) {
-              <form class="form-stack create-dataset-form" (submit)="createDataset($event)">
+              <form
+                class="form-stack create-dataset-form"
+                (submit)="createDataset($event)"
+                (keydown.escape)="cancelCreateDataset()"
+              >
                 <div class="sb-field">
                   <label for="datasetName">New dataset name</label>
                   <input
@@ -387,9 +433,19 @@ import { validateImportFile } from './import-file';
                     data-testid="dataset-description"
                   ></textarea>
                 </div>
-                <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-dataset">
-                  Add dataset
-                </button>
+                <div class="form-actions">
+                  <button class="sb-btn sb-btn--primary" type="submit" data-testid="create-dataset">
+                    Add dataset
+                  </button>
+                  <button
+                    class="sb-btn sb-btn--ghost"
+                    type="button"
+                    data-testid="cancel-create-dataset"
+                    (click)="cancelCreateDataset()"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </form>
             }
 
@@ -724,5 +780,31 @@ export class PromptDetail implements OnInit {
         },
         error: () => this.error.set('Could not add the version.'),
       });
+  }
+
+  // Cancel handlers (2.11): discard the reveal/expand form's unsaved input and collapse back to the
+  // prior state (summary row / closed toggle). Consistent across every surface — back out without
+  // submitting or losing your place. The expand-to-edit rows re-seed on open, so cancel just closes.
+  protected cancelAddVersion(): void {
+    this.showAddVersion.set(false);
+    this.content.set('');
+    this.label.set('');
+  }
+
+  protected cancelEditLabel(): void {
+    this.expandedVersionId.set(null);
+  }
+
+  protected cancelRun(): void {
+    this.showRun.set(false);
+    this.runVersionId.set('');
+    this.runDatasetId.set('');
+    this.recentRuns.set([]);
+  }
+
+  protected cancelCreateDataset(): void {
+    this.showCreateDataset.set(false);
+    this.datasetName.set('');
+    this.datasetDescription.set('');
   }
 }

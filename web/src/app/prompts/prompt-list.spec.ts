@@ -300,4 +300,58 @@ describe('PromptList (org + folder navigation)', () => {
     // No DELETE issued — httpMock.verify() in afterEach asserts nothing outstanding.
     httpMock.expectNone('/api/prompts/p1');
   });
+
+  // 2.11 — Cancel on every reveal/expand surface: collapses the form + discards unsaved input.
+  it('cancels the New prompt form, clearing input and collapsing it [2.11]', () => {
+    const fixture = setup();
+    const el: HTMLElement = fixture.nativeElement;
+    const cmp = fixture.componentInstance as unknown as {
+      showNewPrompt: { set: (v: boolean) => void };
+      name: () => string;
+      description: () => string;
+      description_set?: unknown;
+    };
+    cmp.showNewPrompt.set(true);
+    fixture.detectChanges();
+
+    // Cancel is rendered paired with the submit (consistent placement).
+    const actions = el.querySelector('[data-testid="create-prompt"]')!.closest('.form-actions')!;
+    expect(actions.querySelector('[data-testid="cancel-prompt"]')).not.toBeNull();
+
+    // Type, then Cancel → collapsed + input discarded.
+    (fixture.componentInstance as unknown as { name: { set: (v: string) => void } }).name.set(
+      'Half-typed',
+    );
+    (
+      fixture.componentInstance as unknown as {
+        description: { set: (v: string) => void };
+      }
+    ).description.set('draft');
+    (el.querySelector('[data-testid="cancel-prompt"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-testid="create-prompt"]')).toBeNull(); // collapsed
+    expect(cmp.name()).toBe('');
+    expect(cmp.description()).toBe('');
+    httpMock.expectNone('/api/organizations/o1/prompts'); // nothing persisted
+  });
+
+  it('cancels the New prompt form on Escape [2.11]', () => {
+    const fixture = setup();
+    const el: HTMLElement = fixture.nativeElement;
+    const cmp = fixture.componentInstance as unknown as {
+      showNewPrompt: { set: (v: boolean) => void };
+      name: { set: (v: string) => void } & (() => string);
+    };
+    cmp.showNewPrompt.set(true);
+    fixture.detectChanges();
+    cmp.name.set('Half-typed');
+
+    const form = el.querySelector('[data-testid="create-prompt"]')!.closest('form')!;
+    form.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-testid="create-prompt"]')).toBeNull();
+    expect(cmp.name()).toBe('');
+  });
 });

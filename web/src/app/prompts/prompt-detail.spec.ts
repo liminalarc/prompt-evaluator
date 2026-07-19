@@ -292,6 +292,69 @@ describe('PromptDetail (unified workspace)', () => {
     expect(cmp.content()).toBe('Summarize: {input}'); // pre-filled from v1 to edit, not paste
   });
 
+  // 2.11 — Cancel on the reveal/expand surfaces (add-version, create-dataset, edit-label, run).
+  it('cancels the add-version form, discarding seeded/typed content and collapsing it [2.11]', () => {
+    const fixture = setup();
+    const el: HTMLElement = fixture.nativeElement;
+    const cmp = fixture.componentInstance as unknown as {
+      toggleAddVersion: () => void;
+      cancelAddVersion: () => void;
+      content: () => string;
+      label: { set: (v: string) => void } & (() => string);
+      showAddVersion: () => boolean;
+    };
+    cmp.toggleAddVersion(); // opens + seeds content from the latest version (U11)
+    fixture.detectChanges();
+    expect(cmp.content()).toBe('Summarize: {input}');
+    cmp.label.set('wip');
+
+    // Cancel is paired with the submit.
+    expect(el.querySelector('[data-testid="cancel-add-version"]')).not.toBeNull();
+
+    cmp.cancelAddVersion();
+    fixture.detectChanges();
+    expect(cmp.showAddVersion()).toBe(false);
+    expect(cmp.content()).toBe('');
+    expect(cmp.label()).toBe('');
+    expect(el.querySelector('[data-testid="add-version"]')).toBeNull(); // collapsed
+  });
+
+  it('cancels an open version-label editor, collapsing the row [2.11]', () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance as unknown as {
+      toggleVersion: (id: string) => void;
+      cancelEditLabel: () => void;
+      expandedVersionId: () => string | null;
+    };
+    cmp.toggleVersion('v1');
+    fixture.detectChanges();
+    expect(cmp.expandedVersionId()).toBe('v1');
+    expect(fixture.nativeElement.querySelector('[data-testid="cancel-edit-label"]')).not.toBeNull();
+
+    cmp.cancelEditLabel();
+    fixture.detectChanges();
+    expect(cmp.expandedVersionId()).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="version-detail"]')).toBeNull();
+  });
+
+  it('cancels the create-dataset form, clearing input without a POST [2.11]', () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance as unknown as {
+      showCreateDataset: { set: (v: boolean) => void } & (() => boolean);
+      datasetName: { set: (v: string) => void } & (() => string);
+      cancelCreateDataset: () => void;
+    };
+    cmp.showCreateDataset.set(true);
+    fixture.detectChanges();
+    cmp.datasetName.set('Scratch');
+    cmp.cancelCreateDataset();
+    fixture.detectChanges();
+
+    expect(cmp.showCreateDataset()).toBe(false);
+    expect(cmp.datasetName()).toBe('');
+    httpMock.expectNone('/api/prompts/p1/datasets'); // beyond the initial load, nothing persisted
+  });
+
   it('loads analytics for a selected dataset', () => {
     const fixture = setup();
     const select: HTMLSelectElement = fixture.nativeElement.querySelector(
