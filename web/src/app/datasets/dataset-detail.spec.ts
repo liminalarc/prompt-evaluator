@@ -208,6 +208,31 @@ describe('DatasetDetail run form + scorer config', () => {
     expect(field.tagName).toBe('TEXTAREA');
   });
 
+  it('renders the LlmJudge rubric through the markdown editor, Regex stays plain [2.10]', () => {
+    const fixture = render();
+    const cmp = fixture.componentInstance as unknown as {
+      showAddScorer: { set: (v: boolean) => void };
+      scorerKind: { set: (v: string) => void };
+    };
+    cmp.showAddScorer.set(true);
+    cmp.scorerKind.set('LlmJudge');
+    fixture.detectChanges();
+    // The rubric is markdown-bearing → markdown editor with an Edit/Preview toggle.
+    const editor = fixture.nativeElement.querySelector('app-markdown-editor');
+    expect(editor).not.toBeNull();
+    expect(editor.querySelector('[data-testid="md-preview-tab"]')).not.toBeNull();
+    // Its source textarea keeps the scorer-config testid.
+    expect(editor.querySelector('[data-testid="scorer-config"]').tagName).toBe('TEXTAREA');
+
+    // A Regex config is a pattern, not prose → stays a plain textarea (no editor).
+    cmp.scorerKind.set('Regex');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-markdown-editor')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="scorer-config"]').tagName).toBe(
+      'TEXTAREA',
+    );
+  });
+
   it('disables Add scorer until required config is supplied for Regex/JsonSchema [B5]', () => {
     const fixture = render();
     const cmp = fixture.componentInstance as unknown as {

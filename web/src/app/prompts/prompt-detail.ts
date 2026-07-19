@@ -21,6 +21,7 @@ import {
   EmptyState,
   ErrorState,
   LoadingState,
+  MarkdownEditor,
   PageHeader,
   runFailureMessage,
 } from '../shared';
@@ -42,6 +43,7 @@ import { validateImportFile } from './import-file';
     EmptyState,
     ErrorState,
     LoadingState,
+    MarkdownEditor,
     PageHeader,
   ],
   template: `
@@ -175,13 +177,13 @@ import { validateImportFile } from './import-file';
               </div>
               <div class="sb-field">
                 <label for="content">Content</label>
-                <textarea
-                  id="content"
+                <app-markdown-editor
+                  inputId="content"
                   name="content"
-                  rows="4"
-                  [ngModel]="content()"
-                  (ngModelChange)="content.set($event)"
-                ></textarea>
+                  [rows]="8"
+                  [value]="content()"
+                  (valueChange)="content.set($event)"
+                />
               </div>
               <div class="sb-field">
                 <label for="targetModel">Target model</label>

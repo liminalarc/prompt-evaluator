@@ -18,6 +18,7 @@ import {
   EmptyState,
   ErrorState,
   LoadingState,
+  MarkdownEditor,
   PageHeader,
   StatusBadge,
   originBadge,
@@ -40,6 +41,7 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
     EmptyState,
     ErrorState,
     LoadingState,
+    MarkdownEditor,
     PageHeader,
     StatusBadge,
   ],
@@ -399,14 +401,24 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                           </div>
                           <div class="sb-field">
                             <label [attr.for]="'econfig-' + s.id">{{ editConfigLabel() }}</label>
-                            <textarea
-                              [attr.id]="'econfig-' + s.id"
-                              rows="3"
-                              [ngModel]="editScorerConfig()"
-                              (ngModelChange)="editScorerConfig.set($event)"
-                              [ngModelOptions]="{ standalone: true }"
-                              data-testid="edit-scorer-config"
-                            ></textarea>
+                            @if (editIsJudge()) {
+                              <app-markdown-editor
+                                [inputId]="'econfig-' + s.id"
+                                [rows]="6"
+                                testid="edit-scorer-config"
+                                [value]="editScorerConfig()"
+                                (valueChange)="editScorerConfig.set($event)"
+                              />
+                            } @else {
+                              <textarea
+                                [attr.id]="'econfig-' + s.id"
+                                rows="3"
+                                [ngModel]="editScorerConfig()"
+                                (ngModelChange)="editScorerConfig.set($event)"
+                                [ngModelOptions]="{ standalone: true }"
+                                data-testid="edit-scorer-config"
+                              ></textarea>
+                            }
                           </div>
                           @if (editIsJudge()) {
                             <div class="sb-field">
@@ -483,14 +495,27 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
               </div>
               <div class="sb-field">
                 <label for="scorerConfig">{{ configLabel() }}</label>
-                <textarea
-                  id="scorerConfig"
-                  name="scorerConfig"
-                  rows="3"
-                  [ngModel]="scorerConfig()"
-                  (ngModelChange)="scorerConfig.set($event)"
-                  data-testid="scorer-config"
-                ></textarea>
+                <!-- The LlmJudge rubric is markdown-bearing → the markdown editor (2.10). Regex /
+                     JsonSchema configs are patterns/schemas, not prose, so they stay plain. -->
+                @if (isJudge()) {
+                  <app-markdown-editor
+                    inputId="scorerConfig"
+                    name="scorerConfig"
+                    [rows]="6"
+                    testid="scorer-config"
+                    [value]="scorerConfig()"
+                    (valueChange)="scorerConfig.set($event)"
+                  />
+                } @else {
+                  <textarea
+                    id="scorerConfig"
+                    name="scorerConfig"
+                    rows="3"
+                    [ngModel]="scorerConfig()"
+                    (ngModelChange)="scorerConfig.set($event)"
+                    data-testid="scorer-config"
+                  ></textarea>
+                }
               </div>
               @if (isJudge()) {
                 <div class="sb-field">

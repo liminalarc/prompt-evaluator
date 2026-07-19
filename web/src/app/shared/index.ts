@@ -13,3 +13,4 @@ export { ThemeService, type Theme } from './theme.service';
 export { VersionService, type VersionInfo } from './version.service';
 export { passBadge, originBadge, type BadgeVariant, type BadgeSpec } from './status';
 export { serverError, runFailureMessage } from './server-error';
+export { MarkdownEditor } from './markdown-editor';

@@ -385,6 +385,31 @@ describe('PromptDetail (unified workspace)', () => {
     httpMock.expectNone('/api/prompts/p1/datasets'); // beyond the initial load, nothing persisted
   });
 
+  it('edits Content through the markdown editor on add-version, but not in-place [2.10]', () => {
+    const fixture = setup();
+    const el: HTMLElement = fixture.nativeElement;
+    const cmp = fixture.componentInstance as unknown as {
+      toggleVersion: (id: string) => void;
+      toggleAddVersion: () => void;
+    };
+
+    // An existing version's content is immutable — shown in a <pre>, never an editor.
+    cmp.toggleVersion('v1');
+    fixture.detectChanges();
+    const detail = el.querySelector('[data-testid="version-detail"]')!;
+    expect(detail.querySelector('.version-content')).not.toBeNull(); // read-only <pre>
+    expect(detail.querySelector('app-markdown-editor')).toBeNull(); // not editable in place
+
+    // The markdown editor only appears on the add-version (new-version) path.
+    cmp.toggleVersion('v1'); // collapse
+    cmp.toggleAddVersion();
+    fixture.detectChanges();
+    const editor = el.querySelector('app-markdown-editor');
+    expect(editor).not.toBeNull();
+    // Its source textarea keeps the #content id so import/e2e fills still target it.
+    expect(editor!.querySelector('textarea#content')).not.toBeNull();
+  });
+
   it('loads analytics for a selected dataset', () => {
     const fixture = setup();
     const select: HTMLSelectElement = fixture.nativeElement.querySelector(
