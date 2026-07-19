@@ -377,7 +377,9 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                     data-testid="scorer-row"
                   >
                     <td><app-chip [label]="s.kind" /></td>
-                    <td>{{ s.config || '—' }}</td>
+                    <td class="config-cell" [attr.title]="s.config">
+                      {{ configSummary(s.config) }}
+                    </td>
                     <td>
                       @if (s.judgeModel; as m) {
                         <app-chip [label]="m" />
@@ -688,6 +690,15 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
       .scorer-row--open {
         background: var(--sb-surface-raised);
       }
+      /* W20: the CONFIG cell shows a one-line summary (a full rubric would be a wall of text);
+         the row expands to reveal + edit the full config. */
+      .config-cell {
+        color: var(--sb-text-muted);
+        max-width: 30rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
       .score-hint {
         color: var(--sb-text-muted);
         font-size: var(--sb-type-small-size);
@@ -816,6 +827,14 @@ export class DatasetDetail implements OnInit {
     if (this.isJudge()) return 'Rubric';
     return this.requiresConfig() ? 'Config (required)' : 'Config (optional)';
   });
+
+  // W20: a scannable one-line summary of a scorer's config for the table cell — a full LlmJudge
+  // rubric is a wall of text, so collapse whitespace and truncate. The row expands to the full text.
+  protected configSummary(config: string | null): string {
+    if (!config) return '—';
+    const oneLine = config.replace(/\s+/g, ' ').trim();
+    return oneLine.length > 60 ? oneLine.slice(0, 60) + '…' : oneLine;
+  }
 
   // Same validation/labelling for the inline scorer edit form (U9).
   protected readonly editIsJudge = computed(() => this.editScorerKind() === 'LlmJudge');

@@ -530,6 +530,9 @@ import { validateImportFile } from './import-file';
         background: var(--sb-surface-raised);
         border-radius: var(--sb-radius-sm);
         font-size: var(--sb-type-small-size);
+        /* W4: a long version body must not dominate the page — cap it and scroll internally. */
+        max-height: 22rem;
+        overflow: auto;
       }
       .model-warn {
         margin: var(--sb-space-xs) 0 0;

@@ -5,6 +5,53 @@ export interface DiffLine {
   text: string;
 }
 
+/** A collapsed run of unchanged (context) lines far from any change — the lines are kept so the
+ *  UI can reveal them on demand (2.19 W8). */
+export interface DiffGap {
+  kind: 'gap';
+  count: number;
+  lines: DiffLine[];
+}
+
+/** A row in a collapsed diff: either a real diff line or a collapsible gap of unchanged lines. */
+export type DiffRow = DiffLine | DiffGap;
+
+/**
+ * GitHub-style collapse of a line diff (2.19 W8): runs of unchanged context far from any change
+ * fold into a single gap, so a small edit in a long prompt no longer forces scrolling the entire
+ * identical body. Context within `radius` lines of a change stays visible; the rest collapses. A
+ * fully-unchanged diff collapses to one gap. The hidden lines ride along so the UI can reveal them.
+ */
+export function collapseUnchanged(lines: DiffLine[], radius = 3): DiffRow[] {
+  // A context line is "near" a change if it's within `radius` lines of any add/remove.
+  const near = new Array<boolean>(lines.length).fill(false);
+  for (let k = 0; k < lines.length; k++) {
+    if (lines[k].kind !== 'context') {
+      for (let d = -radius; d <= radius; d++) {
+        const idx = k + d;
+        if (idx >= 0 && idx < lines.length) near[idx] = true;
+      }
+    }
+  }
+
+  const rows: DiffRow[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (lines[i].kind === 'context' && !near[i]) {
+      const run: DiffLine[] = [];
+      while (i < lines.length && lines[i].kind === 'context' && !near[i]) {
+        run.push(lines[i]);
+        i++;
+      }
+      rows.push({ kind: 'gap', count: run.length, lines: run });
+    } else {
+      rows.push(lines[i]);
+      i++;
+    }
+  }
+  return rows;
+}
+
 /**
  * Line-level diff of two prompt versions via a longest-common-subsequence backtrace.
  * Registry content is immutable, so this is purely a browsing affordance — no diff library.
