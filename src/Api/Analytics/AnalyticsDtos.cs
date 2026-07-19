@@ -68,3 +68,32 @@ public sealed record VersionComparisonResponse(
         c.ToVersionId, c.ToVersionNumber, c.ToVersionLabel, c.ToRunId,
         c.Scorers.Select(ScorerComparisonResponse.From).ToList());
 }
+
+// ---- Variance (score stability over repeated runs — 2.14) ----
+
+public sealed record VarianceStatResponse(double Mean, double StdDev, int SampleCount, double Min, double Max)
+{
+    public static VarianceStatResponse From(VarianceStat s) =>
+        new(s.Mean, s.StdDev, s.SampleCount, s.Min, s.Max);
+}
+
+public sealed record FixtureVarianceResponse(Guid FixtureId, VarianceStatResponse Value)
+{
+    public static FixtureVarianceResponse From(FixtureVariance f) =>
+        new(f.FixtureId, VarianceStatResponse.From(f.Value));
+}
+
+public sealed record VersionVarianceResponse(
+    Guid PromptVersionId, int VersionNumber, string? VersionLabel, int RunCount,
+    VarianceStatResponse Aggregate, IReadOnlyList<FixtureVarianceResponse> Fixtures)
+{
+    public static VersionVarianceResponse From(VersionVariance v) => new(
+        v.PromptVersionId, v.VersionNumber, v.VersionLabel, v.RunCount,
+        VarianceStatResponse.From(v.Aggregate), v.Fixtures.Select(FixtureVarianceResponse.From).ToList());
+}
+
+public sealed record ScorerVarianceResponse(ScorerRefResponse Scorer, IReadOnlyList<VersionVarianceResponse> Versions)
+{
+    public static ScorerVarianceResponse From(ScorerVariance s) => new(
+        ScorerRefResponse.From(s.Scorer), s.Versions.Select(VersionVarianceResponse.From).ToList());
+}

@@ -76,6 +76,7 @@ builder.Services.AddScoped<RunEvaluationHandler>();
 builder.Services.AddScoped<TrendAnalyticsHandler>();
 builder.Services.AddScoped<RegressionAnalyticsHandler>();
 builder.Services.AddScoped<ComparisonAnalyticsHandler>();
+builder.Services.AddScoped<VarianceAnalyticsHandler>();
 builder.Services.AddSingleton<RegressionDetector>();
 builder.Services.AddSingleton<FixtureRedactor>();
 

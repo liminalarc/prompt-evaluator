@@ -75,6 +75,10 @@ public sealed class AnalyticsEndpointTests : IAsyncLifetime
     private sealed record FixtureDeltaDto(Guid FixtureId, double? FromValue, double? ToValue, double? Delta);
     private sealed record ScorerComparisonDto(ScorerRefDto Scorer, double? FromMean, double? ToMean, double? Delta, List<FixtureDeltaDto> Fixtures);
     private sealed record ComparisonDto(int FromVersionNumber, int ToVersionNumber, List<ScorerComparisonDto> Scorers);
+    private sealed record VarianceStatDto(double Mean, double StdDev, int SampleCount, double Min, double Max);
+    private sealed record FixtureVarianceDto(Guid FixtureId, VarianceStatDto Value);
+    private sealed record VersionVarianceDto(Guid PromptVersionId, int VersionNumber, int RunCount, VarianceStatDto Aggregate, List<FixtureVarianceDto> Fixtures);
+    private sealed record ScorerVarianceDto(ScorerRefDto Scorer, List<VersionVarianceDto> Versions);
 
     // Seeds a prompt with two versions (v1 "good", v2 "bad"), a dataset with `fixtureCount`
     // fixtures, an LLM-judge scorer, and one run per version. Returns the ids.
@@ -183,6 +187,35 @@ public sealed class AnalyticsEndpointTests : IAsyncLifetime
         Assert.Equal(-0.4, sc.Delta!.Value, 3);
         Assert.Equal(4, sc.Fixtures.Count);
         Assert.All(sc.Fixtures, f => Assert.Equal(-0.4, f.Delta!.Value, 3));
+    }
+
+    [Fact]
+    public async Task Variance_aggregates_all_runs_of_a_version_not_just_the_latest()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync();
+        var (promptId, v1, _, datasetId) = await SeedTwoVersionsAsync(client);
+        // Re-run v1: variance must aggregate BOTH runs (trends would keep only the latest).
+        await client.PostAsJsonAsync($"/api/datasets/{datasetId}/eval-runs", new { promptId, promptVersionId = v1 });
+
+        var series = await client.GetFromJsonAsync<List<ScorerVarianceDto>>(
+            $"/api/analytics/variance?promptId={promptId}&datasetId={datasetId}");
+
+        var s = Assert.Single(series!);
+        var v1Var = s.Versions.Single(v => v.VersionNumber == 1);
+        Assert.Equal(2, v1Var.RunCount); // both runs aggregated
+        // The stub judge is deterministic, so the mean holds and the spread is zero — the endpoint's
+        // job here is proving it aggregates repeats; non-zero-spread math is covered by unit tests.
+        Assert.Equal(0.9, v1Var.Aggregate.Mean, 3);
+        Assert.Equal(0.0, v1Var.Aggregate.StdDev, 3);
+        Assert.Equal(4, v1Var.Fixtures.Count);
+    }
+
+    [Fact]
+    public async Task Variance_for_an_unknown_prompt_is_404()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync();
+        var res = await client.GetAsync($"/api/analytics/variance?promptId={Guid.NewGuid()}&datasetId={Guid.NewGuid()}");
+        Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
     }
 
     [Fact]

@@ -34,6 +34,18 @@ public static class AnalyticsEndpoints
                     : Results.Ok(flags.Select(RegressionFlagResponse.From));
             });
 
+        // Score stability: mean ± spread over a version's repeated runs, per scorer (2.14).
+        group.MapGet("/variance",
+            async (Guid promptId, Guid datasetId, VarianceAnalyticsHandler handler, OrgAccess access, CancellationToken ct) =>
+            {
+                if (await GateAsync(access, promptId, datasetId, ct) is { } problem)
+                    return problem;
+                var series = await handler.HandleAsync(promptId, datasetId, ct);
+                return series is null
+                    ? Results.NotFound()
+                    : Results.Ok(series.Select(ScorerVarianceResponse.From));
+            });
+
         // Version-vs-version comparison: per-fixture + aggregate deltas per scorer.
         group.MapGet("/comparison",
             async (Guid promptId, Guid datasetId, Guid fromVersionId, Guid toVersionId,
