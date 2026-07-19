@@ -92,12 +92,26 @@ public sealed class ModelsEndpointTests : IAsyncLifetime
         Assert.Equal(25m, opus.OutputPricePerMTokUsd);
         Assert.True(opus.IsActive);
 
-        // All five seeded models are present, across both providers.
+        // All eight seeded models are present, across both providers.
         var ids = models!.Select(m => m.ModelId).ToList();
         Assert.Contains("claude-sonnet-5", ids);
         Assert.Contains("claude-haiku-4-5", ids);
         Assert.Contains("gpt-4o", ids);
         Assert.Contains("gpt-4o-mini", ids);
+
+        // 1.19 — current Anthropic models added for onboarding fidelity (Golf runs Sonnet 4.6).
+        Assert.Contains("claude-sonnet-4-6", ids);
+        Assert.Contains("claude-opus-4-7", ids);
+        Assert.Contains("claude-opus-4-6", ids);
+
+        // Sonnet 4.6 is Anthropic, all roles, active, priced.
+        var sonnet46 = Assert.Single(models!, m => m.ModelId == "claude-sonnet-4-6");
+        Assert.Equal("Claude Sonnet 4.6", sonnet46.DisplayName);
+        Assert.Equal("Anthropic", sonnet46.Provider);
+        Assert.Equal(new[] { "subject", "judge", "generator" }, sonnet46.Roles);
+        Assert.Equal(3m, sonnet46.InputPricePerMTokUsd);
+        Assert.Equal(15m, sonnet46.OutputPricePerMTokUsd);
+        Assert.True(sonnet46.IsActive);
     }
 
     [Fact]
