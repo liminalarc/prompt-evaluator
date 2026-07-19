@@ -187,6 +187,11 @@
   align-items: start;
 }
 
+/* Collapsed rail — a slim strip of org initials, reclaiming the horizontal space (W39). */
+.shell--rail-collapsed {
+  grid-template-columns: 3.25rem minmax(0, 1fr);
+}
+
 .shell__rail {
   position: sticky;
   top: 0;

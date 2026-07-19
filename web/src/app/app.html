@@ -101,9 +101,9 @@
 <!-- W39: a persistent left org rail beside the routed content once signed in — you see every org
      you can access and switch with one click (single active at a time). Signed-out stays centered. -->
 @if (auth.isAuthenticated()) {
-  <div class="shell">
+  <div class="shell" [class.shell--rail-collapsed]="railCollapsed()">
     <aside class="shell__rail">
-      <app-org-rail />
+      <app-org-rail [collapsed]="railCollapsed()" (toggleCollapsed)="toggleRail()" />
     </aside>
     <main class="shell__content">
       <router-outlet />

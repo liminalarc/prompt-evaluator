@@ -1,4 +1,12 @@
-import { Component, ElementRef, HostListener, effect, inject, viewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from './auth/auth.service';
 import { OrgContextStore } from './shared/org-context.store';
@@ -16,6 +24,28 @@ export class App {
   protected readonly theme = inject(ThemeService);
   protected readonly version = inject(VersionService);
   private readonly router = inject(Router);
+
+  // W39: the org rail collapses to reclaim horizontal real estate; the choice persists across reloads.
+  private static readonly RAIL_KEY = 'litmus.railCollapsed';
+  protected readonly railCollapsed = signal(this.readRailCollapsed());
+
+  protected toggleRail(): void {
+    const next = !this.railCollapsed();
+    this.railCollapsed.set(next);
+    try {
+      localStorage.setItem(App.RAIL_KEY, next ? '1' : '0');
+    } catch {
+      /* localStorage unavailable — in-memory toggle still applies */
+    }
+  }
+
+  private readRailCollapsed(): boolean {
+    try {
+      return localStorage.getItem(App.RAIL_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
 
   /** The Admin disclosure (a native <details>); referenced so we can auto-close it. */
   private readonly adminMenu = viewChild<ElementRef<HTMLDetailsElement>>('adminMenu');
