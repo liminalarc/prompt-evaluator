@@ -281,6 +281,36 @@ describe('PromptDetail (unified workspace)', () => {
     httpMock.expectOne('/api/prompts/p1').flush(prompt); // reload
   });
 
+  it('defaults the add-version Target model to the latest version model, holding it [R5]', () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance as unknown as {
+      toggleAddVersion: () => void;
+      targetModel: () => string;
+      targetModelChanged: () => boolean;
+    };
+    cmp.toggleAddVersion();
+    fixture.detectChanges();
+    expect(cmp.targetModel()).toBe('legacy-model-x'); // v1's model — held by default
+    expect(cmp.targetModelChanged()).toBe(false);
+    expect(fixture.nativeElement.querySelector('[data-testid="model-change-warning"]')).toBeNull();
+  });
+
+  it('warns when a new version changes the subject model [R5]', () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance as unknown as {
+      toggleAddVersion: () => void;
+      targetModel: { set: (v: string) => void } & (() => string);
+      targetModelChanged: () => boolean;
+    };
+    cmp.toggleAddVersion();
+    cmp.targetModel.set('claude-sonnet-5'); // differs from v1's legacy-model-x
+    fixture.detectChanges();
+    expect(cmp.targetModelChanged()).toBe(true);
+    const warn = fixture.nativeElement.querySelector('[data-testid="model-change-warning"]');
+    expect(warn).not.toBeNull();
+    expect(warn.textContent).toContain('legacy-model-x'); // names the held (prior) model
+  });
+
   it('seeds the new-version form content from the latest version [U11]', () => {
     const fixture = setup();
     const cmp = fixture.componentInstance as unknown as {

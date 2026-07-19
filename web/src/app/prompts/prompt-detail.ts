@@ -197,6 +197,14 @@ import { validateImportFile } from './import-file';
                     </option>
                   }
                 </select>
+                @if (targetModelChanged()) {
+                  <p class="model-warn" data-testid="model-change-warning">
+                    ⚠ This changes the subject model from the last version ({{
+                      modelDisplay(latestVersionModel())
+                    }}). Holding the model constant keeps a version-over-version comparison about
+                    the <em>prompt</em>, not a model swap — change it only on purpose.
+                  </p>
+                }
               </div>
               <div class="sb-field">
                 <label for="label">Label (optional description)</label>
@@ -526,6 +534,11 @@ import { validateImportFile } from './import-file';
         border-radius: var(--sb-radius-sm);
         font-size: var(--sb-type-small-size);
       }
+      .model-warn {
+        margin: var(--sb-space-xs) 0 0;
+        font-size: var(--sb-type-small-size);
+        color: var(--sb-warning-text, var(--sb-text-secondary));
+      }
     `,
   ],
 })
@@ -561,6 +574,22 @@ export class PromptDetail implements OnInit {
   protected readonly subjectModels = computed(() =>
     this.models().filter((m) => m.roles.includes('subject')),
   );
+
+  // R5 — hold the subject model constant across versions. The latest version's model is the default
+  // for a new version (holding it is the default, not a thing to remember); a change is warned so a
+  // silent model drift can't confound a prompt-vs-prompt comparison.
+  protected readonly latestVersionModel = computed<string | null>(() => {
+    const versions = this.prompt()?.versions ?? [];
+    return versions.length ? versions[versions.length - 1].targetModel : null;
+  });
+  protected readonly targetModelChanged = computed(() => {
+    const latest = this.latestVersionModel();
+    return !!latest && this.targetModel() !== latest;
+  });
+  protected modelDisplay(modelId: string | null): string {
+    if (!modelId) return '';
+    return this.models().find((m) => m.modelId === modelId)?.displayName ?? modelId;
+  }
 
   // Progressive disclosure: the version history + datasets stay visible; the create forms reveal.
   protected readonly showAddVersion = signal(false);
@@ -755,6 +784,11 @@ export class PromptDetail implements OnInit {
     if (latest && !this.content().trim()) {
       this.content.set(latest.content);
     }
+    // R5: default the Target model to the latest version's model — holding the subject model
+    // constant is the default, so a version-over-version comparison isn't confounded by a model swap.
+    if (latest) {
+      this.targetModel.set(latest.targetModel);
+    }
   }
 
   protected addVersion(event: Event): void {
@@ -789,6 +823,9 @@ export class PromptDetail implements OnInit {
     this.showAddVersion.set(false);
     this.content.set('');
     this.label.set('');
+    // Discard any model change back to the held default (R5).
+    const latest = this.latestVersionModel();
+    if (latest) this.targetModel.set(latest);
   }
 
   protected cancelEditLabel(): void {

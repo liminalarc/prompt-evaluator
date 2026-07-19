@@ -216,6 +216,13 @@ import { BadgeVariant, Card, EmptyState, ErrorState, PageHeader, StatusBadge } f
                   </select>
                 </div>
               </form>
+              @if (crossModelCompare(); as cm) {
+                <p class="cross-model-warn" data-testid="cross-model-warning">
+                  ⚠ These versions ran on different subject models ({{ cm.from }} vs {{ cm.to }}). A
+                  score delta here mixes the prompt change with a model change — hold the subject
+                  model constant to compare the prompt cleanly.
+                </p>
+              }
               <app-version-comparison [comparison]="comparison()" />
             }
           </app-card>
@@ -266,6 +273,18 @@ export class AnalyticsDashboard {
   protected readonly fromVersionId = signal<string | null>(null);
   protected readonly toVersionId = signal<string | null>(null);
   protected readonly comparison = signal<VersionComparisonData | null>(null);
+
+  // R5: flag a cross-model comparison. If the two selected versions ran on different subject models,
+  // a score delta mixes the prompt change with a model change — you can't cleanly attribute it to
+  // the prompt. Sibling to holding the model on add-version and to 1.16's same-scorer-config rule.
+  protected readonly crossModelCompare = computed<{ from: string; to: string } | null>(() => {
+    const from = this.versions().find((v) => v.id === this.fromVersionId());
+    const to = this.versions().find((v) => v.id === this.toVersionId());
+    if (!from || !to || from.id === to.id) return null;
+    return from.targetModel !== to.targetModel
+      ? { from: from.targetModel, to: to.targetModel }
+      : null;
+  });
 
   constructor() {
     // Reload the org's prompts + datasets whenever the global org changes; clear the selection

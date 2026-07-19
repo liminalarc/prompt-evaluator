@@ -26,3 +26,15 @@
   color: var(--sb-warning);
   font-size: var(--sb-type-small-size);
 }
+
+/* R5 — cross-model comparison flag: the two versions ran on different subject models, so the score
+   delta confounds prompt vs model. Muted brand warning treatment, consistent with `.unverified`. */
+.cross-model-warn {
+  margin: 0 0 var(--sb-space-md);
+  padding: var(--sb-space-sm) var(--sb-space-md);
+  border: 1px solid var(--sb-warning);
+  border-radius: var(--sb-radius-md);
+  background: var(--sb-warning-surface);
+  color: var(--sb-warning);
+  font-size: var(--sb-type-small-size);
+}

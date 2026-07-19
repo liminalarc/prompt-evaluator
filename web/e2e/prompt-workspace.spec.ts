@@ -34,6 +34,18 @@ test('a prompt workspace shows its versions, datasets, and analytics together', 
   await page.getByTestId('add-version').click();
   await expect(page.getByTestId('versions')).toContainText('claude-sonnet-5');
 
+  // R5 — a new version defaults its Target model to the last version's (holds it), and warns on a
+  // change. Re-open add-version: the select is pre-set to v1's model, no warning yet.
+  await page.getByTestId('toggle-add-version').click();
+  await expect(page.locator('#targetModel')).toHaveValue('claude-sonnet-5');
+  await expect(page.getByTestId('model-change-warning')).toHaveCount(0);
+  // Switch the subject model → the drift warning appears; switch back → it clears.
+  await page.selectOption('#targetModel', 'claude-opus-4-8');
+  await expect(page.getByTestId('model-change-warning')).toBeVisible();
+  await page.selectOption('#targetModel', 'claude-sonnet-5');
+  await expect(page.getByTestId('model-change-warning')).toHaveCount(0);
+  await page.getByTestId('cancel-add-version').click();
+
   // Datasets live here too — create one under the prompt.
   await page.getByTestId('toggle-create-dataset').click();
   await page.fill('#datasetName', datasetName);

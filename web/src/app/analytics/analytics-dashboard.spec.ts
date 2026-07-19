@@ -124,7 +124,9 @@ describe('AnalyticsDashboard', () => {
     fixture.detectChanges();
 
     const options = Array.from(
-      (fixture.nativeElement as HTMLElement).querySelectorAll('[data-testid="dataset-select"] option'),
+      (fixture.nativeElement as HTMLElement).querySelectorAll(
+        '[data-testid="dataset-select"] option',
+      ),
     ).map((o) => o.textContent?.trim());
     // Only p1's dataset is offered; p2's dataset must not leak in.
     expect(options).toContain('Summaries');
@@ -270,6 +272,68 @@ describe('AnalyticsDashboard', () => {
     const rows = el.querySelectorAll('[data-testid="regression-unverified-row"]');
     expect(rows.length).toBe(1);
     expect(rows[0].textContent).toContain('v1 → v2');
+  });
+
+  it('flags a cross-model comparison when the two versions ran on different subject models [R5]', () => {
+    const fixture = createAndLoadLists();
+    const cmp = fixture.componentInstance as unknown as {
+      datasetId: { set(v: string): void };
+      selectPrompt(id: string): void;
+    };
+    cmp.datasetId.set('d1');
+    cmp.selectPrompt('p1');
+    fixture.detectChanges();
+
+    // v1 ran on Sonnet 4.6, v2 on Sonnet 5 — the classic round-debrief drift.
+    http.expectOne('/api/prompts/p1').flush({
+      id: 'p1',
+      name: 'Summarizer',
+      description: null,
+      versions: [
+        {
+          id: 'v1',
+          versionNumber: 1,
+          content: '',
+          targetModel: 'claude-sonnet-4-6',
+          label: null,
+          sourceApp: null,
+          createdAt: '',
+        },
+        {
+          id: 'v2',
+          versionNumber: 2,
+          content: '',
+          targetModel: 'claude-sonnet-5',
+          label: null,
+          sourceApp: null,
+          createdAt: '',
+        },
+      ],
+    });
+    fixture.detectChanges();
+
+    http.expectOne((r) => r.url === '/api/analytics/trends').flush([]);
+    http.expectOne((r) => r.url === '/api/analytics/regressions').flush([]);
+    http
+      .expectOne((r) => r.url === '/api/analytics/comparison')
+      .flush({
+        fromVersionId: 'v1',
+        fromVersionNumber: 1,
+        fromVersionLabel: null,
+        fromRunId: 'r1',
+        toVersionId: 'v2',
+        toVersionNumber: 2,
+        toVersionLabel: null,
+        toRunId: 'r2',
+        scorers: [],
+      });
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const warn = el.querySelector('[data-testid="cross-model-warning"]');
+    expect(warn).toBeTruthy();
+    expect(warn!.textContent).toContain('claude-sonnet-4-6');
+    expect(warn!.textContent).toContain('claude-sonnet-5');
   });
 
   it('shows a clean state when there are no regressions', () => {
