@@ -26,7 +26,6 @@
 - **2.15** Structured, severity-tagged LLM-judge verdicts (per-criterion + failure-mode) — `NOT STARTED` — [detail](specs/2.15.md)
 - **2.16** Data-conditional / per-fixture rubric scoring — `NOT STARTED` — [detail](specs/2.16.md)
 - **2.17** Asynchronous eval runs (job + poll) — `NOT STARTED` — [detail](specs/2.17.md)
-- **2.21** Org lifecycle — deletable Default org, no-org onboarding, and request-to-join access — `IN PROGRESS` — [detail](specs/2.21.md)
 
 ## Phase 3 — Integrations & Ops
 - **3.1** Zatomic-backed Prompt Registry — `NOT STARTED` — [detail](specs/3.1.md)
@@ -38,6 +37,7 @@
 - **5.1** Adopt LitmusAI across Cortex Golf & Stormboard (discover → onboard → improve every prompt) — `IN PROGRESS` — [detail](specs/5.1/5.1.md)
 
 ## Archive
+- **2.21** Org lifecycle — deletable Default org, no-org onboarding, and request-to-join access — `DONE` — [detail](specs/archive/2.21.md)
 - **2.20** Deferred UX polish from the 2.19 cohesion pass (source editors, output height, trend gap, org rail + org tabs) — `DONE` — [detail](specs/archive/2.20.md)
 - **2.19** UI/UX cohesion pass (the app feels disjointed in places) — `DONE` — [detail](specs/archive/2.19.md)
 - **2.18** Eval-loop UX polish (run-failure visibility, run labels, dark-mode dropdown; absorbed into 2.19) — `SUPERSEDED` — [detail](specs/archive/2.18.md)

@@ -37,7 +37,15 @@ improvements. An advisory layer (prompt-engineering advice) comes later.
   list/add-by-email/set-role/remove) — an **owner-or-admin, per-org** gate
   (`OrgAccess.CanManageOrgMembersAsync`) on the member-scoped `/api/organizations/{id}/members`
   endpoints, distinct from 4.4's global-admin-only `/api/admin/organizations`. A last-owner guard
-  keeps every org with ≥1 Owner (a global admin can still override via the 4.4 surface). The
+  keeps every org with ≥1 Owner (a global admin can still override via the 4.4 surface). The **pull
+  counterpart to 4.5's add-by-email push is request-to-join (2.21)**: a user requests access to an org
+  (discovered via the authenticated `GET /api/organizations/directory`), an Owner/admin approves
+  (→ the same grant path) or denies from the org page's **Requests** tab. `OrganizationAccessRequest`
+  lives in the Identity context alongside `OrganizationMembership` (behind `IUserDirectory`), *not*
+  Domain — its rules (no duplicate open request, can't request an org you're in, idempotent approve)
+  hold in the adapter + a partial unique index. The **"Default" org is an ordinary, deletable org**
+  (no auto-assignment on sign-up; a user in zero orgs gets a real create-or-join onboarding); deleting
+  any org revokes its memberships (the Identity context has no cross-context FK cascade). The
   eval-runner authenticates as an **internal trusted service** (shared `X-Service-Token`), never with
   user credentials. Password-reset email is an `IEmailSender` seam (dev logs; real provider at
   deploy — spec 3.2).
