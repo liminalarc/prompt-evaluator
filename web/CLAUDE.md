@@ -131,6 +131,20 @@ The operator-facing UI:
   **type-prefixed** (`Prompt:` / `Dataset:`); `getByRole('heading', { name })` still matches by
   substring, so e2e heading assertions are unaffected.
 
+## Markdown editor (from 2.10)
+
+- **Markdown-bearing fields use the shared `MarkdownEditor`** (`shared/markdown-editor.ts`): a source
+  `<textarea>` + an **Edit ⇄ Preview** toggle. Wired into the version **Content** field and the
+  **LlmJudge Rubric** (add + reconfigure). Regex/JsonSchema scorer configs are patterns/schemas, not
+  prose, so they stay plain textareas — the editor is gated on `isJudge()`/`editIsJudge()`.
+- **Preview is sanitized, XSS-safe by construction:** `marked` renders → `DOMPurify` sanitizes → the
+  string is bound via `[innerHTML]` so **Angular's sanitizer also runs** (defense in depth; no
+  `bypassSecurityTrustHtml`). Never render user markdown any other way.
+- The editor takes `[value]`/`(valueChange)` (not `ngModel`) and forwards `inputId`/`name`/`testid`
+  onto its source textarea, so existing selectors (`#content`, `scorer-config`) and e2e `page.fill`
+  keep working. **Source is authoritative — preview never mutates it**; Content stays
+  immutable-by-add (the editor only appears on add/new-version, never in place).
+
 ## Cancel on reveal/expand forms (from 2.11)
 
 - **Every inline reveal/expand form has a Cancel paired with its submit.** Cancel discards the form's
