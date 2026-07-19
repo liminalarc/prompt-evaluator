@@ -192,6 +192,7 @@ import { validateImportFile } from './import-file';
                   name="targetModel"
                   [ngModel]="targetModel()"
                   (ngModelChange)="targetModel.set($event)"
+                  [ngModelOptions]="{ standalone: true }"
                   data-testid="target-model"
                 >
                   @for (m of subjectModels(); track m.modelId) {

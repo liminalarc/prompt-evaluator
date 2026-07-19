@@ -295,6 +295,28 @@ describe('PromptDetail (unified workspace)', () => {
     expect(fixture.nativeElement.querySelector('[data-testid="model-change-warning"]')).toBeNull();
   });
 
+  it('warns when the target-model SELECT is changed via a DOM change event [R5]', () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance as unknown as {
+      toggleAddVersion: () => void;
+      targetModel: () => string;
+      targetModelChanged: () => boolean;
+    };
+    cmp.toggleAddVersion();
+    fixture.detectChanges();
+    const select = fixture.nativeElement.querySelector(
+      '[data-testid="target-model"]',
+    ) as HTMLSelectElement;
+    select.value = 'claude-sonnet-5'; // an option differing from v1's legacy-model-x
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(cmp.targetModel()).toBe('claude-sonnet-5');
+    expect(cmp.targetModelChanged()).toBe(true);
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="model-change-warning"]'),
+    ).not.toBeNull();
+  });
+
   it('warns when a new version changes the subject model [R5]', () => {
     const fixture = setup();
     const cmp = fixture.componentInstance as unknown as {

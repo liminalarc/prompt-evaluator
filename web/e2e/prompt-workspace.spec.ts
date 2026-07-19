@@ -35,7 +35,9 @@ test('a prompt workspace shows its versions, datasets, and analytics together', 
   await expect(page.getByTestId('versions')).toContainText('claude-sonnet-5');
 
   // R5 — a new version defaults its Target model to the last version's (holds it), and warns on a
-  // change. Re-open add-version: the select is pre-set to v1's model, no warning yet.
+  // change. The add-version form stays open after a submit, so close it then re-open it fresh: it
+  // should default (hold) v1's model, with no warning yet.
+  await page.getByTestId('cancel-add-version').click();
   await page.getByTestId('toggle-add-version').click();
   await expect(page.locator('#targetModel')).toHaveValue('claude-sonnet-5');
   await expect(page.getByTestId('model-change-warning')).toHaveCount(0);
