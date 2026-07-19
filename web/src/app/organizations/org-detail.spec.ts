@@ -22,7 +22,12 @@ describe('OrgDetail (owner-facing member management, spec 4.5)', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter([]),
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map([['id', 'o1']]) } } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { paramMap: new Map([['id', 'o1']]), queryParamMap: new Map() },
+          },
+        },
       ],
     });
     const fixture = TestBed.createComponent(OrgDetail);

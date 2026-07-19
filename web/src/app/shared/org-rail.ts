@@ -122,6 +122,7 @@ import { AuthService } from '../auth/auth.service';
           class="org-rail__manage"
           data-testid="manage-org"
           [routerLink]="['/organizations', orgId]"
+          [queryParams]="{ tab: 'members' }"
           title="Manage members"
           >Manage members</a
         >
