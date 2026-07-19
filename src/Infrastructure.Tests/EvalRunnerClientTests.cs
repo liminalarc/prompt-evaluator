@@ -3,11 +3,35 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Application.Ports;
 using Infrastructure.Http;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Infrastructure.Tests;
 
 public class EvalRunnerClientTests
 {
+    [Fact]
+    public void AddInfrastructure_gives_the_eval_runner_client_a_generous_timeout()
+    {
+        // R1 interim band-aid: a heavy synchronous run (round-debrief — Sonnet generation + Opus
+        // judge per fixture) sits right at the .NET default 100s HttpClient timeout and 502s at the
+        // boundary. Raise the timeout well past it (the real fix is async runs — R1). Assert the
+        // configured typed client carries the generous timeout, never the 100s default.
+        var services = new ServiceCollection();
+        services.AddInfrastructure(
+            "Host=localhost;Database=litmus;Username=u;Password=p",
+            "http://eval-runner:8000");
+        using var provider = services.BuildServiceProvider();
+
+        // A typed client's logical name is TClient.Name — here IEvaluationRunner, not the impl.
+        var client = provider
+            .GetRequiredService<IHttpClientFactory>()
+            .CreateClient(nameof(IEvaluationRunner));
+
+        Assert.True(
+            client.Timeout >= TimeSpan.FromMinutes(5),
+            $"eval-runner HttpClient timeout was {client.Timeout}, expected ≥ 5 min");
+    }
+
     private sealed class StubHandler(Func<HttpRequestMessage, HttpResponseMessage> respond)
         : HttpMessageHandler
     {

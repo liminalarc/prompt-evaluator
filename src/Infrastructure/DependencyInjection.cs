@@ -53,7 +53,14 @@ public static class DependencyInjection
         // service token attached by a DelegatingHandler. When the token is null/empty the handler
         // is a no-op, so dev/CI/test defaults keep working against an open eval-runner.
         services.AddHttpClient<IEvaluationRunner, EvalRunnerClient>(client =>
-                client.BaseAddress = new Uri(evalRunnerBaseUrl))
+            {
+                client.BaseAddress = new Uri(evalRunnerBaseUrl);
+                // R1 interim band-aid: a heavy synchronous run (round-debrief — Sonnet generation +
+                // Opus judge per fixture) sits right at the .NET default 100s HttpClient timeout and
+                // 502s at the boundary. Give it generous headroom until async runs (R1) land. Note:
+                // App Runner's own request router may still cap a truly long run — the real fix is R1.
+                client.Timeout = TimeSpan.FromMinutes(5);
+            })
             .AddHttpMessageHandler(() => new ServiceTokenHandler(evalRunnerServiceToken));
 
         return services;
