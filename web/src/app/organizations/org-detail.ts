@@ -1,7 +1,8 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
+import { OrgContextStore } from '../shared/org-context.store';
 import {
   Breadcrumb,
   Card,
@@ -19,8 +20,9 @@ const ROLES: OrgRole[] = ['Owner', 'Member'];
 type OrgTab = 'overview' | 'members';
 
 /**
- * The owner-facing organization detail page (spec 4.5). Reached at /organizations/:id via the
- * topbar **Manage** link, shown to a member who is the org's Owner (or a global admin). Lists the
+ * The owner-facing organization detail page (spec 4.5, tabbed in 2.20 W40). Reached at
+ * /organizations/:id via the org rail's **settings gear** (on the active org), shown to a member who
+ * is the org's Owner (or a global admin). An Overview tab + a Members tab; the Members tab lists the
  * org's members and lets an owner add (by email), remove, and change roles — scoped to that one org,
  * without the workspace-admin flag (distinct from the 4.4 admin surface). The server enforces
  * owner-or-admin authoritatively; a plain member sees a permission notice and no controls.
@@ -264,6 +266,22 @@ export class OrgDetail implements OnInit {
   private readonly router = inject(Router);
   private readonly api = inject(OrganizationsApiService);
   private readonly auth = inject(AuthService);
+  private readonly orgStore = inject(OrgContextStore);
+
+  constructor() {
+    // Rescope on an org switch from the rail: if the global org changes away from this page's org,
+    // follow it — reload for the newly-selected org instead of getting stuck on the old one (the gear
+    // opens the *active* org, so this keeps the page and the rail selection in lock-step). W40 follow-up.
+    effect(() => {
+      const ctxId = this.orgStore.currentOrgId();
+      const pageId = untracked(() => this.orgId());
+      if (ctxId && pageId && ctxId !== pageId) {
+        this.orgId.set(ctxId);
+        void this.router.navigate(['/organizations', ctxId], { replaceUrl: true });
+        this.loadOrg(ctxId);
+      }
+    });
+  }
 
   protected readonly roles = ROLES;
   protected readonly tabs: { id: OrgTab; label: string }[] = [
@@ -307,7 +325,13 @@ export class OrgDetail implements OnInit {
     this.orgId.set(id);
     const urlTab = this.route.snapshot.queryParamMap.get('tab') as OrgTab | null;
     if (urlTab && this.tabIds.includes(urlTab)) this.tab.set(urlTab);
-    // The member-scoped org list carries the caller's role — resolve the name + role from it.
+    this.loadOrg(id);
+  }
+
+  /** Resolve the org's name + the caller's role (from the member-scoped list), then its members. */
+  private loadOrg(id: string): void {
+    this.loading.set(true);
+    this.error.set(null);
     this.api.listOrganizations().subscribe({
       next: (orgs) => {
         const org = orgs.find((o) => o.id === id);
@@ -318,6 +342,7 @@ export class OrgDetail implements OnInit {
         if (this.canManage()) {
           this.loadMembers();
         } else {
+          this.members.set([]);
           this.loading.set(false);
         }
       },

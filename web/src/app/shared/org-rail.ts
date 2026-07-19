@@ -10,8 +10,8 @@ import { AuthService } from '../auth/auth.service';
  * access, with exactly one active at a time — the single-selection {@link OrgContextStore} model is
  * unchanged; this just replaces the cramped topbar `<select>` with a surface where you can *see* all
  * your orgs at a glance and switch. Selecting rescopes the app in place. Supports a **collapsed**
- * state (initials only) to reclaim horizontal real estate, and creating a new org inline. The current
- * org's Owner (or a workspace admin) also gets a Manage-members link.
+ * state (initials only) to reclaim horizontal real estate, and creating a new org inline. The active
+ * org's Owner (or a workspace admin) gets a settings gear opening that org's Overview · Members page.
  */
 @Component({
   selector: 'app-org-rail',
@@ -54,7 +54,7 @@ import { AuthService } from '../auth/auth.service';
 
       <ul class="org-rail__list">
         @for (o of orgs(); track o.id) {
-          <li>
+          <li class="org-rail__row">
             <button
               type="button"
               class="org-rail__item"
@@ -72,6 +72,19 @@ import { AuthService } from '../auth/auth.service';
                 {{ o.name }}
               }
             </button>
+            <!-- Settings gear on the *active* org (owner/admin only): opens its Overview · Members
+                 page. Only on the active row, so switching context is the row click, managing is the
+                 gear — no ambiguous standalone nav link (W40 follow-up). -->
+            @if (!collapsed() && o.id === currentId() && canManageCurrent()) {
+              <a
+                class="org-rail__gear"
+                data-testid="manage-org"
+                [routerLink]="['/organizations', o.id]"
+                title="Organization settings"
+                aria-label="Organization settings"
+                >⚙</a
+              >
+            }
           </li>
         } @empty {
           @if (!collapsed()) {
@@ -116,17 +129,6 @@ import { AuthService } from '../auth/auth.service';
             <p class="org-rail__error" data-testid="rail-org-error">{{ createError() }}</p>
           }
         </form>
-      }
-
-      @if (!collapsed() && canManageCurrent() && currentId(); as orgId) {
-        <a
-          class="org-rail__manage"
-          data-testid="manage-org"
-          [routerLink]="['/organizations', orgId]"
-          [queryParams]="{ tab: 'members' }"
-          title="Manage members"
-          >Manage members</a
-        >
       }
     </nav>
   `,
@@ -203,9 +205,16 @@ import { AuthService } from '../auth/auth.service';
         gap: 2px;
         width: 100%;
       }
+      /* A row holds the org button (flex-1) and, for the active org, a settings gear. */
+      .org-rail__row {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+      }
       .org-rail__item {
+        flex: 1;
+        min-width: 0;
         display: block;
-        width: 100%;
         text-align: left;
         padding: var(--sb-space-sm) var(--sb-space-md);
         border: 0;
@@ -214,9 +223,28 @@ import { AuthService } from '../auth/auth.service';
         color: var(--sb-text-secondary);
         font-size: var(--sb-type-small-size);
         cursor: pointer;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
         transition:
           background 0.15s ease,
           color 0.15s ease;
+      }
+      .org-rail__gear {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.6rem;
+        height: 1.6rem;
+        border-radius: var(--sb-radius-sm);
+        color: var(--sb-text-muted);
+        text-decoration: none;
+        font-size: 0.9rem;
+      }
+      .org-rail__gear:hover {
+        background: var(--sb-surface-variant);
+        color: var(--sb-text);
       }
       .org-rail__item:hover {
         background: var(--sb-surface-variant);
@@ -256,16 +284,6 @@ import { AuthService } from '../auth/auth.service';
         margin: 0;
         color: var(--sb-error);
         font-size: var(--sb-type-caption-size);
-      }
-      .org-rail__manage {
-        margin-top: var(--sb-space-sm);
-        padding: var(--sb-space-xs) var(--sb-space-md);
-        font-size: var(--sb-type-small-size);
-        color: var(--sb-primary);
-        text-decoration: none;
-      }
-      .org-rail__manage:hover {
-        text-decoration: underline;
       }
       .sr-only {
         position: absolute;
