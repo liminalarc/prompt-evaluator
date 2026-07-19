@@ -1,21 +1,12 @@
-import {
-  Component,
-  ElementRef,
-  HostListener,
-  computed,
-  effect,
-  inject,
-  viewChild,
-} from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, ElementRef, HostListener, effect, inject, viewChild } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from './auth/auth.service';
 import { OrgContextStore } from './shared/org-context.store';
-import { ConfirmDialog, ThemeService, VersionService } from './shared';
+import { ConfirmDialog, OrgRail, ThemeService, VersionService } from './shared';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, FormsModule, ConfirmDialog],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ConfirmDialog, OrgRail],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
@@ -25,11 +16,6 @@ export class App {
   protected readonly theme = inject(ThemeService);
   protected readonly version = inject(VersionService);
   private readonly router = inject(Router);
-
-  /** The Manage link shows for the current org's Owner (or a workspace admin) — 4.5 gate. */
-  protected readonly canManageCurrentOrg = computed(
-    () => this.org.currentOrg()?.role === 'Owner' || !!this.auth.currentUser()?.isAdmin,
-  );
 
   /** The Admin disclosure (a native <details>); referenced so we can auto-close it. */
   private readonly adminMenu = viewChild<ElementRef<HTMLDetailsElement>>('adminMenu');

@@ -32,7 +32,10 @@ test('creates an org and folder, files a prompt into it, and navigates by folder
     page.getByTestId('create-org').click(),
   ]);
   orgId = (await orgRes.json()).id;
-  await expect(page.getByTestId('org-select')).toHaveValue(orgId);
+  await expect(page.locator(`[data-testid="org-option"][data-org-id="${orgId}"]`)).toHaveAttribute(
+    'aria-current',
+    'true',
+  );
 
   // Create a top-level folder (at the org root), then descend into it.
   await page.getByTestId('toggle-new-folder').click();

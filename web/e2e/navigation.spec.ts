@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createOrg, deleteOrg, orgName } from './support';
+import { selectOrg, createOrg, deleteOrg, orgName } from './support';
 
 // The coherent app shell (2.4): the dashboard is the landing page, the topbar is
 // Dashboard · Prompts · Analytics (Datasets demoted), and detail pages carry a consistent
@@ -21,7 +21,7 @@ test('dashboard landing, topbar IA, and breadcrumb navigation form a coherent lo
 
   // A prompt in the org.
   await page.goto('/prompts');
-  await page.getByTestId('org-select').selectOption(orgId);
+  await selectOrg(page, orgId);
   await page.getByTestId('toggle-new-prompt').click();
   await page.fill('#name', promptName);
   await page.getByTestId('create-prompt').click();

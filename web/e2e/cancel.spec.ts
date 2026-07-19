@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createOrg, deleteOrg, orgName } from './support';
+import { selectOrg, createOrg, deleteOrg, orgName } from './support';
 
 // Drives the 2.11 Cancel affordance end to end: opening a reveal form, typing, then Cancel must
 // collapse the form and discard the unsaved input — nothing is persisted and the row count holds.
@@ -22,7 +22,7 @@ test('Cancel on add-fixture discards input and leaves the fixture count unchange
 
   // An owning prompt + dataset in the disposable org.
   await page.goto('/prompts');
-  await page.getByTestId('org-select').selectOption(orgId);
+  await selectOrg(page, orgId);
   await page.getByTestId('toggle-new-prompt').click();
   await page.fill('#name', promptName);
   await page.getByTestId('create-prompt').click();

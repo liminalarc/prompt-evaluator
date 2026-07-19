@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createOrg, deleteOrg, orgName } from './support';
+import { selectOrg, createOrg, deleteOrg, orgName } from './support';
 
 // Exercises the in-browser eval-run flow end to end: create a prompt (with a version) and, in its
 // workspace, a dataset; then on the dataset page configure a scorer, run the prompt version over
@@ -31,7 +31,7 @@ test('runs a prompt version over a dataset and shows per-fixture scores', async 
 
   // 1. Create a prompt (in the disposable org) with a version.
   await page.goto('/prompts');
-  await page.getByTestId('org-select').selectOption(orgId);
+  await selectOrg(page, orgId);
   await page.getByTestId('toggle-new-prompt').click();
   await page.fill('#name', promptName);
   await page.getByTestId('create-prompt').click();

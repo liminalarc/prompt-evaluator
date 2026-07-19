@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createOrg, deleteOrg, orgName } from './support';
+import { selectOrg, createOrg, deleteOrg, orgName } from './support';
 
 // Drives datasets end to end against the running stack (1.7/1.9): a dataset lives with a prompt in
 // an org, so it is created from the prompt's workspace, then captured/browsed on its own detail
@@ -23,7 +23,7 @@ test('creates a dataset in a prompt workspace, captures a fixture, and filters b
 
   // An owning prompt in the disposable org, opened in its workspace.
   await page.goto('/prompts');
-  await page.getByTestId('org-select').selectOption(orgId);
+  await selectOrg(page, orgId);
   await page.getByTestId('toggle-new-prompt').click();
   await page.fill('#name', promptName);
   await page.getByTestId('create-prompt').click();

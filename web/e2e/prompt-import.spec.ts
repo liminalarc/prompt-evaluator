@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createOrg, deleteOrg, orgName } from './support';
+import { selectOrg, createOrg, deleteOrg, orgName } from './support';
 
 // Single-file import (1.6): a prompt owner picks a text file in the add-version form and its
 // contents load into the version, then the unchanged add-version POST copies it in. Runs inside a
@@ -17,7 +17,7 @@ test('imports a version’s content from a picked text file', async ({ page, req
   orgId = await createOrg(request, orgName('import'));
 
   await page.goto('/prompts');
-  await page.getByTestId('org-select').selectOption(orgId);
+  await selectOrg(page, orgId);
   await page.getByTestId('toggle-new-prompt').click();
   await page.fill('#name', promptName);
   await page.getByTestId('create-prompt').click();
@@ -53,7 +53,7 @@ test('bulk-imports several prompts from a JSON file with a per-row report', asyn
   ]);
 
   await page.goto('/prompts');
-  await page.getByTestId('org-select').selectOption(orgId);
+  await selectOrg(page, orgId);
   await page.getByTestId('toggle-import').click();
   await page.getByTestId('import-file').setInputFiles({
     name: 'prompts.json',

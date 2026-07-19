@@ -74,31 +74,32 @@ describe('App shell', () => {
     expect(compiled.querySelector('router-outlet')).toBeTruthy();
   });
 
-  it('renders the global org switcher populated from the store', () => {
+  it('renders the org rail populated from the store [2.19 W39]', () => {
     configure();
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges(); // auth effect → org.load() resolves orgs synchronously
-    const options = fixture.nativeElement.querySelectorAll('[data-testid="org-select"] option');
-    expect(Array.from(options).map((o: any) => o.textContent.trim())).toEqual(
+    const items = fixture.nativeElement.querySelectorAll('[data-testid="org-option"]');
+    expect(Array.from(items).map((o: any) => o.textContent.trim())).toEqual(
       jasmine.arrayContaining(['Acme', 'Globex']),
     );
   });
 
-  it('switching the org updates the global selection', () => {
+  it('clicking an org in the rail updates the global selection [2.19 W39]', () => {
     configure();
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     const store = TestBed.inject(OrgContextStore);
     expect(store.currentOrgId()).toBe('o1');
 
-    const select: HTMLSelectElement = fixture.nativeElement.querySelector(
-      '[data-testid="org-select"]',
+    const o2: HTMLButtonElement = fixture.nativeElement.querySelector(
+      '[data-testid="org-option"][data-org-id="o2"]',
     );
-    select.value = 'o2';
-    select.dispatchEvent(new Event('change'));
+    o2.click();
     fixture.detectChanges();
 
     expect(store.currentOrgId()).toBe('o2');
+    // The active item is marked (aria-current) for the newly selected org.
+    expect(o2.getAttribute('aria-current')).toBe('true');
   });
 
   it('shows the Manage link when the current org’s role is Owner (4.5)', () => {
@@ -177,7 +178,7 @@ describe('App shell', () => {
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('a.nav__link')).toBeFalsy();
-    expect(el.querySelector('[data-testid="org-select"]')).toBeFalsy();
+    expect(el.querySelector('[data-testid="org-rail"]')).toBeFalsy();
     expect(el.querySelector('[data-testid="logout"]')).toBeFalsy();
   });
 

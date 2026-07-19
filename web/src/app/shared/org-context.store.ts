@@ -8,7 +8,7 @@ const STORAGE_KEY = 'litmus.currentOrgId';
 /**
  * The persistent global organization context (2.4). Organization is the top-level boundary (1.9);
  * before this it existed only inside the Prompts page, so every other surface ignored it. This
- * root store makes the selection global — the topbar switcher writes it, and prompts / datasets /
+ * root store makes the selection global — the left org rail (W39) writes it, and prompts / datasets /
  * analytics / dashboard all read from it.
  *
  * The selection is remembered in **localStorage** and mirrored to a **`?org=` query param** so a

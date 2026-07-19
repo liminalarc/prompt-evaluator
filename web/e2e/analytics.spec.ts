@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createOrg, deleteOrg, orgName } from './support';
+import { selectOrg, createOrg, deleteOrg, orgName } from './support';
 
 // Exercises the score-analytics dashboard end to end against a live stack: create a prompt with
 // two versions and, in its workspace, a dataset with fixtures + a scorer; run both versions, then
@@ -32,7 +32,7 @@ test('shows a score trend across versions and the regression section on the dash
 
   // 1. Prompt with two versions (in the disposable org).
   await page.goto('/prompts');
-  await page.getByTestId('org-select').selectOption(orgId);
+  await selectOrg(page, orgId);
   await page.getByTestId('toggle-new-prompt').click();
   await page.fill('#name', promptName);
   await page.getByTestId('create-prompt').click();

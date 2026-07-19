@@ -67,32 +67,6 @@
 
   <div class="topbar__right">
     @if (auth.isAuthenticated()) {
-      @if (org.organizations().length > 0) {
-        <div class="topbar__org">
-          <label class="topbar__org-label" for="org-switcher">Org</label>
-          <select
-            id="org-switcher"
-            class="topbar__org-select"
-            data-testid="org-select"
-            [ngModel]="org.currentOrgId()"
-            (ngModelChange)="org.select($event)"
-          >
-            @for (o of org.organizations(); track o.id) {
-              <option [value]="o.id">{{ o.name }}</option>
-            }
-          </select>
-          @if (canManageCurrentOrg() && org.currentOrgId(); as orgId) {
-            <a
-              class="topbar__org-manage"
-              data-testid="manage-org"
-              [routerLink]="['/organizations', orgId]"
-              title="Manage members"
-              >Manage</a
-            >
-          }
-        </div>
-      }
-
       <div class="topbar__user">
         <a
           routerLink="/account"
@@ -124,9 +98,22 @@
   </div>
 </header>
 
-<main class="page">
-  <router-outlet />
-</main>
+<!-- W39: a persistent left org rail beside the routed content once signed in — you see every org
+     you can access and switch with one click (single active at a time). Signed-out stays centered. -->
+@if (auth.isAuthenticated()) {
+  <div class="shell">
+    <aside class="shell__rail">
+      <app-org-rail />
+    </aside>
+    <main class="shell__content">
+      <router-outlet />
+    </main>
+  </div>
+} @else {
+  <main class="page">
+    <router-outlet />
+  </main>
+}
 
 <!-- Footer build chip (3.3): the running version, subtle + fixed in the corner. Full detail on hover. -->
 @if (version.buildLabel(); as label) {

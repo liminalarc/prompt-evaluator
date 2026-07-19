@@ -9,6 +9,7 @@ export { Chip } from './chip';
 export { ChipList } from './chip-list';
 export { Card, CardFoot } from './card';
 export { Drawer } from './drawer';
+export { OrgRail } from './org-rail';
 export { ConfirmDialog } from './confirm-dialog';
 export { ConfirmService, type ConfirmRequest } from './confirm.service';
 export { ThemeService, type Theme } from './theme.service';

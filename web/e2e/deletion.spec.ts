@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createOrg, deleteOrg, orgName } from './support';
+import { selectOrg, createOrg, deleteOrg, orgName } from './support';
 
 // Drives the 1.10 delete flows against the running stack: every destructive action is guarded by an
 // in-app confirmation that states what cascades. Create a prompt then delete it (confirming), and
@@ -21,7 +21,7 @@ test('deletes a prompt behind a confirmation, then deletes the organization', as
   orgId = await createOrg(request, orgName('deletion'));
 
   await page.goto('/prompts');
-  await page.getByTestId('org-select').selectOption(orgId);
+  await selectOrg(page, orgId);
 
   // Create a prompt via the UI.
   await page.getByTestId('toggle-new-prompt').click();
@@ -54,5 +54,5 @@ test('deletes a prompt behind a confirmation, then deletes the organization', as
   await page.getByTestId('confirm-delete').click();
 
   // The deleted org drops out of the topbar switcher (context repointed away).
-  await expect(page.locator(`[data-testid="org-select"] option[value="${orgId}"]`)).toHaveCount(0);
+  await expect(page.locator(`[data-testid="org-option"][data-org-id="${orgId}"]`)).toHaveCount(0);
 });

@@ -138,22 +138,14 @@
   gap: var(--sb-space-xl);
 }
 
-.topbar__org {
-  display: flex;
-  align-items: center;
-  gap: var(--sb-space-sm);
-}
-
 .topbar__user {
   display: flex;
   align-items: center;
   gap: var(--sb-space-sm);
 }
 
-/* Account link + Manage: on-dark control chips so they read clearly in both themes (plain dimmed
-   text on the teal bar was too low-contrast). Shared shape here; Manage adds a border below. */
-.topbar__user-name,
-.topbar__org-manage {
+/* Account link — on-dark control chip so it reads clearly on the teal bar in both themes. */
+.topbar__user-name {
   color: var(--sb-on-dark);
   font-size: var(--sb-type-small-size);
   text-decoration: none;
@@ -161,49 +153,8 @@
   border-radius: var(--sb-radius-sm);
 }
 
-.topbar__user-name:hover,
-.topbar__org-manage:hover {
+.topbar__user-name:hover {
   background: rgba(255, 255, 255, 0.12);
-}
-
-.topbar__org-label {
-  color: var(--sb-on-dark);
-  opacity: 0.75;
-  font-size: var(--sb-type-small-size);
-}
-
-/* Org switcher restyled for the dark bar — translucent-white surface + border, on-dark text. */
-.topbar__org-select {
-  padding: var(--sb-space-xs) var(--sb-space-sm);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  border-radius: var(--sb-radius-sm);
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--sb-on-dark);
-  font: inherit;
-}
-
-.topbar__org-select:hover {
-  border-color: rgba(255, 255, 255, 0.6);
-}
-
-.topbar__org-select:focus-visible {
-  outline: 2px solid var(--sb-on-dark);
-  outline-offset: 2px;
-}
-
-/* Native option list renders on the OS surface (light), so keep its text dark for legibility. */
-.topbar__org-select option {
-  color: var(--sb-text);
-}
-
-/* The 4.5 "Manage" link (org owner/admin) gets a border on top of the shared chip shape so it reads
-   as an actionable control beside the switcher (matching the switcher/Logout border language). */
-.topbar__org-manage {
-  border: 1px solid rgba(255, 255, 255, 0.35);
-}
-
-.topbar__org-manage:hover {
-  border-color: rgba(255, 255, 255, 0.6);
 }
 
 /* The Logout (secondary) and theme-toggle (ghost) buttons default to light-bar colors; retint
@@ -226,6 +177,38 @@
 
 .topbar__theme.sb-btn--ghost:hover {
   background: rgba(255, 255, 255, 0.12);
+}
+
+/* W39: authenticated layout — a fixed-width left org rail beside the routed content. The rail is
+   sticky so it stays put while the content scrolls; on narrow widths it drops to a top block. */
+.shell {
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr);
+  align-items: start;
+}
+
+.shell__rail {
+  position: sticky;
+  top: 0;
+  border-right: 1px solid var(--sb-border);
+  min-height: calc(100vh - 4rem);
+}
+
+.shell__content {
+  min-width: 0;
+  padding: var(--sb-space-3xl) var(--sb-space-lg);
+}
+
+@media (max-width: 48rem) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+  .shell__rail {
+    position: static;
+    min-height: 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--sb-border);
+  }
 }
 
 .page {

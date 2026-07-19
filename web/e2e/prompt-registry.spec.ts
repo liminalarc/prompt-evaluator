@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createOrg, deleteOrg, orgName } from './support';
+import { selectOrg, createOrg, deleteOrg, orgName } from './support';
 
 // Drives the registry end to end against the running stack: create a prompt, add two
 // versions, view its history, and compare versions — Angular -> API -> Postgres and back.
@@ -16,7 +16,7 @@ test('registers a prompt, records versions, and diffs them', async ({ page, requ
   orgId = await createOrg(request, orgName('registry'));
 
   await page.goto('/prompts');
-  await page.getByTestId('org-select').selectOption(orgId);
+  await selectOrg(page, orgId);
   // Reveal the collapsed new-prompt form.
   await page.getByTestId('toggle-new-prompt').click();
   await page.fill('#name', name);

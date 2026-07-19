@@ -1,4 +1,4 @@
-import { APIRequestContext } from '@playwright/test';
+import { APIRequestContext, Page, expect } from '@playwright/test';
 import path from 'node:path';
 
 // Shared e2e helpers: each spec does its work inside a disposable organization and deletes it on
@@ -25,4 +25,14 @@ export async function deleteOrg(request: APIRequestContext, id: string): Promise
   if (id) {
     await request.delete(`/api/organizations/${id}`);
   }
+}
+
+/**
+ * Switch the active org via the left org rail (2.19 W39 — replaced the topbar `<select>`). Clicks
+ * the rail item for the org and waits for it to become the active (aria-current) one.
+ */
+export async function selectOrg(page: Page, orgId: string): Promise<void> {
+  const item = page.locator(`[data-testid="org-option"][data-org-id="${orgId}"]`);
+  await item.click();
+  await expect(item).toHaveAttribute('aria-current', 'true');
 }

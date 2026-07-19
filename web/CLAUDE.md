@@ -101,7 +101,8 @@ The operator-facing UI:
   No emoji for status. Colors come only from `--sb-*` tokens (CI-adjacent hex-scan stays clean).
 - **Organization is a global context**, not a per-page picker. `OrgContextStore`
   (`shared/org-context.store.ts`, root signals) owns `organizations` / `currentOrgId` /
-  `currentOrg`; the topbar switcher writes it via `select()`. Selection persists to **localStorage
+  `currentOrg`; the **persistent left org rail** (`shared/org-rail.ts`, W39 — replaced the topbar
+  `<select>`) writes it via `select()`. Selection persists to **localStorage
   and a `?org=` query param** (resolved `?org=` → localStorage → first org). Pages read
   `orgStore.currentOrgId()` and rescope in an `effect()` on switch; datasets/analytics with no
   org-scoped endpoint intersect the cross-prompt list by the org's prompt ids (no API change).

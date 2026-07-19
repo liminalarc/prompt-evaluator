@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createOrg, deleteOrg, orgName } from './support';
+import { selectOrg, createOrg, deleteOrg, orgName } from './support';
 
 // Drives the unified prompt workspace (1.7/1.9): a prompt's versions, its datasets, and its
 // analytics all live on one page. Runs inside a disposable org deleted on teardown.
@@ -20,7 +20,7 @@ test('a prompt workspace shows its versions, datasets, and analytics together', 
   orgId = await createOrg(request, orgName('workspace'));
 
   await page.goto('/prompts');
-  await page.getByTestId('org-select').selectOption(orgId);
+  await selectOrg(page, orgId);
   await page.getByTestId('toggle-new-prompt').click();
   await page.fill('#name', promptName);
   await page.getByTestId('create-prompt').click();

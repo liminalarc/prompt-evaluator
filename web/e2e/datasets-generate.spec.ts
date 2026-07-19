@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createOrg, deleteOrg, orgName } from './support';
+import { selectOrg, createOrg, deleteOrg, orgName } from './support';
 
 // Exercises the in-browser "Generate" flow end to end. A dataset lives with a prompt (1.7/1.9), so
 // it's created from the prompt's workspace, then generated on its own page. Synthetic generation
@@ -27,7 +27,7 @@ test('generates synthetic fixtures from a captured seed', async ({ page, request
 
   // Create a prompt in the disposable org, then a dataset under it, and open the dataset.
   await page.goto('/prompts');
-  await page.getByTestId('org-select').selectOption(orgId);
+  await selectOrg(page, orgId);
   await page.getByTestId('toggle-new-prompt').click();
   await page.fill('#name', promptName);
   await page.getByTestId('create-prompt').click();

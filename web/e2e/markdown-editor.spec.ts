@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createOrg, deleteOrg, orgName } from './support';
+import { selectOrg, createOrg, deleteOrg, orgName } from './support';
 
 // Drives the 2.10 markdown editor end to end on the version Content field: Edit ⇄ Preview toggle
 // renders the markdown, the source round-trips unchanged, and an XSS payload is inert in the
@@ -20,7 +20,7 @@ test('the version Content markdown editor previews, round-trips, and is XSS-safe
   orgId = await createOrg(request, orgName('md'));
 
   await page.goto('/prompts');
-  await page.getByTestId('org-select').selectOption(orgId);
+  await selectOrg(page, orgId);
   await page.getByTestId('toggle-new-prompt').click();
   await page.fill('#name', promptName);
   await page.getByTestId('create-prompt').click();
