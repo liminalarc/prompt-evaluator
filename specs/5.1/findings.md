@@ -141,8 +141,8 @@
     are **300s** (were 60s; `web/nginx.conf` — local-only, dev serves the SPA same-origin from the API so no
     nginx is in its path). **Diagnosis:** dev's successful runs *and* its 502s both land near ~100s, so the
     HttpClient cap — not App Runner's router — was the ceiling; the bump should let round-debrief complete.
-    App Runner exposes no per-request timeout to tune. **R1-proper (async) still stands** as the real fix for
-    genuinely long runs / bigger datasets — **not yet built**.
+    App Runner exposes no per-request timeout to tune. **R1-proper (async)** is the real fix for genuinely long
+    runs / bigger datasets → **promoted to its own spec [2.17](../2.17.md)** (not built).
 - **R2 — Timeout/gateway 502 fails silently (hole in B2's "loud failures").** When a run 502s via **timeout or
   the App Runner gateway**, the body is not the API's structured `502 {error}` JSON — so the SPA's
   `serverError(err)` path (2.8) can't extract a message and **shows no banner at all**. B2 made the *structured*
@@ -161,11 +161,11 @@
   (a) **rubric-authoring guidance** — write data-conditional rubrics ("if no nine-level data, don't penalize
   its absence; reward graceful sparse-handling"); (b) keep datasets **homogeneous** (split sparse fixtures into
   their own dataset+rubric); (c) a tool feature — **per-fixture / conditional criteria** so one dataset can
-  fairly score mixed-richness fixtures. → *home: **[2.12](../2.12.md)** (+ runbook rubric-authoring note) — **not yet built**.*
+  fairly score mixed-richness fixtures. → *home: **[2.16](../2.16.md)** (promoted from 2.12; + runbook rubric-authoring note) — **not yet built**.*
 - **R4 — Score ≠ quality on a single run; read the rationale + expect noise.** Fixture scores wobble ~±0.1
   run-to-run (F1 0.90→0.85, F2 0.88→0.93) and a real prompt improvement can land as a **flat number** (v2). A
   stable baseline / regression call wants **repeated runs or a variance view**, and a diff should surface the
-  **rationale delta**, not just the score delta. → *home: **[2.12](../2.12.md)** (+ methodology note) — **not yet built**.*
+  **rationale delta**, not just the score delta. → *home: **[2.14](../2.14.md)** (promoted from 2.12; **the active build**).*
 
 ## Subject-model drift (2026-07-18, round-debrief walk)
 - **R5 — Add-version doesn't hold the subject model; silent drift confounds prompt comparisons.** On
@@ -187,7 +187,7 @@
   page's Runs table already does this (U14, 2.8: resolves `vN` + target model from the owning prompt's
   versions); this workspace card lagged behind. Fix: give the workspace recent-runs list the same
   version/model columns (and consider a short label). Same data is already loaded (`p.versions`).
-  → *home: **user decision** — small UX slice; a future eval-loop UX round or fold into an existing UI spec. Not built.*
+  → *home: **[2.18](../2.18.md)** (eval-loop UX polish). Not built.*
 
 - **R6 — The loud run-failure banner is page-level, so it lands off-screen (follow-up to R2).** R2
   (shipped 2.12) makes any run failure loud — verified live: a 502 timeout on a `round-debrief` run
@@ -196,7 +196,7 @@
   (or the dataset run card) lower on a long page puts the failure **above the fold** — "I didn't see
   anything happen." The message is right, the **placement** is wrong. Fix options: a **toast/snackbar**
   that draws the eye (persists until dismissed) and/or an **inline error next to the run button**;
-  optionally auto-scroll to the banner. → *home: **user decision** — R2 visibility follow-up (2.12) or a UI round. Not built.*
+  optionally auto-scroll to the banner. → *home: **[2.18](../2.18.md)** (eval-loop UX polish). Not built.*
 
 - **U16 — Dark mode: the topbar org-switcher dropdown options are near-unreadable.** In dark mode the
   open `<select>` option list (topbar org switcher, app shell 2.4) renders low-contrast — the
@@ -204,7 +204,7 @@
   highlighted option is legible. Native `<option>` popups aren't fully brand-token-styled. Likely fix:
   set **`color-scheme: dark`** on `:root`/the control in dark theme (makes the browser render native
   dropdowns dark-aware), or explicitly token the select's `color`/`background`. Not specific to 5.1 —
-  a general dark-mode/design-system nit. → *home: **user decision** — a UI/dark-mode fix (2.6 brand-tokens or a UI round). Not built.*
+  a general dark-mode/design-system nit. → *home: **[2.18](../2.18.md)** (eval-loop UX polish; may fold into 2.6). Not built.*
 
 ## Eval methodology — the biggest gap (2026-07-19, v4/v5 real-model validation)
 - **R7 — The tool throws away the judge's *reasons*; score ≠ risk.** Decisive evidence from the v4/v5 walk:
@@ -219,8 +219,7 @@
   average, drives the verdict (a clean 0.72 can beat a fabricating 0.75); (d) **rationale-diff in Compare**
   (R4's other half) — surface *what reasons changed*, not just the score delta. Distinct, sizeable capability
   — bigger than R3 (per-fixture criteria) / R4 (variance+rationale-diff) / 2.9 (weighted *scorer* composite),
-  though it subsumes parts of each. → *home: **user decision — likely its own new spec** (structured/
-  severity-tagged judging), spun out of 5.1 like 1.16/1.17/1.18. Not built.*
+  though it subsumes parts of each. → *home: **new spec [2.15](../2.15.md)** (structured/severity-tagged judging). Not built.*
 
 - **R8 — Building a good test dataset is an artform with no proactive tooling.** Surfaced while building
   `Core round scenarios`: coverage, rich-vs-sparse balance, homogeneity-vs-split, capture/synthetic ratio,
