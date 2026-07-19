@@ -7,7 +7,8 @@ namespace Application.Analytics;
 /// unless both sides are present.
 /// </summary>
 public sealed record FixtureDelta(
-    Guid FixtureId, string? FixtureLabel, double? FromValue, double? ToValue, double? Delta);
+    Guid FixtureId, string? FixtureLabel, double? FromValue, double? ToValue, double? Delta,
+    string? FromRationale, string? ToRationale);
 
 /// <summary>
 /// A single scorer's view of a version comparison: the aggregate means on each side (over that

@@ -30,8 +30,12 @@ public sealed class ComparisonAnalyticsHandler(
         var fromRun = latest.FirstOrDefault(r => r.PromptVersionId == fromVersionId);
         var toRun = latest.FirstOrDefault(r => r.PromptVersionId == toVersionId);
 
-        // scorer identity -> (ScorerRef, from fixture→value, to fixture→value)
-        var byScorer = new Dictionary<string, (ScorerRef Scorer, Dictionary<Guid, double> From, Dictionary<Guid, double> To)>();
+        // scorer identity -> (ScorerRef, from fixture→score, to fixture→score). We keep the whole
+        // FixtureScore (not just the value) so the per-fixture judge rationale is available for the
+        // rationale-diff (2.14): a real quality change can score flat, and only the reasoning shows it.
+        var byScorer = new Dictionary<string, (ScorerRef Scorer,
+            Dictionary<Guid, AnalyticsProjection.FixtureScore> From,
+            Dictionary<Guid, AnalyticsProjection.FixtureScore> To)>();
 
         void Collect(EvalRun? run, bool isFrom)
         {
@@ -43,7 +47,7 @@ public sealed class ComparisonAnalyticsHandler(
                     byScorer[scorer.Identity] = entry = (scorer, [], []);
                 var target = isFrom ? entry.From : entry.To;
                 foreach (var s in scores)
-                    target[s.FixtureId] = s.Value;
+                    target[s.FixtureId] = s;
             }
         }
 
@@ -56,14 +60,19 @@ public sealed class ComparisonAnalyticsHandler(
                 var fixtureIds = e.From.Keys.Union(e.To.Keys).OrderBy(id => id).ToList();
                 var fixtures = fixtureIds.Select(id =>
                 {
-                    double? from = e.From.TryGetValue(id, out var fv) ? fv : null;
-                    double? to = e.To.TryGetValue(id, out var tv) ? tv : null;
+                    var hasFrom = e.From.TryGetValue(id, out var fs);
+                    var hasTo = e.To.TryGetValue(id, out var ts);
+                    double? from = hasFrom ? fs.Value : null;
+                    double? to = hasTo ? ts.Value : null;
                     var label = labels.TryGetValue(id, out var l) ? l : null;
-                    return new FixtureDelta(id, label, from, to, from.HasValue && to.HasValue ? to - from : null);
+                    return new FixtureDelta(
+                        id, label, from, to, from.HasValue && to.HasValue ? to - from : null,
+                        FromRationale: hasFrom ? fs.Detail : null,
+                        ToRationale: hasTo ? ts.Detail : null);
                 }).ToList();
 
-                double? fromMean = e.From.Count > 0 ? e.From.Values.Average() : null;
-                double? toMean = e.To.Count > 0 ? e.To.Values.Average() : null;
+                double? fromMean = e.From.Count > 0 ? e.From.Values.Average(s => s.Value) : null;
+                double? toMean = e.To.Count > 0 ? e.To.Values.Average(s => s.Value) : null;
                 double? delta = fromMean.HasValue && toMean.HasValue ? toMean - fromMean : null;
 
                 return new ScorerComparison(e.Scorer, fromMean, toMean, delta, fixtures);

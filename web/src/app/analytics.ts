@@ -55,6 +55,9 @@ export interface FixtureDelta {
   fromValue: number | null;
   toValue: number | null;
   delta: number | null;
+  /** The judge rationale on each side — the "why" behind the score (2.14 rationale-diff). */
+  fromRationale: string | null;
+  toRationale: string | null;
 }
 
 /** Mirrors the .NET ScorerComparisonResponse DTO. */

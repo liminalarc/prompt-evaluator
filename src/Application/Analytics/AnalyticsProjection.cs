@@ -8,8 +8,9 @@ namespace Application.Analytics;
 /// </summary>
 internal static class AnalyticsProjection
 {
-    /// <summary>One score for one fixture under one scorer, flattened for aggregation.</summary>
-    public readonly record struct FixtureScore(Guid FixtureId, double Value, bool? Passed);
+    /// <summary>One score for one fixture under one scorer, flattened for aggregation.
+    /// <see cref="Detail"/> carries the judge rationale (for the rationale-diff, 2.14).</summary>
+    public readonly record struct FixtureScore(Guid FixtureId, double Value, bool? Passed, string? Detail);
 
     /// <summary>
     /// The newest run (by <see cref="EvalRun.CreatedAt"/>) for each version, restricted to versions
@@ -33,7 +34,7 @@ internal static class AnalyticsProjection
             .GroupBy(x => x.Score.Scorer.Identity)
             .Select(g =>
             {
-                var items = g.Select(x => new FixtureScore(x.FixtureId, x.Score.Value, x.Score.Passed)).ToList();
+                var items = g.Select(x => new FixtureScore(x.FixtureId, x.Score.Value, x.Score.Passed, x.Score.Detail)).ToList();
                 return (ScorerRef.From(g.First().Score.Scorer), (IReadOnlyList<FixtureScore>)items);
             });
 }

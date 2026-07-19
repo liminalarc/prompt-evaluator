@@ -43,10 +43,11 @@ public sealed record RegressionFlagResponse(
 // ---- Comparison ----
 
 public sealed record FixtureDeltaResponse(
-    Guid FixtureId, string? FixtureLabel, double? FromValue, double? ToValue, double? Delta)
+    Guid FixtureId, string? FixtureLabel, double? FromValue, double? ToValue, double? Delta,
+    string? FromRationale, string? ToRationale)
 {
     public static FixtureDeltaResponse From(FixtureDelta d) =>
-        new(d.FixtureId, d.FixtureLabel, d.FromValue, d.ToValue, d.Delta);
+        new(d.FixtureId, d.FixtureLabel, d.FromValue, d.ToValue, d.Delta, d.FromRationale, d.ToRationale);
 }
 
 public sealed record ScorerComparisonResponse(

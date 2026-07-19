@@ -100,6 +100,37 @@ public class ComparisonAnalyticsTests
     }
 
     [Fact]
+    public async Task Comparison_carries_the_judge_rationale_for_each_side()
+    {
+        // The number can lie — a real quality change can score flat, visible only in the reasoning
+        // (R4/2.14). The comparison must surface each side's judge rationale (stored in Score.Detail).
+        var prompt = Prompt.Create(Guid.NewGuid(), "Debrief");
+        var v1 = prompt.AddVersion("v1", "claude-sonnet-4-6", When);
+        var v2 = prompt.AddVersion("v2", "claude-sonnet-4-6", When.AddDays(1));
+        var datasetId = Guid.NewGuid();
+        var f0 = Guid.NewGuid();
+        var scorer = ScorerDescriptor.Deterministic(ScorerKind.FuzzyMatch);
+
+        var promptRepo = new InMemoryPromptRepo();
+        await promptRepo.AddAsync(prompt);
+        var runs = new InMemoryEvalRunRepo();
+        var r1 = EvalRun.Create(prompt.Id, v1.Id, datasetId, When);
+        r1.RecordFixture(f0, "out1", 10, 0, 0, 0.001m).AddScore(scorer, 0.6, true, "v1 fabricates a benchmark");
+        await runs.AddAsync(r1);
+        var r2 = EvalRun.Create(prompt.Id, v2.Id, datasetId, When.AddDays(1));
+        r2.RecordFixture(f0, "out2", 10, 0, 0, 0.001m).AddScore(scorer, 0.6, true, "v2 is clean — no benchmark");
+        await runs.AddAsync(r2);
+
+        var handler = new ComparisonAnalyticsHandler(runs, promptRepo, new InMemoryDatasetRepo());
+        var cmp = await handler.HandleAsync(prompt.Id, datasetId, v1.Id, v2.Id);
+
+        var fd = Assert.Single(Assert.Single(cmp!.Scorers).Fixtures);
+        Assert.Equal(0.0, fd.Delta!.Value, 3); // scores tied…
+        Assert.Equal("v1 fabricates a benchmark", fd.FromRationale); // …but the reasons differ
+        Assert.Equal("v2 is clean — no benchmark", fd.ToRationale);
+    }
+
+    [Fact]
     public async Task Comparison_labels_each_fixture_from_the_dataset()
     {
         var prompt = Prompt.Create(Guid.NewGuid(), "Summarizer");

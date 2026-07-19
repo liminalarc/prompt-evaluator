@@ -49,3 +49,29 @@
 .empty {
   color: var(--sb-text-muted);
 }
+
+/* Rationale-diff (2.14): the judge's reasoning on each side, laid out for comparison. */
+.rationale-row td {
+  background: var(--sb-surface-raised);
+}
+.rationale-diff {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sb-space-lg);
+}
+.rationale-side h4 {
+  margin: 0 0 var(--sb-space-xs);
+  font-size: var(--sb-type-small-size);
+  color: var(--sb-text-secondary);
+}
+.rationale-side p {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: var(--sb-type-small-size);
+}
+@media (max-width: 640px) {
+  .rationale-diff {
+    grid-template-columns: 1fr;
+  }
+}

@@ -24,6 +24,8 @@ const data: VersionComparisonData = {
           fromValue: 0.9,
           toValue: 0.7,
           delta: -0.2,
+          fromRationale: 'v1 invents a benchmark',
+          toRationale: 'v2 is clean — no benchmark',
         },
         {
           fixtureId: 'bbbbbbbb-0000-0000-0000-000000000000',
@@ -31,6 +33,8 @@ const data: VersionComparisonData = {
           fromValue: 0.5,
           toValue: 0.8,
           delta: 0.3,
+          fromRationale: null,
+          toRationale: null,
         },
       ],
     },
@@ -67,6 +71,25 @@ describe('VersionComparison', () => {
     expect(rows[0].textContent).not.toContain('aaaaaaaa');
     expect(rows[1].textContent).toContain('bbbbbbbb'); // no label → short-GUID fallback
     expect(rows[1].textContent).toContain('▲'); // +0.3 improvement on the second
+  });
+
+  it('expands a fixture to diff the judge rationale on each side [2.14]', () => {
+    const fixture = TestBed.createComponent(VersionComparison);
+    fixture.componentInstance.comparison = data;
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    // No rationale panel until you ask for the "why".
+    expect(el.querySelector('[data-testid="rationale-diff"]')).toBeNull();
+    // The fixture with rationales offers a toggle; the one without does not.
+    const toggles = el.querySelectorAll('[data-testid="rationale-toggle"]');
+    expect(toggles.length).toBe(1);
+
+    (toggles[0] as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const diff = el.querySelector('[data-testid="rationale-diff"]')!;
+    expect(diff.textContent).toContain('v1 invents a benchmark');
+    expect(diff.textContent).toContain('v2 is clean — no benchmark');
   });
 
   it('shows an empty state when there are no overlapping scorers', () => {

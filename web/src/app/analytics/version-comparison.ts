@@ -41,6 +41,7 @@ import {
                   <th>v{{ cmp.fromVersionNumber }}</th>
                   <th>v{{ cmp.toVersionNumber }}</th>
                   <th>Δ</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -54,7 +55,35 @@ import {
                     <td class="delta" [class]="deltaClass(f.delta)">
                       {{ glyph(f.delta) }} {{ fmt(f.delta) }}
                     </td>
+                    <td>
+                      @if (f.fromRationale || f.toRationale) {
+                        <button
+                          type="button"
+                          class="sb-btn sb-btn--ghost sb-btn--sm"
+                          data-testid="rationale-toggle"
+                          (click)="toggle(f.fixtureId)"
+                        >
+                          {{ expandedFixtureId() === f.fixtureId ? 'Hide why' : 'Why' }}
+                        </button>
+                      }
+                    </td>
                   </tr>
+                  @if (expandedFixtureId() === f.fixtureId) {
+                    <tr class="rationale-row" data-testid="rationale-diff">
+                      <td colspan="5">
+                        <div class="rationale-diff">
+                          <div class="rationale-side">
+                            <h4>v{{ cmp.fromVersionNumber }} — why</h4>
+                            <p>{{ f.fromRationale ?? '— (not scored on this side)' }}</p>
+                          </div>
+                          <div class="rationale-side">
+                            <h4>v{{ cmp.toVersionNumber }} — why</h4>
+                            <p>{{ f.toRationale ?? '— (not scored on this side)' }}</p>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  }
                 }
               </tbody>
             </table>
@@ -73,6 +102,13 @@ export class VersionComparison {
   }
 
   protected readonly data = computed(() => this._data());
+
+  // Rationale-diff (2.14): a fixture row expands to show the judge's reasoning on each side, so a
+  // flat-scoring but real quality change is legible ("removed the prediction") — not just its delta.
+  protected readonly expandedFixtureId = signal<string | null>(null);
+  protected toggle(fixtureId: string): void {
+    this.expandedFixtureId.update((cur) => (cur === fixtureId ? null : fixtureId));
+  }
 
   protected label(sc: ScorerComparison): string {
     return scorerLabel(sc.scorer);
