@@ -103,6 +103,12 @@ import { BadgeVariant, Card, EmptyState, ErrorState, PageHeader, StatusBadge } f
       @if (promptId() && datasetId()) {
         <app-card heading="Score trend">
           <app-trend-chart [series]="visibleTrends()" />
+          @if (unrunVersions().length > 0) {
+            <p class="subtitle" data-testid="unrun-versions">
+              No runs yet (not on the trend):
+              <strong>{{ unrunVersionsLabel() }}</strong> — run them to compare.
+            </p>
+          }
         </app-card>
 
         @if (stochasticVariance().length > 0 || hiddenVariance().length > 0) {
@@ -372,6 +378,19 @@ export class AnalyticsDashboard {
   protected readonly visibleTrends = computed(() =>
     this.trends().filter((s) => !this.isStale(s.scorer)),
   );
+
+  // W31: the trend silently omits versions that have never run — "where's v4?". List them so the
+  // gap is explicit. A version is un-run if no (live) trend series has a point for it.
+  protected readonly unrunVersions = computed(() => {
+    const run = new Set<string>();
+    for (const s of this.visibleTrends()) for (const p of s.points) run.add(p.promptVersionId);
+    return this.versions().filter((v) => !run.has(v.id));
+  });
+  protected unrunVersionsLabel(): string {
+    return this.unrunVersions()
+      .map((v) => `v${v.versionNumber}`)
+      .join(', ');
+  }
 
   protected isStale(scorer: ScorerRef): boolean {
     const ids = this.currentScorerIds();

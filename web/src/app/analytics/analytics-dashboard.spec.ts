@@ -278,6 +278,65 @@ describe('AnalyticsDashboard', () => {
     expect(rows[0].textContent).toContain('v1 → v2');
   });
 
+  it('names versions with no runs beneath the trend [2.20 W31]', () => {
+    const fixture = createAndLoadLists();
+    const cmp = fixture.componentInstance as unknown as {
+      datasetId: { set(v: string): void };
+      selectPrompt(id: string): void;
+    };
+    cmp.datasetId.set('d1');
+    cmp.selectPrompt('p1');
+    fixture.detectChanges();
+
+    // The prompt has v1, v2, v3; only v1 + v2 have run.
+    const v = (id: string, n: number) => ({
+      id,
+      versionNumber: n,
+      content: '',
+      targetModel: 'm',
+      label: null,
+      sourceApp: null,
+      createdAt: '',
+    });
+    http.expectOne('/api/prompts/p1').flush({
+      id: 'p1',
+      name: 'Summarizer',
+      description: null,
+      versions: [v('v1', 1), v('v2', 2), v('v3', 3)],
+    });
+    fixture.detectChanges();
+
+    const pt = (vid: string, n: number, runId: string) => ({
+      promptVersionId: vid,
+      versionNumber: n,
+      versionLabel: null,
+      runId,
+      runAt: '2026-01-0' + n + 'T00:00:00Z',
+      meanValue: 0.8,
+      passRate: 1,
+      fixtureCount: 3,
+    });
+    http
+      .expectOne((r) => r.url === '/api/analytics/trends')
+      .flush([
+        {
+          scorer: { identity: 'j', kind: 'LlmJudge', judgeModel: 'claude' },
+          points: [pt('v1', 1, 'r1'), pt('v2', 2, 'r2')],
+        },
+      ]);
+    http.expectOne((r) => r.url === '/api/analytics/regressions').flush([]);
+    http.expectOne((r) => r.url === '/api/analytics/variance').flush([]);
+    http.expectOne('/api/datasets/d1/scorers').flush([]);
+    fixture.detectChanges();
+
+    const note = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-testid="unrun-versions"]',
+    );
+    expect(note).toBeTruthy();
+    expect(note!.textContent).toContain('v3');
+    expect(note!.textContent).not.toContain('v1');
+  });
+
   it('shows a clean state when there are no regressions', () => {
     const fixture = createAndLoadLists();
     const cmp = fixture.componentInstance as unknown as {
