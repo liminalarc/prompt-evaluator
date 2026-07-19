@@ -81,8 +81,10 @@ describe('OrgRail [2.20 W39]', () => {
     fixture.detectChanges();
     const active = el.querySelector('[data-testid="org-option"][data-org-id="o1"]')!;
     expect(active.querySelector('.org-rail__initial')?.textContent?.trim()).toBe('A');
-    // The create-org affordance is hidden while collapsed.
-    expect(el.querySelector('[data-testid="rail-add-org"]')).toBeNull();
+    // The + stays visible (stacked with the expand toggle) while collapsed, but the create form
+    // isn't open until you click it.
+    expect(el.querySelector('[data-testid="rail-add-org"]')).toBeTruthy();
+    expect(el.querySelector('[data-testid="rail-new-org-name"]')).toBeNull();
   });
 
   it('creates an org from the rail and makes it current', () => {

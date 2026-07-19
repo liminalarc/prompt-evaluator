@@ -23,21 +23,33 @@ import { AuthService } from '../auth/auth.service';
       aria-label="Organizations"
       data-testid="org-rail"
     >
-      <div class="org-rail__head">
+      <div class="org-rail__head" [class.org-rail__head--collapsed]="collapsed()">
         @if (!collapsed()) {
           <span class="org-rail__title">Organizations</span>
         }
-        <button
-          type="button"
-          class="org-rail__collapse"
-          [attr.aria-label]="collapsed() ? 'Expand organizations' : 'Collapse organizations'"
-          [attr.aria-expanded]="!collapsed()"
-          [attr.title]="collapsed() ? 'Expand' : 'Collapse'"
-          data-testid="rail-collapse"
-          (click)="toggleCollapsed.emit()"
-        >
-          {{ collapsed() ? '»' : '«' }}
-        </button>
+        <div class="org-rail__actions">
+          <button
+            type="button"
+            class="org-rail__iconbtn"
+            aria-label="New organization"
+            title="New organization"
+            data-testid="rail-add-org"
+            (click)="onAddClick()"
+          >
+            +
+          </button>
+          <button
+            type="button"
+            class="org-rail__iconbtn"
+            [attr.aria-label]="collapsed() ? 'Expand organizations' : 'Collapse organizations'"
+            [attr.aria-expanded]="!collapsed()"
+            [attr.title]="collapsed() ? 'Expand' : 'Collapse'"
+            data-testid="rail-collapse"
+            (click)="toggleCollapsed.emit()"
+          >
+            {{ collapsed() ? '»' : '«' }}
+          </button>
+        </div>
       </div>
 
       <ul class="org-rail__list">
@@ -68,53 +80,42 @@ import { AuthService } from '../auth/auth.service';
         }
       </ul>
 
-      @if (!collapsed()) {
-        @if (creatingOrg()) {
-          <form
-            class="org-rail__new"
-            (submit)="createOrg($event)"
-            (keydown.escape)="cancelCreateOrg()"
-          >
-            <input
-              class="sb-field"
-              placeholder="Organization name"
-              aria-label="New organization name"
-              name="newOrgName"
-              data-testid="rail-new-org-name"
-              [ngModel]="newOrgName()"
-              (ngModelChange)="newOrgName.set($event)"
-            />
-            <div class="org-rail__new-actions">
-              <button
-                type="submit"
-                class="sb-btn sb-btn--primary sb-btn--sm"
-                data-testid="rail-create-org"
-                [disabled]="!newOrgName().trim() || saving()"
-              >
-                {{ saving() ? 'Adding…' : 'Add' }}
-              </button>
-              <button
-                type="button"
-                class="sb-btn sb-btn--ghost sb-btn--sm"
-                (click)="cancelCreateOrg()"
-              >
-                Cancel
-              </button>
-            </div>
-            @if (createError()) {
-              <p class="org-rail__error" data-testid="rail-org-error">{{ createError() }}</p>
-            }
-          </form>
-        } @else {
-          <button
-            type="button"
-            class="org-rail__add"
-            data-testid="rail-add-org"
-            (click)="startCreateOrg()"
-          >
-            + New organization
-          </button>
-        }
+      @if (!collapsed() && creatingOrg()) {
+        <form
+          class="org-rail__new"
+          (submit)="createOrg($event)"
+          (keydown.escape)="cancelCreateOrg()"
+        >
+          <input
+            class="sb-field"
+            placeholder="Organization name"
+            aria-label="New organization name"
+            name="newOrgName"
+            data-testid="rail-new-org-name"
+            [ngModel]="newOrgName()"
+            (ngModelChange)="newOrgName.set($event)"
+          />
+          <div class="org-rail__new-actions">
+            <button
+              type="submit"
+              class="sb-btn sb-btn--primary sb-btn--sm"
+              data-testid="rail-create-org"
+              [disabled]="!newOrgName().trim() || saving()"
+            >
+              {{ saving() ? 'Adding…' : 'Add' }}
+            </button>
+            <button
+              type="button"
+              class="sb-btn sb-btn--ghost sb-btn--sm"
+              (click)="cancelCreateOrg()"
+            >
+              Cancel
+            </button>
+          </div>
+          @if (createError()) {
+            <p class="org-rail__error" data-testid="rail-org-error">{{ createError() }}</p>
+          }
+        </form>
       }
 
       @if (!collapsed() && canManageCurrent() && currentId(); as orgId) {
@@ -148,7 +149,7 @@ import { AuthService } from '../auth/auth.service';
         margin-bottom: var(--sb-space-xs);
         width: 100%;
       }
-      .org-rail--collapsed .org-rail__head {
+      .org-rail__head--collapsed {
         justify-content: center;
       }
       .org-rail__title {
@@ -157,17 +158,34 @@ import { AuthService } from '../auth/auth.service';
         font-size: var(--sb-type-caption-size);
         color: var(--sb-text-muted);
       }
-      .org-rail__collapse {
-        border: 0;
+      /* Actions grouped in the header when expanded ([+][«]); stacked ([»] over [+]) when collapsed. */
+      .org-rail__actions {
+        display: flex;
+        gap: var(--sb-space-xs);
+      }
+      .org-rail__head--collapsed .org-rail__actions {
+        flex-direction: column-reverse;
+        align-items: center;
+      }
+      .org-rail__iconbtn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.6rem;
+        height: 1.6rem;
+        border: 1px solid var(--sb-border);
+        border-radius: var(--sb-radius-full, 999px);
         background: transparent;
-        color: var(--sb-text-muted);
+        color: var(--sb-text-secondary);
         cursor: pointer;
         font-size: 1rem;
         line-height: 1;
-        padding: var(--sb-space-xs);
-        border-radius: var(--sb-radius-sm);
+        padding: 0;
+        transition:
+          background 0.15s ease,
+          color 0.15s ease;
       }
-      .org-rail__collapse:hover {
+      .org-rail__iconbtn:hover {
         background: var(--sb-surface-variant);
         color: var(--sb-text);
       }
@@ -223,21 +241,6 @@ import { AuthService } from '../auth/auth.service';
       .org-rail__initial {
         font-weight: var(--sb-type-h3-weight);
         text-transform: uppercase;
-      }
-      .org-rail__add {
-        margin-top: var(--sb-space-xs);
-        padding: var(--sb-space-sm) var(--sb-space-md);
-        border: 0;
-        border-radius: var(--sb-radius-md);
-        background: transparent;
-        color: var(--sb-text-secondary);
-        font-size: var(--sb-type-small-size);
-        text-align: left;
-        cursor: pointer;
-      }
-      .org-rail__add:hover {
-        background: var(--sb-surface-variant);
-        color: var(--sb-text);
       }
       .org-rail__new {
         display: flex;
@@ -312,6 +315,12 @@ export class OrgRail {
     this.creatingOrg.set(true);
     this.newOrgName.set('');
     this.createError.set(null);
+  }
+
+  /** `+` is always visible; when the rail is collapsed it expands first, then opens the form. */
+  protected onAddClick(): void {
+    if (this.collapsed()) this.toggleCollapsed.emit();
+    this.startCreateOrg();
   }
 
   protected cancelCreateOrg(): void {
