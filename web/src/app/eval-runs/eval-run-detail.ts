@@ -88,7 +88,9 @@ import { EvalRunsApiService } from './eval-runs-api.service';
                     </div>
                     <div class="io-block">
                       <span class="result__key">Model output</span>
-                      <pre class="io-text">{{ formatOutput(fixtureRun.modelOutput) }}</pre>
+                      <pre class="io-text io-text--output">{{
+                        formatOutput(fixtureRun.modelOutput)
+                      }}</pre>
                     </div>
                   </div>
 
@@ -214,10 +216,16 @@ import { EvalRunsApiService } from './eval-runs-api.service';
         border: 1px solid var(--sb-border);
         border-radius: var(--sb-radius-md);
         padding: var(--sb-space-md);
-        max-height: 320px;
+        max-height: 420px;
         overflow: auto;
+        /* W28: draggable taller — the boxes were a cramped fixed scroll. */
+        resize: vertical;
         white-space: pre-wrap;
         word-break: break-word;
+      }
+      /* W28: the model output is the primary artifact in this focused view — give it more room. */
+      .io-text--output {
+        max-height: 640px;
       }
       .result__meta {
         display: flex;
