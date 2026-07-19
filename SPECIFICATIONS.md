@@ -26,8 +26,7 @@
 - **2.15** Structured, severity-tagged LLM-judge verdicts (per-criterion + failure-mode) — `NOT STARTED` — [detail](specs/2.15.md)
 - **2.16** Data-conditional / per-fixture rubric scoring — `NOT STARTED` — [detail](specs/2.16.md)
 - **2.17** Asynchronous eval runs (job + poll) — `NOT STARTED` — [detail](specs/2.17.md)
-- **2.18** Eval-loop UX polish (run-failure visibility, run labels, dark-mode dropdown) — `NOT STARTED` — [detail](specs/2.18.md)
-- **2.19** UI/UX cohesion pass (the app feels disjointed in places) — `IN PROGRESS` — [detail](specs/2.19.md)
+- **2.20** Deferred UX polish from the 2.19 cohesion pass (source editor, output height, trend gap, org left-drawer) — `NOT STARTED` — [detail](specs/2.20.md)
 
 ## Phase 3 — Integrations & Ops
 - **3.1** Zatomic-backed Prompt Registry — `NOT STARTED` — [detail](specs/3.1.md)
@@ -39,6 +38,8 @@
 - **5.1** Adopt LitmusAI across Cortex Golf & Stormboard (discover → onboard → improve every prompt) — `IN PROGRESS` — [detail](specs/5.1/5.1.md)
 
 ## Archive
+- **2.19** UI/UX cohesion pass (the app feels disjointed in places) — `DONE` — [detail](specs/archive/2.19.md)
+- **2.18** Eval-loop UX polish (run-failure visibility, run labels, dark-mode dropdown; absorbed into 2.19) — `SUPERSEDED` — [detail](specs/archive/2.18.md)
 - **2.14** Score stability & rationale-first comparison (variance view + rationale-diff) — `DONE` — [detail](specs/archive/2.14.md)
 - **2.12** Eval-loop round 3 — reliability quick-fixes (B8/R2/R5 + run-timeout band-aid; R1/R3/R4 promoted to 2.17/2.16/2.14) — `DONE` — [detail](specs/archive/2.12.md)
 - **2.10** Markdown editor (with preview) for markdown-bearing fields — `DONE` — [detail](specs/archive/2.10.md)
