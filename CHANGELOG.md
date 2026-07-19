@@ -5,6 +5,51 @@ SemVer (pre-1.0 `0.x`) across the API, web, and eval-runner. A release is a tagg
 as of `0.13.0` it also deploys to a hosted **dev** environment on every push to `main` (spec 3.2).
 There is no prod target yet.
 
+## [0.17.0] — 2026-07-19
+
+A **UI/UX cohesion pass** that makes the whole app read as one connected product, plus
+**score-stability & rationale-first comparison**. The prompt workspace becomes a tabbed hub, a
+shared right-side Drawer homes the heavy surfaces, Compare is unified (content · scores · rationale
+off one From→To), headline scores stop being inflated by pass/fail scorers, and "fixtures" are
+renamed to **test cases**.
+
+### Added
+
+- **[#2.19] UI/UX cohesion pass** ([detail](specs/archive/2.19.md)):
+  - **Tabbed workspace hub** — `/prompts/:id` is now Versions · Datasets · Analytics · Runs, with
+    **Run** elevated to a header primary action and **Compare** opening a drawer; Datasets/Analytics
+    each get a canonical tab instead of stacked partial-duplicates.
+  - **Shared `Drawer` primitive** — one right-side slide-over (Esc/scrim close, focus-trap, responsive)
+    homes scorer-edit, user↔org management, and Compare.
+  - **Unified Compare drawer** — pick From→To once, then tab **Content** (text diff) · **Scores**
+    (per-scorer deltas) · **Rationale** (judge "why"), with cross-model + within-noise warnings.
+  - **Meaningful headline scores** — dashboard cards, run headers, and Runs/Recent-activity tables show
+    the LLM-judge mean (not a 1.00 inflated by always-pass deterministic scorers).
+  - **Summarize-then-reveal (D3)** — version content caps height, the content diff collapses unchanged
+    runs (GitHub-style), the rubric CONFIG cell shows a one-line summary.
+  - **Variance clarity** — Score-stability focuses on stochastic scorers; deterministic/stale scorer
+    identities fold away and are labelled by config.
+  - **Fixtures → "Test cases"** relabelled app-wide (domain aggregate unchanged); the dataset model
+    (test cases × scorers) is stated on the page.
+  - **Attention-centered dashboard** — Needs attention → Prompts → Recent activity (with scores).
+  - **Consistency** — human date format + chip-lists everywhere; simplified topbar nav (Dashboard ·
+    Prompts · Admin); brand orange-droplet favicon. Absorbs **[#2.18]** (run-failure visibility, run
+    labels, dark dropdown).
+- **[#2.14] Score stability & rationale-first comparison** ([detail](specs/archive/2.14.md)): a
+  variance view (mean ± spread over repeated runs) with a within-noise flag, and a rationale-diff that
+  shows the judge's reasoning on each side of a comparison.
+
+### Changed
+
+- **[#2.12] Eval-loop round 3** ([detail](specs/archive/2.12.md)) closed out (reliability quick-fixes;
+  heavy slices promoted to 2.14–2.18).
+
+### Deferred
+
+- **[#2.20] Deferred UX polish** ([detail](specs/2.20.md)) homes the 2.19 findings not delivered here:
+  a source/code editor for prompt content + rubric (W3/W21), a roomier eval-run output view (W28), a
+  trend gap for un-run versions (W31), and an org switcher as a left drawer/rail (W39).
+
 ## [0.16.0] — 2026-07-19
 
 Authoring & reliability polish for the eval loop: a **Cancel** on every reveal/expand form, a
