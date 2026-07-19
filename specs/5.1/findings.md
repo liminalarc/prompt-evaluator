@@ -134,7 +134,15 @@
   (4 fixtures × 200-400-word Sonnet output + Opus judge each) sits right at that edge: it **failed once, then
   succeeded on retry** — non-deterministic at the boundary. daily-briefing (75-100-word outputs) stayed under
   it. Real fix: **async runs** — kick off a job, return immediately, poll for results (also unblocks bigger
-  datasets). Interim band-aid: raise the HttpClient + App Runner request timeouts. → *home: **[2.12](../2.12.md)** (heavy slice — may split out) — **not yet built**.*
+  datasets). Interim band-aid: raise the HttpClient + App Runner request timeouts. → *home: **[2.12](../2.12.md)** (heavy slice — may split out).*
+  - **Update 2026-07-19 (v4-validation walk):** the 100s cap bit **live** — a `round-debrief` run 502'd twice
+    on dev at the boundary. **Interim band-aid shipped:** the eval-runner HttpClient timeout is now **5 min**
+    (was the 100s .NET default; `Infrastructure/DependencyInjection.cs`) and the compose nginx proxy timeouts
+    are **300s** (were 60s; `web/nginx.conf` — local-only, dev serves the SPA same-origin from the API so no
+    nginx is in its path). **Diagnosis:** dev's successful runs *and* its 502s both land near ~100s, so the
+    HttpClient cap — not App Runner's router — was the ceiling; the bump should let round-debrief complete.
+    App Runner exposes no per-request timeout to tune. **R1-proper (async) still stands** as the real fix for
+    genuinely long runs / bigger datasets — **not yet built**.
 - **R2 — Timeout/gateway 502 fails silently (hole in B2's "loud failures").** When a run 502s via **timeout or
   the App Runner gateway**, the body is not the API's structured `502 {error}` JSON — so the SPA's
   `serverError(err)` path (2.8) can't extract a message and **shows no banner at all**. B2 made the *structured*
@@ -170,6 +178,25 @@
   Analytics/Compare **flags a cross-model comparison** (you can't cleanly compare prompts across different
   subject models — the axis isn't held). Sibling to 1.16's same-*scorer*-config rule: hold the identity axes
   (subject model **and** scorer config) constant when comparing versions. → *home: **[2.12](../2.12.md)** — **shipped 2026-07-19**.*
+
+## UX / consistency (2026-07-19, v4 real-model validation walk)
+- **U15 — The workspace "Run a version" recent-runs list labels runs by timestamp only.** The card
+  (`prompt-detail`, `recentRuns`) shows each run as its raw `createdAt` + scorer kinds + fixture count —
+  it never resolves the run to **which version / subject model** it scored, so you can't tell what a run
+  *was* at a glance (which matters exactly when you're iterating v1→v5 and re-running). The **dataset**
+  page's Runs table already does this (U14, 2.8: resolves `vN` + target model from the owning prompt's
+  versions); this workspace card lagged behind. Fix: give the workspace recent-runs list the same
+  version/model columns (and consider a short label). Same data is already loaded (`p.versions`).
+  → *home: **user decision** — small UX slice; a future eval-loop UX round or fold into an existing UI spec. Not built.*
+
+- **R6 — The loud run-failure banner is page-level, so it lands off-screen (follow-up to R2).** R2
+  (shipped 2.12) makes any run failure loud — verified live: a 502 timeout on a `round-debrief` run
+  showed *"The run failed with a server error (HTTP 502)…"*. But the banner is the **page-level
+  `<app-error-state>` at the top** (by the breadcrumb); triggering a run from the "Run a version" card
+  (or the dataset run card) lower on a long page puts the failure **above the fold** — "I didn't see
+  anything happen." The message is right, the **placement** is wrong. Fix options: a **toast/snackbar**
+  that draws the eye (persists until dismissed) and/or an **inline error next to the run button**;
+  optionally auto-scroll to the banner. → *home: **user decision** — R2 visibility follow-up (2.12) or a UI round. Not built.*
 
 ## Ops / infra
 - **O1 — Dev deployed without the Anthropic key set.** Provisioning shipped the secret as a placeholder;

@@ -5,6 +5,106 @@
 > LitmusAI** (created by hand during the walk) and the shipped prompt in **Golf git `9ba2ad3c`**.
 > Study detail: [../catalog.md](../catalog.md) · runbook: [../runbook.md](../runbook.md).
 
+---
+
+## ▶ NEXT — v4 real-model validation (do this, by hand in dev)
+
+**Why:** v1 ran on Sonnet 4.6 but v2/v3 ran on Sonnet 5, so the v1→v2 win confounded *prompt* with
+*model*, and the backported v2 was never validated on Golf's real model. v4 = **v2's exact prompt on
+Sonnet 4.6**, compared to v1 (also 4.6, same fair rubric) → the clean prompt-only result. Dev is at
+**0.16.0**, so R5 (model-hold + cross-model flag) is live to help.
+
+**Steps** (open the `round-debrief` prompt workspace in dev):
+
+1. **Confirm the fair rubric is in place.** Dataset `Core round scenarios` → Scorers → open the
+   **LlmJudge** row → its Rubric should be the **data-conditional** text in the *Revised rubric* block
+   below. If it isn't, paste that in and Save. (v1 and v4 must be scored by the **same** fair rubric to
+   be comparable — this is what 1.16's same-scorer-config rule protects.)
+2. **Add v4.** `+ Add version` → **clear the seeded content** (it seeds from v3 — we do NOT want that)
+   → paste the **v2 content** block below as Content.
+3. **Set Target model = `Claude Sonnet 4.6`.** R5 now defaults it to the latest version's model (v3 →
+   Sonnet 5), so you must change it — and the **⚠️ model-change warning will fire**. That's expected
+   and correct here: we're *deliberately* validating a different model than the latest version.
+4. **Label:** `v2 content on Sonnet 4.6 — real-model validation`. Add version.
+5. **Run v4** against `Core round scenarios` (same dataset, same scorers).
+6. **Re-run v1** on the fair rubric if it hasn't been scored under it since the rubric change (so the
+   comparison is apples-to-apples). Both must be Sonnet 4.6 + the data-conditional rubric.
+7. **Analytics → Compare versions → v1 vs v4.** Read the per-fixture deltas + the rationale.
+
+**Decide:**
+- **v4 ≥ v1** (esp. F4 climbs, F1-F3 hold ~0.83-0.90) → **backport confirmed** — Golf `9ba2ad3c` is
+  validated on the real model; mark it done. Remember ~±0.1 run-to-run noise: judge the trend.
+- **v4 < v1** → the Sonnet-5 result didn't transfer to 4.6 → tell me and we reconsider the prompt.
+
+**v2 content** (paste as v4's Content — this is exactly what shipped to Golf `9ba2ad3c`):
+```
+You are a friendly, encouraging golf coach providing a post-round analysis for a recreational golfer. You will receive structured data about a round of golf along with the player's career statistics.
+
+## Your Analysis Should
+
+1. **Open with the strongest positive** from the round — a great hole, a personal achievement, or an area of clear improvement.
+2. **When the data supports it, analyze front nine vs back nine momentum** — momentum shifts, strong/weak stretches, consistency. Skip this entirely if no nine-level or per-hole data is provided.
+3. **Identify specific patterns in the data you actually have** — scoring by par type, putting, GIR trends, shot patterns, or pace. Aim for 2-3, but only cite patterns the data shows; on sparse data, fewer real observations beat more speculative ones.
+4. **Compare to the player's own averages** — always reference their personal stats, not generic benchmarks. "You averaged 1.8 putts per hole vs your career 2.1" is far more useful than "tour average is 1.7".
+5. **Close with one actionable practice suggestion** — based on the most impactful weakness you identified. Be specific: "Focus on approach shots from 150-175 yards" not "work on your iron play".
+
+## Tone
+
+- Encouraging but honest — celebrate improvements, acknowledge struggles without dwelling
+- Coach-like, not commentator-like — "you" not "the player"
+- Conversational, flowing paragraphs — match the length to what the data lets you say
+- No bullet points or headers — write in flowing paragraphs
+- Use specific numbers from the data to support observations
+
+## Important Rules
+
+- Only reference data that is actually provided. Do not invent statistics.
+- Never substitute a generic or "recreational golfer" benchmark for a stat you don't have. If the player's own number for something isn't provided, don't compare it at all — say nothing rather than reach for a typical figure.
+- When an analysis has no supporting data (e.g. no per-hole or front/back-nine breakdown), skip it entirely — do not force it, estimate it, or point out that it's missing. Scale the whole debrief down to the data you have; a shorter, fully-grounded analysis beats a padded one.
+- Do not make handicap projections or score predictions of any kind (e.g. "you'll be in the low 90s", "you'll pass your best soon").
+- Do not use golf jargon without context — assume the player knows basic terms but explain advanced concepts briefly.
+- Keep the response between 200-400 words, but go shorter when the data is sparse — never pad to reach the range.
+- Do not use markdown formatting (no headers, bold, italics, or bullet points). Write in plain paragraphs.
+
+## Drill Prescriptions
+
+After your written analysis, append a drills block with 2-3 targeted practice drills that address the most impactful weaknesses you identified in the round. The drills should be specific, actionable, and directly tied to THIS round's actual data — never to generic benchmarks.
+
+Format the drills block exactly as follows — do not deviate from this format:
+
+[DRILLS_JSON]
+[
+  {
+    "area": "short description of weakness area (e.g. '6-10 foot putting', 'approach from 125-150 yards')",
+    "drillName": "specific drill name",
+    "description": "clear, step-by-step description of how to execute the drill at the range or practice green",
+    "targetRounds": 3,
+    "metric": "camelCase metric key (e.g. puttMakeRate6to10ft, avgProximity125to150, girPercent, fairwayPercent)",
+    "targetValue": 0.5
+  }
+]
+[/DRILLS_JSON]
+
+Rules for drills:
+- Write exactly 2-3 drills.
+- Each drill must address a specific, data-backed weakness from this round.
+- targetRounds is an integer between 2 and 6.
+- targetValue is a double representing the goal (e.g. 0.5 for 50% make rate, 25 for 25 yards proximity).
+- The [DRILLS_JSON] block must appear after your written analysis text, separated by a blank line.
+- The written analysis must stand alone without the drills — do not reference the drills in the text.
+```
+
+**Revised rubric** (data-conditional — confirm/paste into the LlmJudge scorer's Rubric field; paste **only** this text, no "Config"/label word):
+```
+Score 0-1 how well this golf post-round debrief follows its brief, JUDGING EACH OUTPUT AGAINST WHAT ITS INPUT CAN SUPPORT. The output is PROSE followed by a [DRILLS_JSON]...[/DRILLS_JSON] block.
+First assess the input's richness. If it lacks per-hole or nine-level data, do NOT expect or reward front/back-nine momentum analysis or par-type patterns, and do NOT penalize their absence — a correct sparse debrief simply omits them.
+Prose (~70%): (1) 200-400 words on rich data, proportionally shorter on sparse — never padded; 3-5 flowing paragraphs, plain text, NO markdown; (2) opens with the strongest positive from THIS round; (3) WHERE THE DATA SUPPORTS IT, analyzes front/back momentum and 2-3 specific data-backed patterns; on sparse data, reward a concise, fully-grounded read of the stats present instead; (4) compares to the player's OWN career averages, never generic/tour/"recreational" benchmarks; (5) closes with ONE specific, actionable practice suggestion tied to a real weakness (or, on sparse data, the most improvable stat present); (6) encouraging-but-honest coach tone ("you"); NO handicap projections or score predictions; (7) invents NO stats, and NEVER narrates, apologizes for, or references data it wasn't given.
+Drills (~30%): (8) 2-3 valid drills tied to weaknesses visible in THIS round (on sparse data, drills tied to the one or two improvable stats present are fine); (9) valid shape: area, drillName, description, targetRounds (int 2-6), metric (camelCase), targetValue (number); (10) prose stands alone.
+Deduct for markdown, invented numbers, generic benchmarks, predictions, referencing missing data, wrong length, or a missing/malformed drills block.
+```
+
+---
+
 ## Setup
 - **Prompt** `round-debrief` — post-round coaching narrative (200-400 words) + a `[DRILLS_JSON]`
   block of 2-3 data-tied drills.
@@ -53,11 +153,9 @@
   v1→v2 comparison confounded *prompt* with *model upgrade*, and the backported v2 was **validated on
   Sonnet 5, not Golf's Sonnet 4.6**. Changes are behavioral/model-agnostic so the backport is *likely*
   fine — but **unvalidated on the real model**.
-- **v4 real-model validation (still to do — left for the user):** add **v4 = v2's exact content,
-  Target model = `Claude Sonnet 4.6`** (paste v2 from git history; do **not** seed-from-latest, which
-  is v3). Run v4, then **Compare v1 vs v4** (both Sonnet 4.6, fair rubric) → the clean prompt-only
-  result on Golf's real model. v4 ≥ v1 → backport confirmed; else reconsider. (R5's add-version model
-  hold + cross-model Compare flag now ship in 2.12, so this drift is prevented going forward.)
+- **v4 real-model validation is still owed** — the exact by-hand steps + paste-ready v2 content live
+  in the **▶ NEXT** section at the top of this file. (R5's add-version model-hold + cross-model Compare
+  flag now ship in 2.12, so this drift is prevented going forward.)
 
 ## Learnings
 1. daily-briefing's **data-starvation → fabrication** lesson **transfers** — explicit bans removed the
