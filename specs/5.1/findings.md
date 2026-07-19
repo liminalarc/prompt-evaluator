@@ -113,6 +113,23 @@
   Exception: the 2 Stormboard inline-prompt extractions (`wizard-prompts`, `asset-mapping`) are a structural
   refactor Stormboard may choose to track in its own system — its call, not ours to impose (see T4).
 
+## Reliability (2026-07-18, round-debrief walk)
+- **R1 — Synchronous eval runs time out on heavier prompts.** The run endpoint
+  (`EvalHarnessEndpoints` `MapPost .../eval-runs`) executes the whole batch inline — every fixture's
+  subject generation **and** LLM-judge call — and only responds when done. The API→eval-runner HttpClient
+  (`Infrastructure/DependencyInjection.cs`) sets **no timeout** → the .NET default **100 s**. round-debrief
+  (4 fixtures × 200-400-word Sonnet output + Opus judge each) sits right at that edge: it **failed once, then
+  succeeded on retry** — non-deterministic at the boundary. daily-briefing (75-100-word outputs) stayed under
+  it. Real fix: **async runs** — kick off a job, return immediately, poll for results (also unblocks bigger
+  datasets). Interim band-aid: raise the HttpClient + App Runner request timeouts. → *home: **new LitmusAI spec**
+  (async eval execution) — **user to confirm**. Not built in 5.1.*
+- **R2 — Timeout/gateway 502 fails silently (hole in B2's "loud failures").** When a run 502s via **timeout or
+  the App Runner gateway**, the body is not the API's structured `502 {error}` JSON — so the SPA's
+  `serverError(err)` path (2.8) can't extract a message and **shows no banner at all**. B2 made the *structured*
+  eval-runner error loud, but timeout/infra 5xx slip through silently ("nothing on screen" on the round-debrief
+  timeout). Fix: surface **any** run failure loudly — a generic banner on a non-JSON/timeout 5xx, not only the
+  `{error}` shape. → *home: **loud-error follow-up** (2.8-adjacent bug) or a new spec — **user to confirm**.*
+
 ## Ops / infra
 - **O1 — Dev deployed without the Anthropic key set.** Provisioning shipped the secret as a placeholder;
   the first eval was the first thing to exercise it. The next environment shouldn't repeat this — add a

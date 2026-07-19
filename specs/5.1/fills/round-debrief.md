@@ -182,8 +182,10 @@ Drills block (weight ~30%):
 (10) the prose stands alone and does not reference the drills.
 Deduct for markdown, invented numbers, generic benchmarks, wrong length, a missing/malformed drills block, or drills untied to the data.
 ```
-- **Regex** · Config `\[DRILLS_JSON\]` (drills block present)
-- **Regex** · Config `[0-9]` (cites a number)
+- **Regex** — paste **only** the pattern into the config field (no label, no quotes): `\[DRILLS_JSON\]`  ·  *(drills block present)*
+- **Regex** — paste **only** the pattern: `[0-9]`  ·  *(cites a number)*
+> ⚠️ The config field is the raw regex — don't paste the word "Config" or the parenthetical. A stored pattern
+> of `Config [0-9]` searches the output for the literal text "Config …" → always "no match".
 
 ## Baseline & iterations (fill as you run)
 - **v1 baseline** (Sonnet 4.6/5, judge Opus 4.8): _pending run_ — record judge value per fixture + aggregate,
