@@ -264,9 +264,15 @@ Rules for drills:
   benchmarks + score predictions** (the two real production risks). F4's score didn't move because the judge
   anchors on structurally-impossible criteria (front/back momentum, 2-3 patterns) the sparse round can't
   supply — a **rubric** cap, not a prompt failure (→ finding **R3**). F1's −0.05 is within run-to-run noise (R4).
-- **Backport decision:** _deferred — user chose to **iterate v3 first** (see "v3 — exactly what to do" below)._
-  v2 alone was a recommend-backport (removes sparse-data fabrication; flat number is a rubric artifact), but
-  we're first fixing the rubric cap + adding a few-shot to see F4 actually clear.
+- **3-way on the data-conditional rubric (the fair yardstick):** v1 avg **0.79** (F1 .85/F2 .88/F3 .82/**F4 .60**);
+  v2 avg **0.88** (.88/.90/.85/**.90**); v3 avg **0.84** (.82/.87/.86/**.82**). **v2 wins.** The **rubric was the
+  real F4 cap** — v2's already-clean sparse output went 0.62 (old rubric) → **0.90** (fair rubric); v1 stays 0.60
+  because its output genuinely fabricates. **v3's few-shot didn't help** (≤ v2 on 3/4 fixtures + ~200 tokens/call)
+  — instruction-based v2 was enough. *Correction: my earlier "few-shot is the hero" read came from a partial set
+  (v1+v3 only); the full 3-way flipped it → **never attribute from an incomplete version set** (R4 sharpened).*
+- **Backport decision:** ✅ **v2 backported** — Golf `9ba2ad3c` (`feat(ai): improve round-debrief prompt…`).
+  Ships the adaptive-structure + anti-benchmark/prediction/missing-data prompt (no few-shot). The
+  **data-conditional rubric** change stays in LitmusAI (measurement, not what Golf runs).
 - **Learnings:** (1) daily-briefing's *data-starvation → fabrication* lesson **transfers** — explicit bans
   removed benchmarks/predictions on sparse input. (2) **Score ≠ quality**: v2 improved the output while the
   aggregate stayed flat; the win was only visible in the **rationale** (R4). (3) A single rubric over
