@@ -25,6 +25,66 @@ public class PromptTests
         Assert.Throws<ArgumentException>(() => Prompt.Create(Guid.Empty, "Summarizer"));
     }
 
+    [Fact]
+    public void Create_leaves_current_version_unset()
+    {
+        var prompt = Prompt.Create(OrgId, "Summarizer");
+        Assert.Null(prompt.CurrentVersionId);
+        Assert.Null(prompt.CurrentVersionSha);
+        Assert.Null(prompt.CurrentVersionSetAt);
+    }
+
+    [Fact]
+    public void SetCurrentVersion_marks_a_version_in_history_with_sha_and_timestamp()
+    {
+        var prompt = Prompt.Create(OrgId, "Summarizer");
+        var v1 = prompt.AddVersion("Do the thing", "claude-sonnet-5", When);
+
+        var ok = prompt.SetCurrentVersion(v1.Id, "abc1234", When);
+
+        Assert.True(ok);
+        Assert.Equal(v1.Id, prompt.CurrentVersionId);
+        Assert.Equal("abc1234", prompt.CurrentVersionSha);
+        Assert.Equal(When, prompt.CurrentVersionSetAt);
+    }
+
+    [Fact]
+    public void SetCurrentVersion_moves_the_marker_so_only_one_is_current()
+    {
+        var prompt = Prompt.Create(OrgId, "Summarizer");
+        var v1 = prompt.AddVersion("v1", "claude-sonnet-5", When);
+        var v2 = prompt.AddVersion("v2", "claude-sonnet-5", When);
+
+        prompt.SetCurrentVersion(v1.Id, null, When);
+        prompt.SetCurrentVersion(v2.Id, null, When.AddDays(1)); // mark-as-backported → move forward
+
+        Assert.Equal(v2.Id, prompt.CurrentVersionId);
+        Assert.Equal(When.AddDays(1), prompt.CurrentVersionSetAt);
+    }
+
+    [Fact]
+    public void SetCurrentVersion_rejects_a_version_not_in_this_prompt()
+    {
+        var prompt = Prompt.Create(OrgId, "Summarizer");
+        prompt.AddVersion("v1", "claude-sonnet-5", When);
+
+        var ok = prompt.SetCurrentVersion(Guid.NewGuid(), null, When);
+
+        Assert.False(ok);
+        Assert.Null(prompt.CurrentVersionId);
+    }
+
+    [Fact]
+    public void SetCurrentVersion_normalizes_a_blank_sha_to_null()
+    {
+        var prompt = Prompt.Create(OrgId, "Summarizer");
+        var v1 = prompt.AddVersion("v1", "claude-sonnet-5", When);
+
+        prompt.SetCurrentVersion(v1.Id, "   ", When);
+
+        Assert.Null(prompt.CurrentVersionSha);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

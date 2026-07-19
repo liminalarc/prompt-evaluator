@@ -27,6 +27,20 @@ public sealed class Prompt
     /// </summary>
     public Guid? FolderId { get; private set; }
 
+    /// <summary>
+    /// The version this prompt's <b>source app is actually running</b> (1.16) — the "Current in source"
+    /// marker. Exactly one version at a time (a single pointer); <c>null</c> until first set. Backport
+    /// signals derive from it: a higher-scoring version above Current is <i>backport-eligible</i>.
+    /// LitmusAI only <b>signals</b> — the backport itself is a human action in the source repo.
+    /// </summary>
+    public Guid? CurrentVersionId { get; private set; }
+
+    /// <summary>Optional commit SHA recorded when Current was set/moved — provenance of what shipped.</summary>
+    public string? CurrentVersionSha { get; private set; }
+
+    /// <summary>When Current was last set/moved (null until first set).</summary>
+    public DateTimeOffset? CurrentVersionSetAt { get; private set; }
+
     /// <summary>The full version history, oldest first. Append-only from the outside.</summary>
     public IReadOnlyList<PromptVersion> Versions
         => _versions.OrderBy(v => v.VersionNumber).ToList().AsReadOnly();
@@ -104,6 +118,24 @@ public sealed class Prompt
             return false;
 
         version.SetLabel(Normalize(label));
+        return true;
+    }
+
+    /// <summary>
+    /// Marks a version as <b>Current in source</b> (1.16) — the one the app runs. This is the single
+    /// mechanic behind both the initial marker and <i>mark-as-backported</i> (moving Current forward to
+    /// a shipped, higher-scoring version); the eligibility flag re-derives against the new pointer.
+    /// Records an optional commit SHA + the set timestamp. Returns false when the version is not in this
+    /// prompt's history (nothing changes).
+    /// </summary>
+    public bool SetCurrentVersion(Guid versionId, string? commitSha, DateTimeOffset setAt)
+    {
+        if (_versions.All(v => v.Id != versionId))
+            return false;
+
+        CurrentVersionId = versionId;
+        CurrentVersionSha = Normalize(commitSha);
+        CurrentVersionSetAt = setAt;
         return true;
     }
 

@@ -99,6 +99,39 @@ public sealed class PromptRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SetCurrentVersion_round_trips_the_marker_sha_and_timestamp()
+    {
+        await using var migrateCtx = NewContext();
+        await migrateCtx.Database.MigrateAsync();
+
+        var orgId = await SeedOrgAsync();
+        var prompt = Prompt.Create(orgId, "Summarizer");
+        var v1 = prompt.AddVersion("v1", "claude-sonnet-5", When);
+        prompt.AddVersion("v2", "claude-sonnet-5", When.AddMinutes(1));
+
+        await using (var writeCtx = NewContext())
+        {
+            await new PromptRepository(writeCtx).AddAsync(prompt);
+        }
+
+        await using (var editCtx = NewContext())
+        {
+            var repo = new PromptRepository(editCtx);
+            var loaded = await repo.GetByIdAsync(prompt.Id);
+            Assert.Null(loaded!.CurrentVersionId); // nullable until first set
+            loaded.SetCurrentVersion(v1.Id, "deadbeef", When.AddDays(1));
+            await repo.SaveChangesAsync();
+        }
+
+        await using var readCtx = NewContext();
+        var reloaded = await new PromptRepository(readCtx).GetByIdAsync(prompt.Id);
+
+        Assert.Equal(v1.Id, reloaded!.CurrentVersionId);
+        Assert.Equal("deadbeef", reloaded.CurrentVersionSha);
+        Assert.Equal(When.AddDays(1), reloaded.CurrentVersionSetAt);
+    }
+
+    [Fact]
     public async Task List_returns_all_prompts_with_their_versions()
     {
         await using var migrateCtx = NewContext();

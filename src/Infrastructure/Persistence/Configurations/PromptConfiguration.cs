@@ -15,6 +15,13 @@ internal sealed class PromptConfiguration : IEntityTypeConfiguration<Prompt>
         builder.Property(p => p.Description);
         builder.Property(p => p.FolderId);
 
+        // The "Current in source" marker (1.16): which version the source app runs. A plain nullable
+        // id column (no DB FK to the owned prompt_versions — same reference-by-id style as
+        // EvalRun.PromptVersionId); the aggregate enforces it points at a version it owns.
+        builder.Property(p => p.CurrentVersionId);
+        builder.Property(p => p.CurrentVersionSha);
+        builder.Property(p => p.CurrentVersionSetAt);
+
         // A prompt belongs to an organization (1.9) — the 4.1 permission boundary. Deleting an org
         // takes its prompts with it.
         builder.HasOne<Organization>()
