@@ -319,11 +319,24 @@ export class EvalRunDetail implements OnInit {
   }
 
   protected summary(run: EvalRun): string {
-    return `${run.results.length} fixture(s) · ${this.scoreCount(run)} score(s)`;
+    const base = `${run.results.length} fixture(s) · ${this.scoreCount(run)} score(s)`;
+    const mean = this.meanScore(run);
+    return mean ? `${base} · mean ${mean.value.toFixed(2)}${mean.judge ? ' (judge)' : ''}` : base;
   }
 
   protected scoreCount(run: EvalRun): number {
     return run.results.reduce((total, fixtureRun) => total + fixtureRun.scores.length, 0);
+  }
+
+  // The run's meaningful headline mean (W27): the LLM-judge scores when present (deterministic
+  // scorers are near-always 1.0 and would inflate an overall mean), else the overall mean.
+  private meanScore(run: EvalRun): { value: number; judge: boolean } | null {
+    const all = run.results.flatMap((fr) => fr.scores);
+    if (all.length === 0) return null;
+    const judge = all.filter((s) => s.scorerKind === 'LlmJudge');
+    const chosen = judge.length > 0 ? judge : all;
+    const value = chosen.reduce((sum, s) => sum + s.value, 0) / chosen.length;
+    return { value, judge: judge.length > 0 };
   }
 
   /** The captured/synthetic input the model was run over; '—' until the dataset resolves. */

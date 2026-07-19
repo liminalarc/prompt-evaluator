@@ -78,24 +78,29 @@ export class DashboardFacade {
         delta: number;
         confidence: RegressionConfidence;
       }[];
-      trends: { points: TrendPoint[] }[];
+      trends: { scorer: { kind: string }; points: TrendPoint[] }[];
     }[],
   ): DashboardView {
-    // Latest score per prompt = the most recent trend point across all of its datasets/scorers.
-    const latestByPrompt = new Map<string, TrendPoint>();
+    // Latest *meaningful* score per prompt: prefer the LLM-judge series' most recent point, since
+    // deterministic scorers (Regex/exact-match) are near-always 1.0 and would show a misleading
+    // perfect "1.00" on the card (2.19 W33). Fall back to the overall latest when there's no judge.
+    const judgeLatest = new Map<string, TrendPoint>();
+    const overallLatest = new Map<string, TrendPoint>();
     for (const { dataset, trends } of perDataset) {
       for (const series of trends) {
         for (const point of series.points) {
-          const current = latestByPrompt.get(dataset.promptId);
-          if (!current || point.runAt > current.runAt) {
-            latestByPrompt.set(dataset.promptId, point);
+          const o = overallLatest.get(dataset.promptId);
+          if (!o || point.runAt > o.runAt) overallLatest.set(dataset.promptId, point);
+          if (series.scorer?.kind === 'LlmJudge') {
+            const j = judgeLatest.get(dataset.promptId);
+            if (!j || point.runAt > j.runAt) judgeLatest.set(dataset.promptId, point);
           }
         }
       }
     }
 
     const promptCards: DashboardPromptCard[] = prompts.map((p) => {
-      const point = latestByPrompt.get(p.id);
+      const point = judgeLatest.get(p.id) ?? overallLatest.get(p.id);
       return {
         ...this.bareCard(p),
         latestScore: point

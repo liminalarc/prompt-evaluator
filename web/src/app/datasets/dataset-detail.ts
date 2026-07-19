@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -42,6 +42,7 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
     Chip,
     ChipList,
     DatePipe,
+    DecimalPipe,
     EmptyState,
     ErrorState,
     LoadingState,
@@ -617,6 +618,7 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                     <th>Run</th>
                     <th>Version</th>
                     <th>Model</th>
+                    <th>Score</th>
                     <th>Scorers</th>
                     <th>Fixtures</th>
                   </tr>
@@ -633,6 +635,16 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                       <td>
                         @if (modelFor(r.promptVersionId); as m) {
                           <app-chip [label]="m" />
+                        } @else {
+                          —
+                        }
+                      </td>
+                      <td data-testid="run-score">
+                        @if (r.meanScore != null) {
+                          <strong>{{ r.meanScore | number: '1.2-2' }}</strong>
+                          @if (r.meanScorerKind === 'LlmJudge') {
+                            <span class="score-hint"> · judge</span>
+                          }
                         } @else {
                           —
                         }
@@ -671,6 +683,10 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
       .fixture-row--open,
       .scorer-row--open {
         background: var(--sb-surface-raised);
+      }
+      .score-hint {
+        color: var(--sb-text-muted);
+        font-size: var(--sb-type-small-size);
       }
       .cell-truncate {
         max-width: 28rem;

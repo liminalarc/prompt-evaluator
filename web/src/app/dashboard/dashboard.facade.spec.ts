@@ -159,6 +159,62 @@ describe('DashboardFacade', () => {
       });
   });
 
+  it('prefers the meaningful LLM-judge score over an inflating Regex 1.0 [2.19 W33]', (done) => {
+    const at = '2026-01-03T00:00:00Z';
+    const judgeSeries = {
+      scorer: { identity: 'j', kind: 'LlmJudge', judgeModel: 'claude' },
+      points: [
+        {
+          promptVersionId: 'v2',
+          versionNumber: 2,
+          versionLabel: null,
+          runId: 'rj',
+          runAt: at,
+          meanValue: 0.62,
+          passRate: 1,
+          fixtureCount: 3,
+        },
+      ],
+    };
+    const regexSeries = {
+      scorer: { identity: 'x', kind: 'Regex', judgeModel: null },
+      points: [
+        {
+          promptVersionId: 'v2',
+          versionNumber: 2,
+          versionLabel: null,
+          runId: 'rx',
+          runAt: at,
+          meanValue: 1.0,
+          passRate: 1,
+          fixtureCount: 3,
+        },
+      ],
+    };
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: PromptsApiService, useValue: { listPromptsByOrganization: () => of(prompts) } },
+        { provide: DatasetsApiService, useValue: { listDatasets: () => of(datasets) } },
+        { provide: EvalRunsApiService, useValue: { listRuns: () => of([]) } },
+        {
+          provide: AnalyticsApiService,
+          useValue: {
+            getRegressions: () => of([]),
+            // Regex 1.0 shares the run timestamp with the judge 0.62 — the card must show 0.62.
+            getTrends: (_p: string, id: string) =>
+              of(id === 'd1' ? [regexSeries, judgeSeries] : []),
+          },
+        },
+      ],
+    });
+    TestBed.inject(DashboardFacade)
+      .load('o1')
+      .subscribe((view) => {
+        expect(view.prompts[0].latestScore?.meanValue).toBe(0.62);
+        done();
+      });
+  });
+
   it('returns bare prompt cards with no runs/regressions when the org has no datasets', (done) => {
     make([datasets[1]]) // only the foreign dataset → filtered out, so effectively none
       .load('o1')

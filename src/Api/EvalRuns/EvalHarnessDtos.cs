@@ -72,15 +72,29 @@ public sealed record EvalRunResponse(
 
 public sealed record EvalRunSummaryResponse(
     Guid Id, Guid PromptId, Guid PromptVersionId, DateTimeOffset CreatedAt, int FixtureCount, int ScoreCount,
-    IReadOnlyList<string> ScorerKinds)
+    IReadOnlyList<string> ScorerKinds, double? MeanScore, string? MeanScorerKind)
 {
-    public static EvalRunSummaryResponse From(EvalRun run) => new(
-        run.Id,
-        run.PromptId,
-        run.PromptVersionId,
-        run.CreatedAt,
-        run.Results.Count,
-        run.Results.Sum(r => r.Scores.Count),
-        // Distinct scorer kinds the run scored with, so the runs table reads version · model · scorers (U14).
-        run.Results.SelectMany(r => r.Scores).Select(s => s.Scorer.Kind.ToString()).Distinct().OrderBy(k => k).ToList());
+    public static EvalRunSummaryResponse From(EvalRun run)
+    {
+        var allScores = run.Results.SelectMany(r => r.Scores).ToList();
+        // The run's *meaningful* headline score: the LLM-judge mean when the run has one, since
+        // deterministic scorers (Regex/exact-match) are near-always 1.0 and inflate a naive overall
+        // mean to look perfect (2.19 W23/W30/W33). Falls back to the overall mean when there's no judge.
+        var judge = allScores.Where(s => s.Scorer.Kind == ScorerKind.LlmJudge).ToList();
+        var chosen = judge.Count > 0 ? judge : allScores;
+        double? meanScore = chosen.Count > 0 ? chosen.Average(s => s.Value) : null;
+        string? meanScorerKind = chosen.Count == 0 ? null : (judge.Count > 0 ? "LlmJudge" : "overall");
+
+        return new(
+            run.Id,
+            run.PromptId,
+            run.PromptVersionId,
+            run.CreatedAt,
+            run.Results.Count,
+            allScores.Count,
+            // Distinct scorer kinds the run scored with, so the runs table reads version · model · scorers (U14).
+            allScores.Select(s => s.Scorer.Kind.ToString()).Distinct().OrderBy(k => k).ToList(),
+            meanScore,
+            meanScorerKind);
+    }
 }

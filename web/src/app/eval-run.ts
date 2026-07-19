@@ -38,6 +38,10 @@ export interface EvalRunSummary {
   fixtureCount: number;
   scoreCount: number;
   scorerKinds: string[];
+  /** The run's meaningful headline score (LLM-judge mean, or overall when no judge); null if unscored. */
+  meanScore: number | null;
+  /** Which scorer the mean represents: 'LlmJudge' or 'overall'. */
+  meanScorerKind: string | null;
 }
 
 /** Mirrors the .NET ScorerConfigResponse DTO. */

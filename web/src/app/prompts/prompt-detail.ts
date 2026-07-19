@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -44,6 +44,7 @@ import { validateImportFile } from './import-file';
     Chip,
     ChipList,
     DatePipe,
+    DecimalPipe,
     EmptyState,
     ErrorState,
     LoadingState,
@@ -338,6 +339,7 @@ import { validateImportFile } from './import-file';
                   <thead>
                     <tr>
                       <th>Run</th>
+                      <th>Score</th>
                       <th>Scorers</th>
                       <th>Fixtures</th>
                     </tr>
@@ -349,6 +351,9 @@ import { validateImportFile } from './import-file';
                           <a [routerLink]="['/eval-runs', r.id]" data-testid="recent-run-link">{{
                             r.createdAt | date: 'medium'
                           }}</a>
+                        </td>
+                        <td>
+                          {{ r.meanScore != null ? (r.meanScore | number: '1.2-2') : '—' }}
                         </td>
                         <td><app-chip-list [labels]="r.scorerKinds" /></td>
                         <td>{{ r.fixtureCount }}</td>
