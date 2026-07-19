@@ -8,7 +8,6 @@ import {
   ScorerVariance,
   TrendSeries,
   VarianceStat,
-  VersionComparison as VersionComparisonData,
   isStochasticScorer,
   scorerLabel,
 } from '../analytics';
@@ -20,7 +19,7 @@ import { OrgContextStore } from '../shared/org-context.store';
 import { PromptSummary, PromptVersion } from '../prompt';
 import { DatasetSummary } from '../dataset';
 import { TrendChart } from './trend-chart';
-import { VersionComparison } from './version-comparison';
+import { CompareDrawer } from './compare-drawer';
 import { BadgeVariant, Card, EmptyState, ErrorState, PageHeader, StatusBadge } from '../shared';
 
 /**
@@ -34,7 +33,7 @@ import { BadgeVariant, Card, EmptyState, ErrorState, PageHeader, StatusBadge } f
     DecimalPipe,
     NgTemplateOutlet,
     TrendChart,
-    VersionComparison,
+    CompareDrawer,
     Card,
     EmptyState,
     ErrorState,
@@ -280,56 +279,31 @@ import { BadgeVariant, Card, EmptyState, ErrorState, PageHeader, StatusBadge } f
                 data-testid="compare-need-versions"
               />
             } @else {
-              <form class="selectors">
-                <div class="sb-field">
-                  <label for="from">From</label>
-                  <select
-                    id="from"
-                    name="from"
-                    data-testid="from-version"
-                    [ngModel]="fromVersionId()"
-                    (ngModelChange)="fromVersionId.set($event)"
-                  >
-                    @for (v of versions(); track v.id) {
-                      <option [ngValue]="v.id">{{ versionLabel(v) }}</option>
-                    }
-                  </select>
-                </div>
-                <div class="sb-field">
-                  <label for="to">To</label>
-                  <select
-                    id="to"
-                    name="to"
-                    data-testid="to-version"
-                    [ngModel]="toVersionId()"
-                    (ngModelChange)="toVersionId.set($event)"
-                  >
-                    @for (v of versions(); track v.id) {
-                      <option [ngValue]="v.id">{{ versionLabel(v) }}</option>
-                    }
-                  </select>
-                </div>
-              </form>
-              @if (crossModelCompare(); as cm) {
-                <p class="cross-model-warn" data-testid="cross-model-warning">
-                  ⚠ These versions ran on different subject models ({{ cm.from }} vs {{ cm.to }}). A
-                  score delta here mixes the prompt change with a model change — hold the subject
-                  model constant to compare the prompt cleanly.
-                </p>
-              }
-              @if (compareNoise(); as noise) {
-                @if (noise.withinNoise) {
-                  <p class="cross-model-warn" data-testid="within-noise">
-                    ⚠ This change (Δ {{ noise.delta.toFixed(3) }}) is within run-to-run noise (±{{
-                      noise.spread.toFixed(3)
-                    }}) — not a confident move. Run more repeats to confirm.
-                  </p>
-                }
-              }
-              <app-version-comparison [comparison]="comparison()" />
+              <p class="subtitle">
+                Diff any two versions' content, scores, and judge rationale side by side.
+              </p>
+              <button
+                type="button"
+                class="sb-btn sb-btn--secondary"
+                data-testid="open-compare"
+                (click)="showCompare.set(true)"
+              >
+                Compare versions
+              </button>
             }
           </app-card>
         </div>
+
+        @if (showCompare()) {
+          <app-compare-drawer
+            [open]="true"
+            [promptId]="promptId()!"
+            [versions]="versions()"
+            [datasetId]="datasetId()"
+            [variance]="variance()"
+            (closed)="showCompare.set(false)"
+          />
+        }
       } @else {
         <app-empty-state
           message="Choose a prompt and a dataset to see its score history."
@@ -404,33 +378,10 @@ export class AnalyticsDashboard {
     return ids.size > 0 && !ids.has(scorer.identity);
   }
 
+  // Versions of the selected prompt — fed to the unified Compare drawer (W7), which owns the
+  // From→To pick, the content/score/rationale tabs, and the cross-model / within-noise banners.
   protected readonly versions = signal<PromptVersion[]>([]);
-  protected readonly fromVersionId = signal<string | null>(null);
-  protected readonly toVersionId = signal<string | null>(null);
-  protected readonly comparison = signal<VersionComparisonData | null>(null);
-
-  // Flag a version-over-version change that sits within run-to-run noise: if |Δ| for the primary
-  // scorer is within the two versions' combined spread, it isn't a confident move (R4). Needs
-  // repeated runs to mean anything — with one run each, spread is 0 and nothing is flagged.
-  protected readonly compareNoise = computed<{
-    withinNoise: boolean;
-    spread: number;
-    delta: number;
-  } | null>(() => {
-    const cmp = this.comparison();
-    const from = this.fromVersionId();
-    const to = this.toVersionId();
-    if (!cmp || !from || !to || cmp.scorers.length === 0) return null;
-    const sc = cmp.scorers[0];
-    if (sc.delta == null) return null;
-    const sv = this.variance().find((v) => v.scorer.identity === sc.scorer.identity);
-    const fromVar = sv?.versions.find((v) => v.promptVersionId === from);
-    const toVar = sv?.versions.find((v) => v.promptVersionId === to);
-    if (!fromVar || !toVar) return null;
-    const spread = fromVar.aggregate.stdDev + toVar.aggregate.stdDev;
-    if (spread <= 0) return null; // no repeated runs → nothing to say
-    return { withinNoise: Math.abs(sc.delta) <= spread, spread, delta: sc.delta };
-  });
+  protected readonly showCompare = signal(false);
 
   // "0.750 ± 0.050" — a version's aggregate mean with its run-to-run spread.
   protected fmtStat(s: VarianceStat): string {
@@ -445,18 +396,6 @@ export class AnalyticsDashboard {
     const duplicated = this.variance().filter((v) => scorerLabel(v.scorer) === base).length > 1;
     return duplicated ? `${base} · #${scorer.identity.slice(0, 6)}` : base;
   }
-
-  // R5: flag a cross-model comparison. If the two selected versions ran on different subject models,
-  // a score delta mixes the prompt change with a model change — you can't cleanly attribute it to
-  // the prompt. Sibling to holding the model on add-version and to 1.16's same-scorer-config rule.
-  protected readonly crossModelCompare = computed<{ from: string; to: string } | null>(() => {
-    const from = this.versions().find((v) => v.id === this.fromVersionId());
-    const to = this.versions().find((v) => v.id === this.toVersionId());
-    if (!from || !to || from.id === to.id) return null;
-    return from.targetModel !== to.targetModel
-      ? { from: from.targetModel, to: to.targetModel }
-      : null;
-  });
 
   constructor() {
     // Reload the org's prompts + datasets whenever the global org changes; clear the selection
@@ -482,17 +421,11 @@ export class AnalyticsDashboard {
       }
     });
 
-    // Reload the comparison whenever the prompt, dataset, or either version selection changes.
+    // Close the Compare drawer whenever the prompt/dataset changes out from under it.
     effect(() => {
-      const promptId = this.promptId();
-      const datasetId = this.datasetId();
-      const from = this.fromVersionId();
-      const to = this.toVersionId();
-      if (promptId && datasetId && from && to && from !== to) {
-        this.loadComparison(promptId, datasetId, from, to);
-      } else {
-        this.comparison.set(null);
-      }
+      this.promptId();
+      this.datasetId();
+      this.showCompare.set(false);
     });
   }
 
@@ -527,13 +460,7 @@ export class AnalyticsDashboard {
     return delta.toFixed(3);
   }
 
-  protected versionLabel(version: PromptVersion): string {
-    return version.label
-      ? `v${version.versionNumber} · ${version.label}`
-      : `v${version.versionNumber}`;
-  }
-
-  // Selecting a prompt loads its versions and defaults the comparison to the two most recent.
+  // Selecting a prompt loads its versions (the Compare drawer seeds From→To from them).
   protected selectPrompt(promptId: string | null): void {
     this.promptId.set(promptId);
     // B8: drop a dataset selection that belongs to a different prompt — the picker is now
@@ -543,20 +470,11 @@ export class AnalyticsDashboard {
       this.datasetId.set(null);
     }
     this.versions.set([]);
-    this.fromVersionId.set(null);
-    this.toVersionId.set(null);
     if (!promptId) {
       return;
     }
     this.promptsApi.getPrompt(promptId).subscribe({
-      next: (prompt) => {
-        this.versions.set(prompt.versions);
-        const n = prompt.versions.length;
-        if (n >= 2) {
-          this.fromVersionId.set(prompt.versions[n - 2].id);
-          this.toVersionId.set(prompt.versions[n - 1].id);
-        }
-      },
+      next: (prompt) => this.versions.set(prompt.versions),
       error: () => this.error.set('Could not load the prompt versions.'),
     });
   }
@@ -581,13 +499,6 @@ export class AnalyticsDashboard {
     this.evalApi.listScorers(datasetId).subscribe({
       next: (scorers) => this.currentScorerIds.set(new Set(scorers.map((s) => s.identity))),
       error: () => this.currentScorerIds.set(new Set()),
-    });
-  }
-
-  private loadComparison(promptId: string, datasetId: string, from: string, to: string): void {
-    this.api.getComparison(promptId, datasetId, from, to).subscribe({
-      next: (cmp) => this.comparison.set(cmp),
-      error: () => this.error.set('Could not load the version comparison.'),
     });
   }
 }
