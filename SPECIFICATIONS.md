@@ -27,7 +27,7 @@
 - **2.16** Data-conditional / per-fixture rubric scoring — `NOT STARTED` — [detail](specs/2.16.md)
 - **2.17** Asynchronous eval runs (job + poll) — `NOT STARTED` — [detail](specs/2.17.md)
 - **2.18** Eval-loop UX polish (run-failure visibility, run labels, dark-mode dropdown) — `NOT STARTED` — [detail](specs/2.18.md)
-- **2.19** UI/UX cohesion pass (the app feels disjointed in places) — `NOT STARTED` — [detail](specs/2.19.md)
+- **2.19** UI/UX cohesion pass (the app feels disjointed in places) — `IN PROGRESS` — [detail](specs/2.19.md)
 
 ## Phase 3 — Integrations & Ops
 - **3.1** Zatomic-backed Prompt Registry — `NOT STARTED` — [detail](specs/3.1.md)
