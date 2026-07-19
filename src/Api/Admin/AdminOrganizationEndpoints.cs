@@ -72,11 +72,14 @@ public static class AdminOrganizationEndpoints
 
         // Cascade delete (1.10). Idempotent — a missing org is a no-op 204.
         group.MapDelete("/{id:guid}", async (
-            Guid id, IOrganizationRepository organizations, OrgAccess access, CancellationToken ct) =>
+            Guid id, IOrganizationRepository organizations, IUserDirectory users, OrgAccess access,
+            CancellationToken ct) =>
         {
             if (!await access.IsGlobalAdminAsync(ct))
                 return Results.Forbid();
             await organizations.DeleteAsync(id, ct);
+            // Revoke memberships too — they're in the Identity context and don't cascade (2.21).
+            await users.RemoveAllMembersAsync(id, ct);
             return Results.NoContent();
         });
 

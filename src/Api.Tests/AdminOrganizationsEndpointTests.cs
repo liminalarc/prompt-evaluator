@@ -46,6 +46,8 @@ public sealed class AdminOrganizationsEndpointTests : IAsyncLifetime
     private sealed record OrgDto(Guid Id, string Name, int MemberCount);
     private sealed record OrgMemberDto(Guid UserId, string Email, string DisplayName, string Role);
     private sealed record UserRowDto(Guid Id, string Email);
+    private sealed record MembershipDto(Guid OrganizationId, string Role);
+    private sealed record UserDetailDto(Guid Id, string Email, IReadOnlyList<MembershipDto> Memberships);
 
     private async Task<HttpClient> AdminClientAsync()
     {
@@ -105,6 +107,43 @@ public sealed class AdminOrganizationsEndpointTests : IAsyncLifetime
         var delete = await admin.DeleteAsync($"/api/admin/organizations/{created.Id}");
         Assert.Equal(HttpStatusCode.NoContent, delete.StatusCode);
         Assert.DoesNotContain(await ListOrgsAsync(admin), o => o.Id == created.Id);
+    }
+
+    [Fact]
+    public async Task The_seeded_Default_org_can_be_deleted_like_any_other()
+    {
+        var admin = await AdminClientAsync();
+        Assert.Contains(await ListOrgsAsync(admin), o => o.Id == DefaultOrgId);
+
+        var delete = await admin.DeleteAsync($"/api/admin/organizations/{DefaultOrgId}");
+        Assert.Equal(HttpStatusCode.NoContent, delete.StatusCode);
+        Assert.DoesNotContain(await ListOrgsAsync(admin), o => o.Id == DefaultOrgId);
+
+        // The admin's membership to the now-deleted Default org is revoked — no dangling row (2.21).
+        var adminId = await UserIdAsync(admin, AdminEmail);
+        var users = (await admin.GetFromJsonAsync<List<UserDetailDto>>("/api/admin/users"))!;
+        Assert.DoesNotContain(users.Single(u => u.Id == adminId).Memberships, m => m.OrganizationId == DefaultOrgId);
+    }
+
+    [Fact]
+    public async Task Deleting_an_org_revokes_its_members_leaving_no_orphan_membership()
+    {
+        await _factory.CreateAuthenticatedClientAsync("member@test.local");
+        var admin = await AdminClientAsync();
+        var memberId = await UserIdAsync(admin, "member@test.local");
+
+        var created = (await (await admin.PostAsJsonAsync("/api/admin/organizations", new { name = "Ephemeral" }))
+            .Content.ReadFromJsonAsync<OrgDto>())!;
+        var add = await admin.PostAsJsonAsync($"/api/admin/organizations/{created.Id}/members",
+            new { userId = memberId, role = "Member" });
+        Assert.Equal(HttpStatusCode.NoContent, add.StatusCode);
+
+        var delete = await admin.DeleteAsync($"/api/admin/organizations/{created.Id}");
+        Assert.Equal(HttpStatusCode.NoContent, delete.StatusCode);
+
+        var users = (await admin.GetFromJsonAsync<List<UserDetailDto>>("/api/admin/users"))!;
+        var member = users.Single(u => u.Id == memberId);
+        Assert.DoesNotContain(member.Memberships, m => m.OrganizationId == created.Id);
     }
 
     [Fact]

@@ -59,6 +59,13 @@ public interface IUserDirectory
     /// <summary>Remove a user's membership of an organization (4.3). No-op if not a member.</summary>
     Task RevokeOrganizationAsync(Guid userId, Guid organizationId, CancellationToken ct = default);
 
+    /// <summary>
+    /// Revoke <em>every</em> membership of an organization — called when the org is deleted (2.21) so
+    /// no dangling membership row survives it (memberships live in the Identity context with no
+    /// cross-context FK, so an org delete can't cascade to them). No-op when the org has no members.
+    /// </summary>
+    Task RemoveAllMembersAsync(Guid organizationId, CancellationToken ct = default);
+
     /// <summary>How many users hold the global-admin flag — backs the last-admin lockout guard (4.3).</summary>
     Task<int> CountGlobalAdminsAsync(CancellationToken ct = default);
 

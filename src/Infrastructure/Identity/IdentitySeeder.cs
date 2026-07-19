@@ -33,16 +33,21 @@ public static class IdentitySeeder
                 throw new InvalidOperationException(
                     "Failed to seed bootstrap admin: " + string.Join("; ", result.Errors));
             userId = result.UserId;
+
+            // Grant the Default org ONLY on first creation. The Default org is now an ordinary,
+            // deletable org (2.21) — if it's later deleted, a subsequent startup must not resurrect
+            // the membership (which would leave the admin pointing at a non-existent org). The seed
+            // is a first-run escape hatch, not a standing enforcement.
+            await users.GrantOrganizationAsync(userId, orgId, OrgRole.Owner, ct);
         }
         else
         {
             userId = existing.Id;
         }
 
-        await users.GrantOrganizationAsync(userId, orgId, OrgRole.Owner, ct);
-
         // The bootstrap admin is a workspace-level global admin (1.13) so it can manage the Model
-        // Catalog on a freshly deployed app. Idempotent (no-op when already set).
+        // Catalog on a freshly deployed app. Idempotent (no-op when already set) — kept unconditional
+        // so the flag is always ensured, independent of the (deletable) Default org.
         await users.SetGlobalAdminAsync(userId, true, ct);
     }
 }

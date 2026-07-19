@@ -108,6 +108,55 @@ public sealed class UserDirectoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task RemoveAllMembersAsync_revokes_every_membership_of_that_org_only()
+    {
+        var orgA = Guid.NewGuid();
+        var orgB = Guid.NewGuid();
+
+        var u1 = await WithDirectory(async d => (await d.RegisterAsync("m1@example.com", "M1", "Correct-Horse-9")).UserId);
+        var u2 = await WithDirectory(async d => (await d.RegisterAsync("m2@example.com", "M2", "Correct-Horse-9")).UserId);
+
+        await WithDirectory(async d =>
+        {
+            await d.GrantOrganizationAsync(u1, orgA, OrgRole.Owner);
+            await d.GrantOrganizationAsync(u2, orgA, OrgRole.Member);
+            await d.GrantOrganizationAsync(u1, orgB, OrgRole.Owner);
+            return 0;
+        });
+
+        await WithDirectory(async d => { await d.RemoveAllMembersAsync(orgA); return 0; });
+
+        Assert.False(await WithDirectory(d => d.IsMemberAsync(u1, orgA)));
+        Assert.False(await WithDirectory(d => d.IsMemberAsync(u2, orgA)));
+        // A different org's memberships are untouched.
+        Assert.True(await WithDirectory(d => d.IsMemberAsync(u1, orgB)));
+    }
+
+    [Fact]
+    public async Task Seeding_does_not_re_grant_the_default_org_after_it_was_removed()
+    {
+        var org = Guid.NewGuid();
+
+        var adminId = await WithDirectory(async d =>
+        {
+            await IdentitySeeder.SeedBootstrapAdminAsync(d, "boss@example.com", "Boss", "Correct-Horse-9", org);
+            return (await d.FindByEmailAsync("boss@example.com"))!.Id;
+        });
+
+        // The Default org is deleted like any other (2.21), taking its memberships with it.
+        await WithDirectory(async d => { await d.RemoveAllMembersAsync(org); return 0; });
+
+        // A later startup re-runs the idempotent seeder — it must NOT resurrect the membership.
+        await WithDirectory(async d =>
+        {
+            await IdentitySeeder.SeedBootstrapAdminAsync(d, "boss@example.com", "Boss", "Correct-Horse-9", org);
+            return 0;
+        });
+
+        Assert.Empty(await WithDirectory(d => d.GetAccessibleOrganizationIdsAsync(adminId)));
+    }
+
+    [Fact]
     public async Task Seeding_the_bootstrap_admin_is_idempotent_and_grants_the_default_org()
     {
         var org = Guid.NewGuid();

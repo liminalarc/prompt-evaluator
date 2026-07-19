@@ -66,7 +66,8 @@ public static class OrganizationEndpoints
 
         // Deletes an org and everything under it (folders, prompts, datasets cascade). Idempotent —
         // a missing org is a no-op 204; a member is required to delete one that exists (4.1).
-        group.MapDelete("/{id:guid}", async (Guid id, IOrganizationRepository repository, OrgAccess access, CancellationToken ct) =>
+        group.MapDelete("/{id:guid}", async (Guid id, IOrganizationRepository repository,
+            IUserDirectory users, OrgAccess access, CancellationToken ct) =>
         {
             var org = await repository.GetByIdAsync(id, ct);
             if (org is null)
@@ -75,6 +76,9 @@ public static class OrganizationEndpoints
                 return Results.Forbid();
 
             await repository.DeleteAsync(id, ct);
+            // Memberships live in the Identity context (no cross-context FK cascade) — revoke them
+            // explicitly so the deleted org leaves no dangling membership rows (2.21).
+            await users.RemoveAllMembersAsync(id, ct);
             return Results.NoContent();
         });
 

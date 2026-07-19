@@ -138,6 +138,11 @@ public sealed class UserDirectory(UserManager<AppUser> users, AppIdentityDbConte
         await db.SaveChangesAsync(ct);
     }
 
+    public async Task RemoveAllMembersAsync(Guid organizationId, CancellationToken ct = default)
+        => await db.OrganizationMemberships
+            .Where(m => m.OrganizationId == organizationId)
+            .ExecuteDeleteAsync(ct);
+
     public Task<int> CountGlobalAdminsAsync(CancellationToken ct = default)
         => users.Users.CountAsync(u => u.IsAdmin, ct);
 
