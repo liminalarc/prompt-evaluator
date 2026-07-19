@@ -865,7 +865,12 @@ export class DatasetDetail implements OnInit {
     if (!d) return [{ label: 'Dashboard', link: '/' }];
     return [
       { label: 'Dashboard', link: '/' },
-      { label: this.promptName() ?? 'Prompt', link: ['/prompts', d.promptId] },
+      // Return to the workspace's Datasets tab — where this dataset was opened from.
+      {
+        label: this.promptName() ?? 'Prompt',
+        link: ['/prompts', d.promptId],
+        queryParams: { tab: 'datasets' },
+      },
       { label: d.name },
     ];
   });

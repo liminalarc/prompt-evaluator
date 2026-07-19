@@ -5,6 +5,8 @@ import { RouterLink } from '@angular/router';
 export interface Crumb {
   label: string;
   link?: string | unknown[];
+  /** Optional query params to carry on the link (e.g. return to a specific workspace tab). */
+  queryParams?: Record<string, unknown>;
 }
 
 /**
@@ -18,7 +20,13 @@ export interface Crumb {
     <nav class="breadcrumb" data-testid="breadcrumb" aria-label="Breadcrumb">
       @for (c of items(); track $index; let last = $last) {
         @if (c.link && !last) {
-          <a class="breadcrumb__crumb" [routerLink]="c.link" data-testid="crumb">{{ c.label }}</a>
+          <a
+            class="breadcrumb__crumb"
+            [routerLink]="c.link"
+            [queryParams]="c.queryParams ?? null"
+            data-testid="crumb"
+            >{{ c.label }}</a
+          >
         } @else {
           <span
             class="breadcrumb__crumb breadcrumb__crumb--current"

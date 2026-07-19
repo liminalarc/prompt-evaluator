@@ -81,7 +81,12 @@ describe('PromptDetail (unified workspace)', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         provideNoopAnimations(),
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => 'p1' } } } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { paramMap: { get: () => 'p1' }, queryParamMap: { get: () => null } },
+          },
+        },
       ],
     });
     const fixture = TestBed.createComponent(PromptDetail);
@@ -90,6 +95,8 @@ describe('PromptDetail (unified workspace)', () => {
     httpMock.expectOne('/api/prompts/p1').flush(prompt);
     httpMock.expectOne('/api/prompts/p1/datasets').flush(datasets);
     httpMock.expectOne('/api/models').flush(models);
+    // Datasets load → the Runs tab fetches each dataset's runs (prompt-wide runs list).
+    httpMock.expectOne('/api/datasets/d1/eval-runs').flush([]);
     fixture.detectChanges();
     return fixture;
   }
@@ -117,6 +124,7 @@ describe('PromptDetail (unified workspace)', () => {
     expect(create.request.body).toEqual({ name: 'New set', description: null });
     create.flush({ id: 'd2', promptId: 'p1', name: 'New set', description: null, fixtures: [] });
     httpMock.expectOne('/api/prompts/p1/datasets').flush(datasets); // reload
+    httpMock.expectOne('/api/datasets/d1/eval-runs').flush([]); // runs refresh after reload
   });
 
   it('sends a dataset description from the create form [U5]', () => {
@@ -143,6 +151,7 @@ describe('PromptDetail (unified workspace)', () => {
       fixtures: [],
     });
     httpMock.expectOne('/api/prompts/p1/datasets').flush(datasets); // reload
+    httpMock.expectOne('/api/datasets/d1/eval-runs').flush([]); // runs refresh after reload
   });
 
   it('runs a version against a dataset from the workspace [U13]', () => {
@@ -171,6 +180,54 @@ describe('PromptDetail (unified workspace)', () => {
       createdAt: '2026-07-12T00:00:00Z',
       results: [],
     });
+  });
+
+  it('lists the prompt runs across its datasets in the Runs tab, loaded with the workspace', () => {
+    // Like setup(), but the dataset's runs load with one run so the Runs table renders.
+    TestBed.configureTestingModule({
+      imports: [PromptDetail],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { paramMap: { get: () => 'p1' }, queryParamMap: { get: () => null } },
+          },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(PromptDetail);
+    httpMock = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/prompts/p1').flush(prompt);
+    httpMock.expectOne('/api/prompts/p1/datasets').flush(datasets);
+    httpMock.expectOne('/api/models').flush(models);
+    // The Runs tab loads every dataset's runs on init — no need to open the run form.
+    httpMock.expectOne('/api/datasets/d1/eval-runs').flush([
+      {
+        id: 'run-1',
+        promptId: 'p1',
+        promptVersionId: 'v1',
+        createdAt: '2026-07-12T10:00:00Z',
+        fixtureCount: 3,
+        scoreCount: 6,
+        scorerKinds: ['LlmJudge'],
+        meanScore: 0.84,
+        meanScorerKind: 'LlmJudge',
+      },
+    ]);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const table = el.querySelector('[data-testid="prompt-runs"]');
+    expect(table).toBeTruthy();
+    expect(table!.textContent).toContain('Summaries'); // dataset name column
+    expect(table!.textContent).toContain('v1'); // version resolved from promptVersionId
+    expect(table!.textContent).toContain('0.84'); // meaningful mean
+    expect(el.querySelector('[data-testid="no-prompt-runs"]')).toBeNull();
   });
 
   it('imports a text file into the add-version content signal', async () => {

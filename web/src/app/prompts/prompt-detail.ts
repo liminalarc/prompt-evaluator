@@ -2,6 +2,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { catchError, forkJoin, map, of } from 'rxjs';
 import { Prompt } from '../prompt';
 import { DatasetSummary } from '../dataset';
 import { EvalRunSummary } from '../eval-run';
@@ -108,7 +109,7 @@ type WorkspaceTab = 'versions' | 'datasets' | 'analytics' | 'runs';
               class="ws-tabs__tab"
               [class.ws-tabs__tab--active]="tab() === t.id"
               [attr.data-testid]="'tab-' + t.id"
-              (click)="tab.set(t.id)"
+              (click)="selectTab(t.id)"
             >
               {{ t.label }}
             </button>
@@ -290,8 +291,8 @@ type WorkspaceTab = 'versions' | 'datasets' | 'analytics' | 'runs';
 
         <div class="tab-panel" [hidden]="tab() !== 'runs'">
           @if (p.versions.length > 0 && datasets()?.length) {
-            <app-card heading="Run a version">
-              <p class="subtitle">Score a version against one of this prompt's datasets.</p>
+            <app-card heading="Runs">
+              <p class="subtitle">Every run of this prompt across its datasets, newest first.</p>
               @if (showRun()) {
                 <form
                   class="form-stack add-version-form"
@@ -347,35 +348,50 @@ type WorkspaceTab = 'versions' | 'datasets' | 'analytics' | 'runs';
                     </button>
                   </div>
                 </form>
+              }
 
-                @if (recentRuns().length > 0) {
-                  <table class="sb-table" data-testid="recent-runs">
-                    <thead>
+              @if (runsLoading()) {
+                <app-loading-state label="Loading runs…" />
+              } @else if (promptRuns().length === 0) {
+                <app-empty-state
+                  message="No runs yet — run a version to score it."
+                  data-testid="no-prompt-runs"
+                />
+              } @else {
+                <table class="sb-table" data-testid="prompt-runs">
+                  <thead>
+                    <tr>
+                      <th>Run</th>
+                      <th>Version</th>
+                      <th>Dataset</th>
+                      <th>Score</th>
+                      <th>Scorers</th>
+                      <th>Test cases</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (r of promptRuns(); track r.id) {
                       <tr>
-                        <th>Run</th>
-                        <th>Score</th>
-                        <th>Scorers</th>
-                        <th>Test cases</th>
+                        <td>
+                          <a [routerLink]="['/eval-runs', r.id]" data-testid="prompt-run-link">{{
+                            r.createdAt | date: 'medium'
+                          }}</a>
+                        </td>
+                        <td>
+                          {{
+                            versionNumberOf(r.promptVersionId) != null
+                              ? 'v' + versionNumberOf(r.promptVersionId)
+                              : '—'
+                          }}
+                        </td>
+                        <td>{{ r.datasetName }}</td>
+                        <td>{{ r.meanScore != null ? (r.meanScore | number: '1.2-2') : '—' }}</td>
+                        <td><app-chip-list [labels]="r.scorerKinds" /></td>
+                        <td>{{ r.fixtureCount }}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      @for (r of recentRuns(); track r.id) {
-                        <tr>
-                          <td>
-                            <a [routerLink]="['/eval-runs', r.id]" data-testid="recent-run-link">{{
-                              r.createdAt | date: 'medium'
-                            }}</a>
-                          </td>
-                          <td>
-                            {{ r.meanScore != null ? (r.meanScore | number: '1.2-2') : '—' }}
-                          </td>
-                          <td><app-chip-list [labels]="r.scorerKinds" /></td>
-                          <td>{{ r.fixtureCount }}</td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                }
+                    }
+                  </tbody>
+                </table>
               }
               <button
                 foot
@@ -664,6 +680,10 @@ export class PromptDetail implements OnInit {
   protected readonly runDatasetId = signal('');
   protected readonly running = signal(false);
   protected readonly recentRuns = signal<EvalRunSummary[]>([]);
+  // All of this prompt's runs across its datasets — the Runs tab lists these (loaded with the
+  // workspace, independent of the run form). Each run carries its dataset name for the table.
+  protected readonly promptRuns = signal<(EvalRunSummary & { datasetName: string })[]>([]);
+  protected readonly runsLoading = signal(false);
   protected readonly selectedDatasetId = signal('');
   protected readonly trends = signal<TrendSeries[] | null>(null);
 
@@ -671,12 +691,30 @@ export class PromptDetail implements OnInit {
 
   // Elevate Run (W11): the header action jumps to the Runs tab and opens the compact run form.
   protected openRun(): void {
-    this.tab.set('runs');
+    this.selectTab('runs');
     this.showRun.set(true);
   }
 
+  // Sync the active tab to a `?tab=` query param (replaceUrl — no history spam). This makes the
+  // workspace deep-linkable and, crucially, lets the browser Back button from a dataset detail page
+  // return to the *tab you left from* (e.g. Datasets), not always Versions.
+  protected selectTab(t: WorkspaceTab): void {
+    this.tab.set(t);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab: t },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  private readonly tabIds: WorkspaceTab[] = ['versions', 'datasets', 'analytics', 'runs'];
+
   ngOnInit(): void {
     this.id = this.route.snapshot.paramMap.get('id') ?? '';
+    // Restore the tab from the URL so a deep-link / Back-navigation lands on the right tab.
+    const urlTab = this.route.snapshot.queryParamMap.get('tab') as WorkspaceTab | null;
+    if (urlTab && this.tabIds.includes(urlTab)) this.tab.set(urlTab);
     this.load();
     this.loadDatasets();
     this.modelsApi.listModels().subscribe({ next: (m) => this.models.set(m) });
@@ -697,7 +735,10 @@ export class PromptDetail implements OnInit {
 
   private loadDatasets(): void {
     this.datasetsApi.listDatasetsByPrompt(this.id).subscribe({
-      next: (list) => this.datasets.set(list),
+      next: (list) => {
+        this.datasets.set(list);
+        this.loadPromptRuns(list);
+      },
       error: () => this.error.set('Could not load the prompt’s datasets.'),
     });
   }
@@ -725,6 +766,39 @@ export class PromptDetail implements OnInit {
     this.recentRuns.set([]);
     if (!datasetId) return;
     this.evalApi.listRuns(datasetId).subscribe({ next: (runs) => this.recentRuns.set(runs) });
+  }
+
+  // The Runs tab lists every run of this prompt across its datasets, newest first — loaded with the
+  // workspace so the tab is populated without opening the run form. Bounded by the dataset count.
+  private loadPromptRuns(datasets: DatasetSummary[]): void {
+    if (datasets.length === 0) {
+      this.promptRuns.set([]);
+      return;
+    }
+    this.runsLoading.set(true);
+    forkJoin(
+      datasets.map((d) =>
+        this.evalApi.listRuns(d.id).pipe(
+          // Tag each run with its dataset name; a per-dataset failure yields [] (never a dead tab).
+          map((runs) => runs.map((r) => ({ ...r, datasetName: d.name }))),
+          catchError(() => of([] as (EvalRunSummary & { datasetName: string })[])),
+        ),
+      ),
+    ).subscribe({
+      next: (perDataset) => {
+        const all = perDataset
+          .flat()
+          .sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0));
+        this.promptRuns.set(all);
+        this.runsLoading.set(false);
+      },
+      error: () => this.runsLoading.set(false),
+    });
+  }
+
+  /** The version number for a run's promptVersionId, for a readable run identity in the Runs table. */
+  protected versionNumberOf(versionId: string): number | null {
+    return this.prompt()?.versions.find((v) => v.id === versionId)?.versionNumber ?? null;
   }
 
   protected triggerRun(event: Event): void {
