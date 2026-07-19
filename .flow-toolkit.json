@@ -1,0 +1,4 @@
+{
+  "_comment": "spec.maxLines raised from the 120-line default to accommodate spec 5.1's dogfooding records: the fill sheets under specs/5.1/fills/ plus catalog.md and the running findings.md log carry verbatim prompt/fixture/rubric data and a growing shakeout log that are legitimately long. Genuine specs stay well under this, so the flow-spec-guard soft bloat nudge still fires for a truly bloated spec.",
+  "spec": { "maxLines": 200 }
+}
