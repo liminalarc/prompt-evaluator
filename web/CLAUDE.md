@@ -131,6 +131,20 @@ The operator-facing UI:
   **type-prefixed** (`Prompt:` / `Dataset:`); `getByRole('heading', { name })` still matches by
   substring, so e2e heading assertions are unaffected.
 
+## Cancel on reveal/expand forms (from 2.11)
+
+- **Every inline reveal/expand form has a Cancel paired with its submit.** Cancel discards the form's
+  unsaved field input and collapses back to the summary row / closed toggle. There is **no shared
+  wrapper component** — the forms are hand-rolled (`show*` signal + footer toggle). "Shared" is a
+  convention: wrap the submit + a `sb-btn--ghost` Cancel in a `<div class="form-actions">` (the pairing
+  row lives in `prompts/prompts.css`, reused by all eval-loop screens via `styleUrl`), add a
+  `cancelX()` handler that resets the form's signals + flips the `show*`/`expanded*Id` signal, and put
+  `(keydown.escape)="cancelX()"` on the `<form>`. Cancel sits **after** the primary submit.
+- Expand-to-edit **rows** (version label, fixture meta, scorer reconfigure) re-seed their editor on
+  open, so their Cancel just closes the row (`expanded*Id.set(null)`).
+- A new reveal surface inherits Cancel by copying that two-line pattern — don't ship a reveal form
+  without one.
+
 ## E2e that needs a model (from 1.2)
 
 - An e2e that would trigger a live model call (synthetic generation) runs against a **stubbed

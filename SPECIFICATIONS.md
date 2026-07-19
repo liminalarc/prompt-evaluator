@@ -23,7 +23,6 @@
 - **2.7** AI Prompt Authoring Assistant (proactive, best-practice) — `NOT STARTED` — [detail](specs/2.7.md)
 - **2.9** Weighted composite scoring (per-dataset scorer weights → one overall score) — `NOT STARTED` — [detail](specs/2.9.md)
 - **2.10** Markdown editor (with preview) for markdown-bearing fields — `NOT STARTED` — [detail](specs/2.10.md)
-- **2.11** Cancel action on every reveal / expand-to-edit surface — `NOT STARTED` — [detail](specs/2.11.md)
 - **2.12** Eval-loop round 3 — reliability & fair scoring (round-debrief dogfood findings) — `NOT STARTED` — [detail](specs/2.12.md)
 
 ## Phase 3 — Integrations & Ops
@@ -36,6 +35,7 @@
 - **5.1** Adopt LitmusAI across Cortex Golf & Stormboard (discover → onboard → improve every prompt) — `IN PROGRESS` — [detail](specs/5.1/5.1.md)
 
 ## Archive
+- **2.11** Cancel action on every reveal / expand-to-edit surface — `DONE` — [detail](specs/archive/2.11.md)
 - **1.19** Catalog: add current Anthropic models (Sonnet 4.6, Opus 4.7, Opus 4.6) — `DONE` — [detail](specs/archive/1.19.md)
 - **2.8** Eval-loop UX round 2 (dogfood findings) — `DONE` — [detail](specs/archive/2.8.md)
 - **4.6** Admin-created users (create user, no email) — `DONE` — [detail](specs/archive/4.6.md)
