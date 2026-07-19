@@ -1,9 +1,16 @@
 # LitmusAI
 
-Evaluation harness and regression tracker for the LLM/SLM prompts embedded across our
-applications. Copy prompts into a versioned registry, run them against curated datasets,
-score them (deterministic + LLM-judge + human), and watch score movement across
-improvements.
+**Stop shipping prompt regressions.** LitmusAI is the evaluation harness for the LLM/SLM
+prompts baked into our apps (Cortex Golf, Stormboard, and the rest). It versions every
+prompt, scores each version against real captured test cases — deterministic checks, an
+LLM judge, and human review — and flags the moment a "small tweak" quietly makes a prompt
+worse, *before* it reaches users.
+
+**Who it's for:** engineers who own a prompt and need evidence — did the last change help
+or hurt? — instead of eyeballing a diff and hoping.
+
+Under the hood: copy prompts into a versioned registry, run them against curated datasets,
+score them (deterministic + LLM-judge + human), and watch score movement across improvements.
 
 - **Backbone:** .NET (DDD) — `src/`
 - **Eval service:** Python / FastAPI — `eval-runner/`

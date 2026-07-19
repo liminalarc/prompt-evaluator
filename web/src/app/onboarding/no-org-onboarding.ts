@@ -20,7 +20,7 @@ import { OrgDirectoryEntry } from '../organizations/org-admin.model';
     <section class="panel" data-testid="no-org-onboarding">
       <app-page-header
         heading="Welcome to LitmusAI"
-        subtitle="You’re not in an organization yet. Create one, or request to join an existing team."
+        subtitle="LitmusAI scores your prompts against real test cases and tracks how each version does. First, join a workspace — create one, or request to join an existing team."
       />
 
       @if (error(); as message) {

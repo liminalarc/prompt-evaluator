@@ -11,7 +11,10 @@ import { AuthService } from './auth.service';
     <section class="auth" data-testid="login-page">
       <div class="auth__head">
         <h1 class="auth__title">Sign in</h1>
-        <p class="auth__subtitle">Sign in to LitmusAI.</p>
+        <p class="auth__subtitle">
+          Track how your prompts score, version over version — and catch regressions before they
+          ship.
+        </p>
       </div>
 
       @if (error(); as message) {
