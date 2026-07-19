@@ -119,8 +119,7 @@
   **selected prompt** — so under prompt=`round-debrief` the Dataset dropdown also offers `Core player
   scenarios`, which belongs to `daily-briefing`. A dataset belongs to exactly one prompt (1.7,
   `Dataset.PromptId`); picking a foreign one yields empty/mismatched analytics. Same class as **B3** (the
-  run picker), same fix: filter `datasets()` by `d.promptId === promptId()`. → *home: **loud/scoping
-  follow-up** (2.8-adjacent) or a new UI-fix slice — **user to confirm**.*
+  run picker), same fix: filter `datasets()` by `d.promptId === promptId()`. → *home: **[2.12](../2.12.md)**.*
 
 ## Reliability (2026-07-18, round-debrief walk)
 - **R1 — Synchronous eval runs time out on heavier prompts.** The run endpoint
@@ -130,14 +129,13 @@
   (4 fixtures × 200-400-word Sonnet output + Opus judge each) sits right at that edge: it **failed once, then
   succeeded on retry** — non-deterministic at the boundary. daily-briefing (75-100-word outputs) stayed under
   it. Real fix: **async runs** — kick off a job, return immediately, poll for results (also unblocks bigger
-  datasets). Interim band-aid: raise the HttpClient + App Runner request timeouts. → *home: **new LitmusAI spec**
-  (async eval execution) — **user to confirm**. Not built in 5.1.*
+  datasets). Interim band-aid: raise the HttpClient + App Runner request timeouts. → *home: **[2.12](../2.12.md)** (heavy slice — may split out).*
 - **R2 — Timeout/gateway 502 fails silently (hole in B2's "loud failures").** When a run 502s via **timeout or
   the App Runner gateway**, the body is not the API's structured `502 {error}` JSON — so the SPA's
   `serverError(err)` path (2.8) can't extract a message and **shows no banner at all**. B2 made the *structured*
   eval-runner error loud, but timeout/infra 5xx slip through silently ("nothing on screen" on the round-debrief
   timeout). Fix: surface **any** run failure loudly — a generic banner on a non-JSON/timeout 5xx, not only the
-  `{error}` shape. → *home: **loud-error follow-up** (2.8-adjacent bug) or a new spec — **user to confirm**.*
+  `{error}` shape. → *home: **[2.12](../2.12.md)**.*
 
 ## Eval methodology (2026-07-18, round-debrief walk)
 - **R3 — One rubric over a heterogeneous dataset caps the "hard" fixtures, hiding real prompt gains.** The
@@ -150,13 +148,11 @@
   (a) **rubric-authoring guidance** — write data-conditional rubrics ("if no nine-level data, don't penalize
   its absence; reward graceful sparse-handling"); (b) keep datasets **homogeneous** (split sparse fixtures into
   their own dataset+rubric); (c) a tool feature — **per-fixture / conditional criteria** so one dataset can
-  fairly score mixed-richness fixtures. → *home: runbook rubric-authoring note now + candidate **new LitmusAI
-  spec** (conditional/per-fixture rubric criteria) — **user to confirm**.*
+  fairly score mixed-richness fixtures. → *home: **[2.12](../2.12.md)** (+ runbook rubric-authoring note).*
 - **R4 — Score ≠ quality on a single run; read the rationale + expect noise.** Fixture scores wobble ~±0.1
   run-to-run (F1 0.90→0.85, F2 0.88→0.93) and a real prompt improvement can land as a **flat number** (v2). A
   stable baseline / regression call wants **repeated runs or a variance view**, and a diff should surface the
-  **rationale delta**, not just the score delta. → *home: methodology note + candidate analytics feature
-  (multi-run/variance, rationale-diff) — **user to confirm**.*
+  **rationale delta**, not just the score delta. → *home: **[2.12](../2.12.md)** (+ methodology note).*
 
 ## Ops / infra
 - **O1 — Dev deployed without the Anthropic key set.** Provisioning shipped the secret as a placeholder;

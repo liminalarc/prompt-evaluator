@@ -24,6 +24,7 @@
 - **2.9** Weighted composite scoring (per-dataset scorer weights → one overall score) — `NOT STARTED` — [detail](specs/2.9.md)
 - **2.10** Markdown editor (with preview) for markdown-bearing fields — `NOT STARTED` — [detail](specs/2.10.md)
 - **2.11** Cancel action on every reveal / expand-to-edit surface — `NOT STARTED` — [detail](specs/2.11.md)
+- **2.12** Eval-loop round 3 — reliability & fair scoring (round-debrief dogfood findings) — `NOT STARTED` — [detail](specs/2.12.md)
 
 ## Phase 3 — Integrations & Ops
 - **3.1** Zatomic-backed Prompt Registry — `NOT STARTED` — [detail](specs/3.1.md)
