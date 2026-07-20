@@ -58,6 +58,19 @@ public sealed class AiUsageRecord
 
     public DateTimeOffset OccurredAt { get; private set; }
 
+    /// <summary>
+    /// Cost of the call in USD, snapshotted at write time from the versioned pricing table (6.1.T2);
+    /// null when the model has no pricing entry (see <see cref="PricingMissing"/>). Frozen once set so
+    /// a later price change never rewrites history.
+    /// </summary>
+    public decimal? CostUsd { get; private set; }
+
+    /// <summary>The pricing-table version the cost was computed against (6.1.T2).</summary>
+    public string? RateVersion { get; private set; }
+
+    /// <summary>True when the model had no pricing entry — tokens are still stored, cost is null.</summary>
+    public bool PricingMissing { get; private set; }
+
     // Required by EF Core materialization; not for application use.
     private AiUsageRecord()
     {
@@ -106,6 +119,22 @@ public sealed class AiUsageRecord
             RequestId = requestId,
             OccurredAt = occurredAt,
         };
+    }
+
+    /// <summary>
+    /// Snapshots the cost + rate version onto the record (6.1.T2). Called once, at write time, from the
+    /// versioned pricing table; the values are then frozen. <paramref name="costUsd"/> is null when the
+    /// model has no pricing entry (<paramref name="pricingMissing"/> true), tokens still stored.
+    /// </summary>
+    public void ApplyCost(decimal? costUsd, string rateVersion, bool pricingMissing)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(rateVersion);
+        if (costUsd is < 0)
+            throw new ArgumentOutOfRangeException(nameof(costUsd), costUsd, "Cost must be non-negative.");
+
+        CostUsd = costUsd;
+        RateVersion = rateVersion;
+        PricingMissing = pricingMissing;
     }
 
     private static void NonNegative(int value, string name)

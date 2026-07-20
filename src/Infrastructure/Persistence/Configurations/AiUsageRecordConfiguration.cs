@@ -25,6 +25,11 @@ internal sealed class AiUsageRecordConfiguration : IEntityTypeConfiguration<AiUs
         builder.Property(r => r.RequestId);
         builder.Property(r => r.OccurredAt).IsRequired();
 
+        // Cost snapshot (6.1.T2) — frozen at write time; null cost when pricing is missing.
+        builder.Property(r => r.CostUsd);
+        builder.Property(r => r.RateVersion);
+        builder.Property(r => r.PricingMissing).IsRequired();
+
         // Query slices (6.1.T3) filter by time and group by these dimensions — index the common ones.
         builder.HasIndex(r => r.OccurredAt);
         builder.HasIndex(r => new { r.OrganizationId, r.OccurredAt });

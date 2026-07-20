@@ -5,8 +5,10 @@ using Application.Ports;
 using Domain;
 using Infrastructure.Http;
 using Infrastructure.Persistence;
+using Infrastructure.Pricing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Testcontainers.PostgreSql;
 
 namespace Infrastructure.Tests;
@@ -207,7 +209,8 @@ public sealed class AiUsageRecorderIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task A_run_persists_a_usage_record_per_model_call()
     {
-        var recorder = new AiUsageRecorder(_provider.GetRequiredService<IServiceScopeFactory>());
+        var pricing = new ConfigUsagePricing(Options.Create(AiUsagePricingOptions.Defaults()));
+        var recorder = new AiUsageRecorder(_provider.GetRequiredService<IServiceScopeFactory>(), pricing);
         var ctx = new AmbientAiUsageContext();
         var org = Guid.NewGuid();
         var user = Guid.NewGuid();
@@ -248,5 +251,57 @@ public sealed class AiUsageRecorderIntegrationTests : IAsyncLifetime
         Assert.Contains(rows, r => r.Feature == AiUsageFeature.SubjectExecution);
         Assert.Contains(rows, r => r.Feature == AiUsageFeature.LlmJudge);
         Assert.All(rows, r => Assert.Equal(960, r.CacheReadTokens));
+
+        // Cost snapshotted from the pricing table (6.1.T2): opus-4-8 with 1000 in / 500 out / 40
+        // cache-write / 960 cache-read = 0.005 + 0.0125 + 0.00025 + 0.00048 = 0.01823.
+        Assert.All(rows, r => Assert.Equal(0.01823m, r.CostUsd));
+        Assert.All(rows, r => Assert.Equal("2026-07", r.RateVersion));
+        Assert.All(rows, r => Assert.False(r.PricingMissing));
+    }
+}
+
+public class ConfigUsagePricingTests
+{
+    private static readonly ConfigUsagePricing Pricing =
+        new(Options.Create(AiUsagePricingOptions.Defaults()));
+
+    [Fact]
+    public void Compute_prices_input_output_and_cache_tokens()
+    {
+        // opus-4-8: 1e6 in ×5 + 1e6 out ×25 + 1e6 cache-write ×6.25 + 1e6 cache-read ×0.5 = 36.75
+        var cost = Pricing.Compute("claude-opus-4-8", 1_000_000, 1_000_000, 1_000_000, 1_000_000);
+
+        Assert.Equal(36.75m, cost.CostUsd);
+        Assert.Equal("2026-07", cost.RateVersion);
+        Assert.False(cost.PricingMissing);
+    }
+
+    [Fact]
+    public void Compute_flags_an_unknown_model_with_null_cost_and_the_version()
+    {
+        var cost = Pricing.Compute("some-unpriced-model", 100, 100, 0, 0);
+
+        Assert.Null(cost.CostUsd);
+        Assert.True(cost.PricingMissing);
+        Assert.Equal("2026-07", cost.RateVersion);
+    }
+
+    [Fact]
+    public void Config_overrides_a_model_rate_and_the_version_over_the_defaults()
+    {
+        // Later price changes apply to new records only; historical rows keep their snapshot. Here we
+        // prove config can override the table (the mechanism ops use to change rates going forward).
+        var options = AiUsagePricingOptions.Defaults();
+        options.RateVersion = "2026-08";
+        options.Models["claude-opus-4-8"] = new AiUsagePricingOptions.ModelRate
+        {
+            InputPerMTokUsd = 4m, OutputPerMTokUsd = 20m, CacheWritePerMTokUsd = 5m, CacheReadPerMTokUsd = 0.4m,
+        };
+        var pricing = new ConfigUsagePricing(Options.Create(options));
+
+        var cost = pricing.Compute("claude-opus-4-8", 1_000_000, 0, 0, 0);
+
+        Assert.Equal(4m, cost.CostUsd);
+        Assert.Equal("2026-08", cost.RateVersion);
     }
 }

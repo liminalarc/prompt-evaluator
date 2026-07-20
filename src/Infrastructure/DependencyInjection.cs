@@ -55,6 +55,12 @@ public static class DependencyInjection
         services.AddSingleton<Application.Ports.IAiUsageContextAccessor, Application.AiUsage.AmbientAiUsageContext>();
         services.AddSingleton<Application.Ports.IAiUsageRecorder, AiUsageRecorder>();
 
+        // Versioned pricing table (6.1.T2), authoritative for the ledger. Seed the built-in defaults;
+        // the Api binds the `AiUsagePricing` config section over them (see Program.cs).
+        services.AddOptions<Infrastructure.Pricing.AiUsagePricingOptions>()
+            .Configure(o => o.SeedDefaults());
+        services.AddSingleton<Application.Ports.IUsagePricing, Infrastructure.Pricing.ConfigUsagePricing>();
+
         // eval-runner is an internal trusted service (4.1): authenticate to it with a shared
         // service token attached by a DelegatingHandler. When the token is null/empty the handler
         // is a no-op, so dev/CI/test defaults keep working against an open eval-runner.

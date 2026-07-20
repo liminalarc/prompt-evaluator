@@ -90,4 +90,46 @@ public class AiUsageRecordTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => Create(maxTokens: -1));
     }
+
+    [Fact]
+    public void Create_leaves_cost_unset_until_ApplyCost()
+    {
+        var record = Create();
+
+        Assert.Null(record.CostUsd);
+        Assert.Null(record.RateVersion);
+        Assert.False(record.PricingMissing);
+    }
+
+    [Fact]
+    public void ApplyCost_snapshots_cost_and_rate_version()
+    {
+        var record = Create();
+
+        record.ApplyCost(0.0175m, "2026-07", pricingMissing: false);
+
+        Assert.Equal(0.0175m, record.CostUsd);
+        Assert.Equal("2026-07", record.RateVersion);
+        Assert.False(record.PricingMissing);
+    }
+
+    [Fact]
+    public void ApplyCost_records_missing_pricing_as_null_cost_plus_flag()
+    {
+        var record = Create(model: "some-unpriced-model");
+
+        record.ApplyCost(null, "2026-07", pricingMissing: true);
+
+        Assert.Null(record.CostUsd);
+        Assert.True(record.PricingMissing);
+        Assert.Equal("2026-07", record.RateVersion);
+    }
+
+    [Fact]
+    public void ApplyCost_rejects_negative_cost_and_blank_rate_version()
+    {
+        var record = Create();
+        Assert.Throws<ArgumentOutOfRangeException>(() => record.ApplyCost(-0.01m, "2026-07", false));
+        Assert.Throws<ArgumentException>(() => record.ApplyCost(0.01m, "  ", false));
+    }
 }

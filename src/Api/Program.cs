@@ -33,6 +33,11 @@ var evalRunnerServiceToken = builder.Configuration["EvalRunner:ServiceToken"];
 
 builder.Services.AddInfrastructure(postgres, evalRunnerBaseUrl, evalRunnerServiceToken);
 
+// AI-usage pricing (6.1.T2): bind the optional `AiUsagePricing` config section over the built-in
+// defaults seeded in AddInfrastructure, so rates/version can be overridden without a code change.
+builder.Services.AddOptions<Infrastructure.Pricing.AiUsagePricingOptions>()
+    .Bind(builder.Configuration.GetSection("AiUsagePricing"));
+
 // Identity token providers (password-reset tokens) and the SignInManager live in the ASP.NET Core
 // shared framework, so they're added here at the composition root rather than in the (framework-light)
 // Infrastructure. SignInManager (3.2) issues the auth cookie with a security-stamp claim.
