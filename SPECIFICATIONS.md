@@ -13,6 +13,7 @@
 - **1.15** Per-org model catalogs (per-organization customization) — `NOT STARTED` — [detail](specs/1.15.md)
 - **1.17** Multimodal / image fixtures (vision-input prompts) — `NOT STARTED` — [detail](specs/1.17.md)
 - **1.18** Tool-augmented evaluation (web_search / tool-loop prompts) — `NOT STARTED` — [detail](specs/1.18.md)
+- **1.20** Backport assistance (generate the artifact to ship the target — prompt or markdown) — `NOT STARTED` — [detail](specs/1.20.md)
 
 ## Phase 2 — Review & Advisory
 - **2.1** Human Review UI — `NOT STARTED` — [detail](specs/2.1.md)
