@@ -29,6 +29,9 @@ tells you when a better version is sitting unshipped (backport-eligible).
    higher-scoring version exists.
 3. **Trust the score** — deterministic checks + an LLM judge + human review, composed per dataset, with
    same-scorer-config comparisons so a rubric change can't hide a real drop.
+4. **See what evaluation costs** — every model call the harness makes (subject runs, LLM-judge scoring,
+   synthetic generation) is ledgered by model / feature / user / org, sliceable over time, with budgets
+   and over-threshold alerts so runaway spend gets caught early (workspace-admin surface).
 
 ## Voice
 
