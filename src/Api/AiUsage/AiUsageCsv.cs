@@ -40,8 +40,18 @@ public static class AiUsageCsv
         return sb.ToString();
     }
 
+    // Characters that make a spreadsheet treat a cell as a formula (Excel / Sheets / LibreOffice).
+    private static readonly char[] FormulaTriggers = ['=', '+', '-', '@', '\t', '\r'];
+
     private static string Field(string value)
     {
+        // Formula-injection guard: a cell whose text is attacker-influenced (e.g. `model` comes from an
+        // org member's unvalidated TargetModel) can begin with `=`/`+`/`-`/`@`/tab/CR and execute as a
+        // formula when an admin opens the export. Neutralize by prefixing a single quote (OWASP CSV
+        // injection mitigation) before RFC-4180 quoting. Empty/numeric cells are unaffected.
+        if (value.Length > 0 && Array.IndexOf(FormulaTriggers, value[0]) >= 0)
+            value = "'" + value;
+
         if (value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r'))
             return $"\"{value.Replace("\"", "\"\"")}\"";
         return value;
