@@ -5,6 +5,38 @@ SemVer (pre-1.0 `0.x`) across the API, web, and eval-runner. A release is a tagg
 as of `0.13.0` it also deploys to a hosted **dev** environment on every push to `main` (spec 3.2).
 There is no prod target yet.
 
+## [0.21.0] — 2026-07-20
+
+**Weighted composite scoring.** A dataset's scorers now carry **weights** (default equal), and every
+run gets one weight-blended **composite** — a single "overall quality" number instead of eyeballing
+each scorer's series. The composite shows as its own trend line and a **version-over-version change
+table** (per-scorer means + composite, with deltas), extending the two-version compare to N versions.
+Crucially, the **backport signal** (1.16) is now keyed off the **normalized weighted composite vs
+Current** for both eligibility and the single recommended target — so a high-signal scorer (LLM judge)
+outweighs a low-signal one (RegEx), and a prompt whose rubric changed mid-history no longer
+mis-recommends an old version that scored high on the old yardstick.
+
+### Added
+
+- **[#2.9] Weighted composite scoring** ([detail](specs/archive/2.9.md)):
+  - **Per-dataset-scorer weights** on `ScorerConfig` (default `1.0` = equal; must be finite and
+    positive; editable in the dataset scorer UI). Weight is deliberately **excluded from a scorer's
+    identity**, so re-weighting never forks its score series. New `AddScorerWeight` migration.
+  - **Weighted composite** per run/version — the weighted mean of each scorer's `[0,1]` value,
+    renormalized over the scorers actually present (so adding/removing a scorer between versions is
+    handled correctly). Surfaced as a new composite **trend series** (`GET /api/analytics/composite`)
+    and a **version-over-version change table** on the Analytics dashboard.
+  - **Backport signal rewired (1.16 → weighted).** Eligibility and the single backport target now
+    derive from the normalized weighted composite vs Current
+    (`Σ_shared w·(cand−cur) / Σ_Current w`), replacing the interim unweighted rule, with the
+    same-scorer-config no-regression floor retained as a safety guard. Resolves the round-debrief
+    scorer-config-change confound (covered by a regression test).
+
+### Deferred
+
+- Must-pass/veto gating and weight auto-tuning (from 2.9's Out) → new **[#2.9a]**
+  ([detail](specs/2.9a.md)).
+
 ## [0.20.0] — 2026-07-20
 
 An admin **AI Usage & Budget Tracker**: every model call the harness makes — subject runs, LLM-judge
