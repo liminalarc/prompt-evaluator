@@ -58,6 +58,21 @@ public sealed class AiUsageBudget
         {
             throw new ArgumentException($"A {scope} budget requires a scope value.", nameof(scopeValue));
         }
+        else
+        {
+            // Validate the scope value matches its scope. Without this a mistyped Feature/Org value
+            // passes the non-blank check, then fails to parse when spend is computed and the budget
+            // silently tracks the WHOLE ledger (false alerts). A Model id is free-form, so not checked.
+            scopeValue = scopeValue.Trim();
+            if (scope == BudgetScope.Feature && !Enum.TryParse<AiUsageFeature>(scopeValue, ignoreCase: true, out _))
+                throw new ArgumentException(
+                    $"'{scopeValue}' is not a valid feature (expected SubjectExecution, LlmJudge, or SyntheticGeneration).",
+                    nameof(scopeValue));
+            if (scope == BudgetScope.Organization && !Guid.TryParse(scopeValue, out _))
+                throw new ArgumentException(
+                    $"An organization budget's scope value must be a valid organization id; got '{scopeValue}'.",
+                    nameof(scopeValue));
+        }
 
         return new AiUsageBudget
         {

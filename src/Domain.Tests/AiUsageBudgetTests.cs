@@ -33,6 +33,35 @@ public class AiUsageBudgetTests
     }
 
     [Theory]
+    [InlineData("SubjectExecution")]
+    [InlineData("llmjudge")] // case-insensitive
+    [InlineData("SyntheticGeneration")]
+    public void Create_a_feature_budget_accepts_a_valid_feature(string feature)
+    {
+        var b = AiUsageBudget.Create(BudgetScope.Feature, feature, 50m, BudgetPeriod.Monthly, 80, When);
+        Assert.Equal(BudgetScope.Feature, b.Scope);
+    }
+
+    [Fact]
+    public void Create_a_feature_budget_rejects_an_unknown_feature()
+    {
+        // Without validation this would be created, then silently track the WHOLE ledger.
+        Assert.Throws<ArgumentException>(() =>
+            AiUsageBudget.Create(BudgetScope.Feature, "judge", 50m, BudgetPeriod.Monthly, 80, When));
+    }
+
+    [Fact]
+    public void Create_an_org_budget_requires_a_valid_guid_scope_value()
+    {
+        var org = Guid.NewGuid();
+        var b = AiUsageBudget.Create(BudgetScope.Organization, org.ToString(), 50m, BudgetPeriod.Monthly, 80, When);
+        Assert.Equal(org.ToString(), b.ScopeValue);
+
+        Assert.Throws<ArgumentException>(() =>
+            AiUsageBudget.Create(BudgetScope.Organization, "not-a-guid", 50m, BudgetPeriod.Monthly, 80, When));
+    }
+
+    [Theory]
     [InlineData(0)]
     [InlineData(-5)]
     public void Create_rejects_a_non_positive_limit(decimal limit)
