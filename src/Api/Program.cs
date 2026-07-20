@@ -1,4 +1,5 @@
 using Api.Admin;
+using Api.AiUsage;
 using Api.Analytics;
 using Api.Auth;
 using Api.Datasets;
@@ -144,6 +145,7 @@ app.MapFolderEndpoints();
 app.MapDatasetEndpoints();
 app.MapEvalHarnessEndpoints();
 app.MapAnalyticsEndpoints();
+app.MapAiUsageEndpoints();
 
 // SPA client-side routes (e.g. /prompts, /analytics) fall back to index.html outside Development.
 // Lowest route priority, so the /api/* endpoints and /health, /version above keep their responses.

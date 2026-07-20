@@ -61,6 +61,9 @@ public static class DependencyInjection
             .Configure(o => o.SeedDefaults());
         services.AddSingleton<Application.Ports.IUsagePricing, Infrastructure.Pricing.ConfigUsagePricing>();
 
+        // AI-usage read model (6.1.T3): filter / aggregate / calls / export.
+        services.AddScoped<Application.AiUsage.IAiUsageQueries, AiUsageQueryService>();
+
         // eval-runner is an internal trusted service (4.1): authenticate to it with a shared
         // service token attached by a DelegatingHandler. When the token is null/empty the handler
         // is a no-op, so dev/CI/test defaults keep working against an open eval-runner.
