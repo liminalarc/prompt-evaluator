@@ -4,8 +4,9 @@ namespace Application.Analytics;
 
 /// <summary>
 /// Derives per-version lifecycle status for a prompt (1.16): which version is <b>Current in source</b>,
-/// which are <b>Backport-eligible</b> (score higher than Current and worth shipping), and which
-/// <b>Regressed</b>. Every comparison keys off <see cref="ScorerRef.Identity"/> over a shared dataset —
+/// which are <b>Backport-eligible</b> (score higher than Current), the single <b>backport target</b>
+/// (the highest-scoring eligible version — the one to actually ship), and which <b>Regressed</b>.
+/// Every comparison keys off <see cref="ScorerRef.Identity"/> over a shared dataset —
 /// runs made under a different scorer config are a different yardstick and are never blended (the 5.1
 /// F1 / 2026-07-18 decision). Read-only over the append-only run history.
 ///
@@ -75,17 +76,50 @@ public sealed class VersionStatusHandler(
                     regressed.Add(flag.ToVersionId);
         }
 
+        var eligibleIds = versions
+            .Where(v => IsBackportEligible(v.Id, currentId, seriesMeans))
+            .Select(v => v.Id)
+            .ToHashSet();
+
+        // Exactly one recommended target: the highest-scoring eligible version (there can be many
+        // versions above Current, but only one to actually ship). "Highest-scoring" is the interim
+        // unweighted rule — the average of the version's per-series means over the series it shares
+        // with Current; ties break to the later version number. Weighted ranking → 2.9.
+        var targetId = versions
+            .Where(v => eligibleIds.Contains(v.Id))
+            .OrderByDescending(v => OverallMeanVsCurrent(v.Id, currentId, seriesMeans))
+            .ThenByDescending(v => v.VersionNumber)
+            .Select(v => (Guid?)v.Id)
+            .FirstOrDefault();
+
         var statuses = versions
             .Select(v => new VersionStatus(
                 v.Id,
                 v.VersionNumber,
                 v.Label,
                 IsCurrent: currentId == v.Id,
-                BackportEligible: IsBackportEligible(v.Id, currentId, seriesMeans),
+                BackportEligible: eligibleIds.Contains(v.Id),
+                IsBackportTarget: targetId == v.Id,
                 Regressed: regressed.Contains(v.Id)))
             .ToList();
 
-        return new PromptVersionStatus(promptId, currentId, statuses);
+        return new PromptVersionStatus(promptId, currentId, targetId, statuses);
+    }
+
+    // The version's average mean across the (dataset × scorer) series it shares with Current — the
+    // scalar used to pick the single best backport target among the eligible versions.
+    private static double OverallMeanVsCurrent(
+        Guid versionId, Guid? currentId, IReadOnlyList<Dictionary<Guid, double>> seriesMeans)
+    {
+        if (currentId is not { } cId)
+            return 0.0;
+
+        var shared = new List<double>();
+        foreach (var series in seriesMeans)
+            if (series.TryGetValue(cId, out _) && series.TryGetValue(versionId, out var versionMean))
+                shared.Add(versionMean);
+
+        return shared.Count == 0 ? 0.0 : shared.Average();
     }
 
     // ≥ Current on every shared series, strictly higher on ≥ 1 — over at least one shared series.

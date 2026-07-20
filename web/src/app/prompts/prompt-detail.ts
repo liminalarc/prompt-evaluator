@@ -139,21 +139,21 @@ type WorkspaceTab = 'versions' | 'datasets' | 'analytics' | 'runs';
                   below.
                 </p>
               }
-              @if (eligibleVersion(); as elig) {
+              @if (backportTarget(); as target) {
                 <div class="deploy-eligible" data-testid="deploy-eligible">
-                  <app-status-badge variant="success" label="Backport-eligible" />
+                  <app-status-badge variant="success" label="Backport target" />
                   <span
-                    >v{{ elig.versionNumber }} scores higher than Current — ship it, then mark it
-                    backported.</span
+                    >v{{ target.versionNumber }} is the highest-scoring version above Current — ship
+                    it, then mark it backported.</span
                   >
                   <button
                     type="button"
                     class="sb-btn sb-btn--sm sb-btn--primary"
                     data-testid="mark-backported"
-                    [disabled]="settingCurrentId() === elig.id"
-                    (click)="setCurrent(elig.id)"
+                    [disabled]="settingCurrentId() === target.id"
+                    (click)="setCurrent(target.id)"
                   >
-                    Mark backported → v{{ elig.versionNumber }}
+                    Mark backported → v{{ target.versionNumber }}
                   </button>
                 </div>
               }
@@ -190,10 +190,12 @@ type WorkspaceTab = 'versions' | 'datasets' | 'analytics' | 'runs';
                       data-testid="version-row"
                     >
                       <td>v{{ v.versionNumber }}</td>
-                      <td class="version-status-cell" data-testid="version-status">
-                        @for (b of statusBadgesFor(v.id); track b.label) {
-                          <app-status-badge [variant]="b.variant" [label]="b.label" />
-                        }
+                      <td data-testid="version-status">
+                        <div class="version-status-cell">
+                          @for (b of statusBadgesFor(v.id); track b.label) {
+                            <app-status-badge [variant]="b.variant" [label]="b.label" />
+                          }
+                        </div>
                       </td>
                       <td><app-chip [label]="v.targetModel" /></td>
                       <td>{{ v.label ?? '—' }}</td>
@@ -788,11 +790,11 @@ export class PromptDetail implements OnInit {
     return this.prompt()?.versions.find((v) => v.id === currentId)?.versionNumber ?? null;
   });
 
-  /** The first backport-eligible version (a better one to ship), for the Deployment summary. */
-  protected readonly eligibleVersion = computed(() => {
-    const eligible = this.versionStatus()?.versions.find((v) => v.backportEligible);
-    if (!eligible) return null;
-    return { id: eligible.versionId, versionNumber: eligible.versionNumber };
+  /** The single recommended backport target (the highest-scoring version above Current). */
+  protected readonly backportTarget = computed(() => {
+    const target = this.versionStatus()?.versions.find((v) => v.isBackportTarget);
+    if (!target) return null;
+    return { id: target.versionId, versionNumber: target.versionNumber };
   });
 
   // Datasets + analytics — this prompt's, shown together with it (1.7).

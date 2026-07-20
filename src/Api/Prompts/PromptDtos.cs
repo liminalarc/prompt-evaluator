@@ -45,18 +45,21 @@ public sealed record SetCurrentVersionRequest(string? CommitSha);
 
 /// <summary>One version's derived lifecycle status (1.16) — the badges the UI renders.</summary>
 public sealed record VersionStatusResponse(
-    Guid VersionId, int VersionNumber, string? Label, bool IsCurrent, bool BackportEligible, bool Regressed)
+    Guid VersionId, int VersionNumber, string? Label,
+    bool IsCurrent, bool BackportEligible, bool IsBackportTarget, bool Regressed)
 {
     public static VersionStatusResponse From(VersionStatus s) =>
-        new(s.VersionId, s.VersionNumber, s.Label, s.IsCurrent, s.BackportEligible, s.Regressed);
+        new(s.VersionId, s.VersionNumber, s.Label, s.IsCurrent, s.BackportEligible, s.IsBackportTarget, s.Regressed);
 }
 
-/// <summary>A prompt's per-version status set + its Current-in-source pointer (1.16).</summary>
+/// <summary>A prompt's per-version status + its Current-in-source pointer and single backport target (1.16).</summary>
 public sealed record PromptVersionStatusResponse(
-    Guid PromptId, Guid? CurrentVersionId, IReadOnlyList<VersionStatusResponse> Versions)
+    Guid PromptId, Guid? CurrentVersionId, Guid? BackportTargetVersionId,
+    IReadOnlyList<VersionStatusResponse> Versions)
 {
     public static PromptVersionStatusResponse From(PromptVersionStatus s) =>
-        new(s.PromptId, s.CurrentVersionId, s.Versions.Select(VersionStatusResponse.From).ToList());
+        new(s.PromptId, s.CurrentVersionId, s.BackportTargetVersionId,
+            s.Versions.Select(VersionStatusResponse.From).ToList());
 }
 
 /// <summary>Lightweight projection for the browse/list view — no version bodies.</summary>

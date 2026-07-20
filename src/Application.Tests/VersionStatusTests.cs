@@ -121,6 +121,39 @@ public class VersionStatusTests
         Assert.True(s1.IsCurrent);
         Assert.False(s1.BackportEligible); // Current is never its own backport
         Assert.True(s2.BackportEligible);  // v2 beats Current v1
+        Assert.True(s2.IsBackportTarget);  // the only eligible → the target
+        Assert.Equal(v2.Id, status.BackportTargetVersionId);
+    }
+
+    [Fact]
+    public async Task Among_several_eligible_only_the_highest_scoring_is_the_backport_target()
+    {
+        var prompt = Prompt.Create(Guid.NewGuid(), "P");
+        var v1 = prompt.AddVersion("v1", "claude-sonnet-5", When);
+        var v2 = prompt.AddVersion("v2", "claude-sonnet-5", When.AddDays(1));
+        var v3 = prompt.AddVersion("v3", "claude-sonnet-5", When.AddDays(2));
+        prompt.SetCurrentVersion(v1.Id, null, When); // shipped v1
+
+        var promptRepo = new InMemoryPromptRepo(); await promptRepo.AddAsync(prompt);
+        var datasetRepo = new InMemoryDatasetRepo();
+        var ds = Dataset.Create(prompt.Id, "DS"); await datasetRepo.AddAsync(ds);
+        var runs = new InMemoryEvalRunRepo();
+        var regex = ScorerDescriptor.Deterministic(ScorerKind.Regex, "^out");
+        var f = Guid.NewGuid();
+        // v2 and v3 both beat Current v1, but v3 scores higher → v3 is THE target, not v2.
+        await runs.AddAsync(RunWith(prompt.Id, v1.Id, ds.Id, regex, When, (f, 0.5, true)));
+        await runs.AddAsync(RunWith(prompt.Id, v2.Id, ds.Id, regex, When.AddDays(1), (f, 0.7, true)));
+        await runs.AddAsync(RunWith(prompt.Id, v3.Id, ds.Id, regex, When.AddDays(2), (f, 0.9, true)));
+
+        var status = await Handler(promptRepo, runs, datasetRepo).HandleAsync(prompt.Id);
+
+        // Both are eligible (the underlying signal), but only the highest-scoring is the single target.
+        Assert.True(status!.Versions.Single(v => v.VersionId == v2.Id).BackportEligible);
+        Assert.True(status.Versions.Single(v => v.VersionId == v3.Id).BackportEligible);
+        Assert.False(status.Versions.Single(v => v.VersionId == v2.Id).IsBackportTarget);
+        Assert.True(status.Versions.Single(v => v.VersionId == v3.Id).IsBackportTarget);
+        Assert.Equal(v3.Id, status.BackportTargetVersionId);
+        Assert.Single(status.Versions, v => v.IsBackportTarget); // exactly one
     }
 
     [Fact]

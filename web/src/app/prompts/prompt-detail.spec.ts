@@ -76,6 +76,7 @@ describe('PromptDetail (unified workspace)', () => {
   const versionStatus = {
     promptId: 'p1',
     currentVersionId: null,
+    backportTargetVersionId: null,
     versions: [
       {
         versionId: 'v1',
@@ -83,6 +84,7 @@ describe('PromptDetail (unified workspace)', () => {
         label: null,
         isCurrent: false,
         backportEligible: false,
+        isBackportTarget: false,
         regressed: false,
       },
     ],
@@ -367,6 +369,7 @@ describe('PromptDetail (unified workspace)', () => {
     const currentStatus = {
       promptId: 'p1',
       currentVersionId: 'v1',
+      backportTargetVersionId: null,
       versions: [
         {
           versionId: 'v1',
@@ -374,6 +377,7 @@ describe('PromptDetail (unified workspace)', () => {
           label: null,
           isCurrent: true,
           backportEligible: false,
+          isBackportTarget: false,
           regressed: false,
         },
       ],

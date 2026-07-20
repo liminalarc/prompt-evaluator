@@ -28,7 +28,10 @@ export interface VersionStatus {
   versionNumber: number;
   label: string | null;
   isCurrent: boolean;
+  /** Underlying signal: this version scores higher than Current (many can). */
   backportEligible: boolean;
+  /** The single recommended target — the highest-scoring eligible version. Only this one is badged. */
+  isBackportTarget: boolean;
   regressed: boolean;
 }
 
@@ -36,6 +39,8 @@ export interface VersionStatus {
 export interface PromptVersionStatus {
   promptId: string;
   currentVersionId: string | null;
+  /** The single version to actually ship (highest-scoring above Current), or null when none beats it. */
+  backportTargetVersionId: string | null;
   versions: VersionStatus[];
 }
 
