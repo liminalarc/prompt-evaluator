@@ -49,6 +49,18 @@ public class VersionStatusTests
         public Task DeleteAsync(Guid id, CancellationToken ct = default) { Saved.RemoveAll(d => d.Id == id); return Task.CompletedTask; }
     }
 
+    private sealed class InMemoryScorerConfigRepo : IScorerConfigRepository
+    {
+        public readonly List<ScorerConfig> Saved = [];
+        public Task AddAsync(ScorerConfig config, CancellationToken ct = default) { Saved.Add(config); return Task.CompletedTask; }
+        public Task<IReadOnlyList<ScorerConfig>> ListByDatasetAsync(Guid datasetId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<ScorerConfig>>(Saved.Where(c => c.DatasetId == datasetId).ToList());
+        public Task<ScorerConfig?> GetByIdAsync(Guid id, CancellationToken ct = default)
+            => Task.FromResult(Saved.SingleOrDefault(c => c.Id == id));
+        public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task RemoveAsync(Guid id, CancellationToken ct = default) { Saved.RemoveAll(c => c.Id == id); return Task.CompletedTask; }
+    }
+
     // A run for `version` over `datasetId` scored by `scorer`; fixtures are keyed by the given ids so
     // consecutive versions can be paired for regression detection.
     private static EvalRun RunWith(
@@ -64,8 +76,9 @@ public class VersionStatusTests
         return run;
     }
 
-    private static VersionStatusHandler Handler(InMemoryPromptRepo p, InMemoryEvalRunRepo r, InMemoryDatasetRepo d)
-        => new(p, r, d, new RegressionDetector());
+    private static VersionStatusHandler Handler(
+        InMemoryPromptRepo p, InMemoryEvalRunRepo r, InMemoryDatasetRepo d, InMemoryScorerConfigRepo? sc = null)
+        => new(p, r, d, sc ?? new InMemoryScorerConfigRepo(), new RegressionDetector());
 
     [Fact]
     public async Task Unknown_prompt_returns_null()
@@ -233,5 +246,73 @@ public class VersionStatusTests
 
         Assert.True(status!.Versions.Single(v => v.VersionId == v2.Id).Regressed);
         Assert.False(status.Versions.Single(v => v.VersionId == v1.Id).Regressed);
+    }
+
+    // The scorer-config-change confound (round-debrief, 2.9): a prompt whose judge rubric was swapped
+    // mid-history. An old version (v2) scored high on the OLD rubric shares only the low-weight RegEx
+    // series with Current, so the interim *raw-mean* rule ranks it the backport target — over the newer
+    // maintainer-iterated version (v4) that improves on Current's high-weight NEW-rubric judge. The
+    // normalized weighted composite fixes this: v4 is the target, v2 is not.
+    [Fact]
+    public async Task Backport_target_uses_the_weighted_composite_not_the_raw_mean_on_a_scorer_config_change()
+    {
+        var prompt = Prompt.Create(Guid.NewGuid(), "round-debrief");
+        var v1 = prompt.AddVersion("v1", "claude-sonnet-5", When);                 // old-rubric baseline
+        var v2 = prompt.AddVersion("v2", "claude-sonnet-5", When.AddDays(1));       // old-rubric, high-on-old
+        var v3 = prompt.AddVersion("v3", "claude-sonnet-5", When.AddDays(2));       // new-rubric = Current
+        var v4 = prompt.AddVersion("v4", "claude-sonnet-5", When.AddDays(3));       // new-rubric, iterated
+        prompt.SetCurrentVersion(v3.Id, null, When.AddDays(2)); // the source runs v3 (post rubric swap)
+
+        var promptRepo = new InMemoryPromptRepo(); await promptRepo.AddAsync(prompt);
+        var datasetRepo = new InMemoryDatasetRepo();
+        var ds = Dataset.Create(prompt.Id, "Core scenarios"); await datasetRepo.AddAsync(ds);
+
+        var regex = ScorerDescriptor.Deterministic(ScorerKind.Regex, "^out");
+        var judgeOld = ScorerDescriptor.LlmJudge("old rubric", "claude-opus-4-8");
+        var judgeNew = ScorerDescriptor.LlmJudge("new rubric", "claude-opus-4-8"); // rubric swap → new identity
+
+        // Weights: the LLM judge is the high-signal scorer, RegEx the low-signal one.
+        var scorerConfigs = new InMemoryScorerConfigRepo();
+        scorerConfigs.Saved.Add(ScorerConfig.Create(ds.Id, regex, When, weight: 1.0));
+        scorerConfigs.Saved.Add(ScorerConfig.Create(ds.Id, judgeNew, When, weight: 4.0));
+
+        var f = Guid.NewGuid();
+        var runs = new InMemoryEvalRunRepo();
+        // v1 old-rubric: regex 0.6, judge_old 0.5
+        await runs.AddAsync(RunWithScores(prompt.Id, v1.Id, ds.Id, When, f,
+            (regex, 0.6), (judgeOld, 0.5)));
+        // v2 old-rubric: regex 1.0, judge_old 0.95 (looks great on the OLD yardstick)
+        await runs.AddAsync(RunWithScores(prompt.Id, v2.Id, ds.Id, When.AddDays(1), f,
+            (regex, 1.0), (judgeOld, 0.95)));
+        // v3 = Current, new-rubric: regex 0.6, judge_new 0.5
+        await runs.AddAsync(RunWithScores(prompt.Id, v3.Id, ds.Id, When.AddDays(2), f,
+            (regex, 0.6), (judgeNew, 0.5)));
+        // v4 new-rubric, iterated: regex 0.65, judge_new 0.9 (real gain on the CURRENT yardstick)
+        await runs.AddAsync(RunWithScores(prompt.Id, v4.Id, ds.Id, When.AddDays(3), f,
+            (regex, 0.65), (judgeNew, 0.9)));
+
+        var status = await Handler(promptRepo, runs, datasetRepo, scorerConfigs).HandleAsync(prompt.Id);
+
+        // Both beat Current on the composite, so both are eligible…
+        Assert.True(status!.Versions.Single(v => v.VersionId == v2.Id).BackportEligible);
+        Assert.True(status.Versions.Single(v => v.VersionId == v4.Id).BackportEligible);
+        // …but the raw-mean rule would pick v2 (it shares only RegEx=1.0 with Current, avg 1.0 > v4's
+        // shared avg (0.65 + 0.9)/2 = 0.775). The weighted composite picks v4 instead.
+        Assert.Equal(v4.Id, status.BackportTargetVersionId);
+        Assert.True(status.Versions.Single(v => v.VersionId == v4.Id).IsBackportTarget);
+        Assert.False(status.Versions.Single(v => v.VersionId == v2.Id).IsBackportTarget);
+        Assert.Single(status.Versions, v => v.IsBackportTarget);
+    }
+
+    // A run for `version` over `datasetId` where one fixture is scored by several (scorer, value) pairs.
+    private static EvalRun RunWithScores(
+        Guid promptId, Guid versionId, Guid datasetId, DateTimeOffset at, Guid fixtureId,
+        params (ScorerDescriptor scorer, double value)[] scores)
+    {
+        var run = EvalRun.Create(promptId, versionId, datasetId, at);
+        var fr = run.RecordFixture(fixtureId, "out", latencyMs: 10, inputTokens: 0, outputTokens: 0, costUsd: 0.001m);
+        foreach (var (scorer, value) in scores)
+            fr.AddScore(scorer, value, passed: null, detail: null);
+        return run;
     }
 }
