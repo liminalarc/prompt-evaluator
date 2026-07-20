@@ -51,4 +51,29 @@ public sealed class ScorerConfigRepositoryTests : IAsyncLifetime
         Assert.Equal("^ok$", regex.Scorer.Config);
         Assert.Null(regex.Scorer.JudgeModel);
     }
+
+    [Fact]
+    public async Task Weight_persists_default_and_explicit_and_survives_reweight()
+    {
+        var repo = new ScorerConfigRepository(_db);
+        var datasetId = Guid.NewGuid();
+        var at = new DateTimeOffset(2026, 7, 20, 0, 0, 0, TimeSpan.Zero);
+
+        // One scorer with the default weight, one created with an explicit weight.
+        var regex = ScorerConfig.Create(datasetId, ScorerDescriptor.Deterministic(ScorerKind.Regex, "^ok$"), at);
+        var judge = ScorerConfig.Create(datasetId, ScorerDescriptor.LlmJudge("Rate quality", "claude-opus-4-8"), at, weight: 4.0);
+        await repo.AddAsync(regex);
+        await repo.AddAsync(judge);
+
+        // Reweight the default one and persist the change.
+        var loaded = await repo.GetByIdAsync(regex.Id);
+        loaded!.SetWeight(2.5);
+        await repo.SaveChangesAsync();
+
+        _db.ChangeTracker.Clear();
+        var configs = await repo.ListByDatasetAsync(datasetId);
+
+        Assert.Equal(2.5, Assert.Single(configs, c => c.Scorer.Kind == ScorerKind.Regex).Weight);
+        Assert.Equal(4.0, Assert.Single(configs, c => c.Scorer.Kind == ScorerKind.LlmJudge).Weight);
+    }
 }

@@ -367,6 +367,7 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                   <th>Kind</th>
                   <th>Config</th>
                   <th>Judge model</th>
+                  <th>Weight</th>
                 </tr>
               </thead>
               <tbody>
@@ -389,6 +390,7 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                         —
                       }
                     </td>
+                    <td data-testid="scorer-weight">×{{ s.weight }}</td>
                   </tr>
                 }
               </tbody>
@@ -459,6 +461,20 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                     </select>
                   </div>
                 }
+                <div class="sb-field">
+                  <label [attr.for]="'eweight-' + s.id">Composite weight</label>
+                  <input
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    [attr.id]="'eweight-' + s.id"
+                    [ngModel]="editScorerWeight()"
+                    (ngModelChange)="editScorerWeight.set($event)"
+                    [ngModelOptions]="{ standalone: true }"
+                    data-testid="edit-scorer-weight"
+                  />
+                  <p class="subtitle">Relative weight in the dataset's overall composite score.</p>
+                </div>
                 <div class="toolbar">
                   <button
                     class="sb-btn sb-btn--primary sb-btn--sm"
@@ -552,6 +568,22 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                   </select>
                 </div>
               }
+              <div class="sb-field">
+                <label for="scorerWeight">Composite weight</label>
+                <input
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  id="scorerWeight"
+                  name="scorerWeight"
+                  [ngModel]="scorerWeight()"
+                  (ngModelChange)="scorerWeight.set($event)"
+                  data-testid="scorer-weight"
+                />
+                <p class="subtitle">
+                  Relative weight in the dataset's overall composite score (default 1).
+                </p>
+              </div>
               <div class="form-actions">
                 <button
                   class="sb-btn sb-btn--primary"
@@ -795,6 +827,7 @@ export class DatasetDetail implements OnInit {
   protected readonly scorerKind = signal<ScorerKind>('Regex');
   protected readonly scorerConfig = signal('');
   protected readonly judgeModel = signal('');
+  protected readonly scorerWeight = signal(1);
 
   // Clicking a scorer row opens its edit form in the shared right drawer (W22/D1): reconfigure the
   // descriptor or remove the scorer. `expandedScorerId` names the open one; `editingScorer` resolves
@@ -806,6 +839,7 @@ export class DatasetDetail implements OnInit {
   protected readonly editScorerKind = signal<ScorerKind>('Regex');
   protected readonly editScorerConfig = signal('');
   protected readonly editJudgeModel = signal('');
+  protected readonly editScorerWeight = signal(1);
 
   // The run form is fixed to the dataset's owning prompt (B3): its versions load with the dataset
   // and the operator picks a version only — no free (cross-org) prompt choice.
@@ -1045,10 +1079,12 @@ export class DatasetDetail implements OnInit {
         kind: this.scorerKind(),
         config: this.scorerConfig().trim() || null,
         judgeModel: isJudge ? this.judgeModel() : null,
+        weight: this.scorerWeight(),
       })
       .subscribe({
         next: () => {
           this.scorerConfig.set('');
+          this.scorerWeight.set(1);
           this.loadScorers();
         },
         error: (err) =>
@@ -1065,6 +1101,7 @@ export class DatasetDetail implements OnInit {
     this.editScorerKind.set(scorer.kind as ScorerKind);
     this.editScorerConfig.set(scorer.config ?? '');
     this.editJudgeModel.set(scorer.judgeModel ?? '');
+    this.editScorerWeight.set(scorer.weight);
     this.expandedScorerId.set(scorer.id);
   }
 
@@ -1083,6 +1120,7 @@ export class DatasetDetail implements OnInit {
         kind: this.editScorerKind(),
         config: this.editScorerConfig().trim() || null,
         judgeModel: isJudge ? this.editJudgeModel() : null,
+        weight: this.editScorerWeight(),
       })
       .subscribe({
         next: () => {
@@ -1182,6 +1220,7 @@ export class DatasetDetail implements OnInit {
     this.showAddScorer.set(false);
     this.scorerConfig.set('');
     this.scorerKind.set('Regex');
+    this.scorerWeight.set(1);
   }
 
   protected cancelEditScorer(): void {

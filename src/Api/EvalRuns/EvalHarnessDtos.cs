@@ -4,16 +4,18 @@ namespace Api.EvalRuns;
 
 // ---- Scorer configuration ----
 
-public sealed record ConfigureScorerRequest(string Kind, string? Config, string? JudgeModel);
+// Weight is optional (2.9): omitted → the domain default (1.0, equal weighting).
+public sealed record ConfigureScorerRequest(string Kind, string? Config, string? JudgeModel, double? Weight);
 
 public sealed record ScorerConfigResponse(
-    Guid Id, string Kind, string Config, string? JudgeModel, string Identity, DateTimeOffset CreatedAt)
+    Guid Id, string Kind, string Config, string? JudgeModel, double Weight, string Identity, DateTimeOffset CreatedAt)
 {
     public static ScorerConfigResponse From(ScorerConfig config) => new(
         config.Id,
         config.Scorer.Kind.ToString(),
         config.Scorer.Config,
         config.Scorer.JudgeModel,
+        config.Weight,
         config.Scorer.Identity,
         config.CreatedAt);
 }

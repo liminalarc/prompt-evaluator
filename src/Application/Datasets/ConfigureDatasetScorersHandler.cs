@@ -14,13 +14,13 @@ public sealed class ConfigureDatasetScorersHandler(
     TimeProvider time)
 {
     public async Task<ScorerConfig?> HandleAsync(
-        Guid datasetId, ScorerDescriptor descriptor, CancellationToken ct = default)
+        Guid datasetId, ScorerDescriptor descriptor, double weight = 1.0, CancellationToken ct = default)
     {
         var dataset = await datasets.GetByIdAsync(datasetId, ct);
         if (dataset is null)
             return null;
 
-        var config = ScorerConfig.Create(datasetId, descriptor, time.GetUtcNow());
+        var config = ScorerConfig.Create(datasetId, descriptor, time.GetUtcNow(), weight);
         await scorerConfigs.AddAsync(config, ct);
         return config;
     }
@@ -33,13 +33,14 @@ public sealed class ConfigureDatasetScorersHandler(
     /// exist or does not belong to <paramref name="datasetId"/> (Api → 404).
     /// </summary>
     public async Task<ScorerConfig?> ReconfigureAsync(
-        Guid datasetId, Guid scorerId, ScorerDescriptor descriptor, CancellationToken ct = default)
+        Guid datasetId, Guid scorerId, ScorerDescriptor descriptor, double weight = 1.0, CancellationToken ct = default)
     {
         var config = await scorerConfigs.GetByIdAsync(scorerId, ct);
         if (config is null || config.DatasetId != datasetId)
             return null;
 
         config.Reconfigure(descriptor);
+        config.SetWeight(weight);
         await scorerConfigs.SaveChangesAsync(ct);
         return config;
     }

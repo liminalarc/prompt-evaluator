@@ -50,6 +50,8 @@ export interface ScorerConfig {
   kind: string;
   config: string;
   judgeModel: string | null;
+  /** Relative weight in the dataset's weighted composite (2.9); 1.0 = equal weighting. */
+  weight: number;
   identity: string;
   createdAt: string;
 }

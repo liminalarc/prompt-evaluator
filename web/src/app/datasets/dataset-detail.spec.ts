@@ -383,6 +383,7 @@ describe('DatasetDetail run form + scorer config', () => {
       kind: 'Regex',
       config: '^a',
       judgeModel: null,
+      weight: 1,
       identity: 'h1',
       createdAt: '2026-07-12T00:00:00Z',
     };
@@ -418,6 +419,48 @@ describe('DatasetDetail run form + scorer config', () => {
         body: jasmine.objectContaining({ kind: 'Regex', config: '^b' }),
       }),
     );
+  });
+
+  it('sends the composite weight when adding a scorer and shows it in the table [2.9]', () => {
+    let body: { weight?: number } | null = null;
+    const scorer = {
+      id: 's1',
+      kind: 'Regex',
+      config: '^a',
+      judgeModel: null,
+      weight: 3,
+      identity: 'h1',
+      createdAt: '2026-07-12T00:00:00Z',
+    };
+    const fixture = render();
+    const evalApi = TestBed.inject(EvalRunsApiService) as unknown as {
+      listScorers: () => unknown;
+      configureScorer: (id: string, b: unknown) => unknown;
+    };
+    evalApi.listScorers = () => of([scorer]);
+    evalApi.configureScorer = (_id: string, b: unknown) => {
+      body = b as { weight?: number };
+      return of(scorer);
+    };
+    const cmp = fixture.componentInstance as unknown as {
+      scorers: { set: (v: unknown[]) => void };
+      scorerKind: { set: (v: string) => void };
+      scorerConfig: { set: (v: string) => void };
+      scorerWeight: { set: (v: number) => void };
+      addScorer: (e: Event) => void;
+    };
+
+    cmp.scorerKind.set('Regex');
+    cmp.scorerConfig.set('^a');
+    cmp.scorerWeight.set(4);
+    cmp.addScorer(new Event('submit'));
+    expect(body).toEqual(jasmine.objectContaining({ weight: 4 }));
+
+    // The configured weight is surfaced in the scorers table.
+    cmp.scorers.set([scorer]);
+    fixture.detectChanges();
+    const weightCell = fixture.nativeElement.querySelector('[data-testid="scorer-weight"]');
+    expect(weightCell?.textContent).toContain('3');
   });
 
   it('shows version, model and scorers in the runs table [U14]', () => {

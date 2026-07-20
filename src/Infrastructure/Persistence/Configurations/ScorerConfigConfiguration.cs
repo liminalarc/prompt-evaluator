@@ -11,6 +11,8 @@ internal sealed class ScorerConfigConfiguration : IEntityTypeConfiguration<Score
         builder.ToTable("scorer_configs");
         builder.HasKey(c => c.Id);
         builder.Property(c => c.DatasetId).IsRequired();
+        // Per-scorer composite weight (2.9); default 1.0 so pre-existing rows are equally weighted.
+        builder.Property(c => c.Weight).IsRequired().HasDefaultValue(1.0);
         builder.Property(c => c.CreatedAt).IsRequired();
         builder.HasIndex(c => c.DatasetId);
 

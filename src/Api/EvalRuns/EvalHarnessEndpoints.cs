@@ -26,10 +26,11 @@ public static class EvalHarnessEndpoints
             {
                 if ((await access.CanAccessDatasetAsync(id, ct)).ToProblem() is { } problem)
                     return problem;
-                if (!TryBuildDescriptor(request, out var descriptor, out var error))
+                if (!TryBuildDescriptor(request, out var descriptor, out var error)
+                    || !TryResolveWeight(request, out var weight, out error))
                     return Results.BadRequest(new { error });
 
-                var config = await handler.HandleAsync(id, descriptor!, ct);
+                var config = await handler.HandleAsync(id, descriptor!, weight, ct);
                 return config is null
                     ? Results.NotFound()
                     : Results.Created($"/api/datasets/{id}/scorers", ScorerConfigResponse.From(config));
@@ -41,10 +42,11 @@ public static class EvalHarnessEndpoints
             {
                 if ((await access.CanAccessDatasetAsync(id, ct)).ToProblem() is { } problem)
                     return problem;
-                if (!TryBuildDescriptor(request, out var descriptor, out var error))
+                if (!TryBuildDescriptor(request, out var descriptor, out var error)
+                    || !TryResolveWeight(request, out var weight, out error))
                     return Results.BadRequest(new { error });
 
-                var config = await handler.ReconfigureAsync(id, scorerId, descriptor!, ct);
+                var config = await handler.ReconfigureAsync(id, scorerId, descriptor!, weight, ct);
                 return config is null ? Results.NotFound() : Results.Ok(ScorerConfigResponse.From(config));
             }).RequireAuthorization();
 
@@ -124,5 +126,20 @@ public static class EvalHarnessEndpoints
             error = ex.Message;
             return false;
         }
+    }
+
+    // Resolves the composite weight from the request (2.9): omitted → 1.0 (equal weighting); a
+    // non-finite or non-positive value is rejected with a readable 400. Shared by create + edit.
+    private static bool TryResolveWeight(ConfigureScorerRequest request, out double weight, out string? error)
+    {
+        error = null;
+        weight = request.Weight ?? 1.0;
+        if (!double.IsFinite(weight) || weight <= 0.0)
+        {
+            error = "Scorer weight must be a finite, strictly positive number.";
+            weight = 1.0;
+            return false;
+        }
+        return true;
     }
 }

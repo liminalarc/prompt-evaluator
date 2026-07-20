@@ -7,6 +7,8 @@ export interface ConfigureScorerBody {
   kind: string;
   config: string | null;
   judgeModel: string | null;
+  /** Composite weight (2.9); omitted → 1.0 (equal weighting). */
+  weight?: number | null;
 }
 
 /**

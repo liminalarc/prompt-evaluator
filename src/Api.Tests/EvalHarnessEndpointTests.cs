@@ -87,7 +87,7 @@ public sealed class EvalHarnessEndpointTests : IAsyncLifetime
     private sealed record IdName(Guid Id);
     private sealed record PromptDto(Guid Id, List<VersionDto> Versions);
     private sealed record VersionDto(Guid Id);
-    private sealed record ScorerDto(Guid Id, string Kind, string Identity, string? JudgeModel);
+    private sealed record ScorerDto(Guid Id, string Kind, string Identity, string? JudgeModel, double Weight);
     private sealed record ScoreDto(string ScorerKind, string ScorerIdentity, string? JudgeModel, double Value, bool? Passed, string? Detail);
     private sealed record FixtureRunDto(Guid FixtureId, string ModelOutput, int LatencyMs, int InputTokens, int OutputTokens, decimal? CostUsd, List<ScoreDto> Scores);
     private sealed record RunDto(Guid Id, Guid PromptId, Guid PromptVersionId, Guid DatasetId, List<FixtureRunDto> Results);
@@ -190,6 +190,38 @@ public sealed class EvalHarnessEndpointTests : IAsyncLifetime
         var only = Assert.Single(scorers!);
         Assert.Equal(scorer.Id, only.Id); // same config row…
         Assert.NotEqual(scorer.Identity, only.Identity); // …new descriptor → new identity hash
+    }
+
+    [Fact]
+    public async Task A_scorer_carries_a_weight_defaulting_to_one_and_editable_in_place()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync();
+        var (_, _, datasetId) = await SeedAsync(client);
+
+        // Omitting weight defaults to 1.0 (equal weighting).
+        var add = await client.PostAsJsonAsync($"/api/datasets/{datasetId}/scorers",
+            new { kind = "Regex", config = "^a", judgeModel = (string?)null });
+        var scorer = (await add.Content.ReadFromJsonAsync<ScorerDto>())!;
+        Assert.Equal(1.0, scorer.Weight);
+
+        // Editing sets a new weight while keeping the same descriptor (identity unchanged).
+        var edit = await client.PutAsJsonAsync($"/api/datasets/{datasetId}/scorers/{scorer.Id}",
+            new { kind = "Regex", config = "^a", judgeModel = (string?)null, weight = 4.0 });
+        Assert.Equal(HttpStatusCode.OK, edit.StatusCode);
+
+        var only = Assert.Single((await client.GetFromJsonAsync<List<ScorerDto>>($"/api/datasets/{datasetId}/scorers"))!);
+        Assert.Equal(scorer.Identity, only.Identity); // reweight never forks the series
+        Assert.Equal(4.0, only.Weight);
+    }
+
+    [Fact]
+    public async Task Configuring_a_scorer_with_a_non_positive_weight_is_400()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync();
+        var (_, _, datasetId) = await SeedAsync(client);
+        var res = await client.PostAsJsonAsync($"/api/datasets/{datasetId}/scorers",
+            new { kind = "Regex", config = "^a", judgeModel = (string?)null, weight = 0.0 });
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
     }
 
     [Fact]
