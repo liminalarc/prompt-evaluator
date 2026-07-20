@@ -62,7 +62,65 @@ public static class AiUsageEndpoints
             return Results.Text(csv, "text/csv");
         });
 
+        // Budgets (6.1.T6) — tracking + alerting only.
+        group.MapGet("/budgets", async (IAiUsageBudgetRepository repo, OrgAccess access, CancellationToken ct) =>
+        {
+            if (!await access.IsGlobalAdminAsync(ct)) return Results.Forbid();
+            var list = await repo.ListAsync(ct);
+            return Results.Ok(list.Select(BudgetResponse.From));
+        });
+
+        group.MapGet("/budgets/status", async (
+            BudgetStatusHandler handler, OrgAccess access, CancellationToken ct) =>
+        {
+            if (!await access.IsGlobalAdminAsync(ct)) return Results.Forbid();
+            var statuses = await handler.StatusAsync(ct);
+            return Results.Ok(statuses.Select(BudgetStatusResponse.From));
+        });
+
+        group.MapPost("/budgets", async (
+            CreateBudgetRequest request, IAiUsageBudgetRepository repo, OrgAccess access, TimeProvider time, CancellationToken ct) =>
+        {
+            if (!await access.IsGlobalAdminAsync(ct)) return Results.Forbid();
+            if (!Enum.TryParse<BudgetScope>(request.Scope, ignoreCase: true, out var scope))
+                return Results.BadRequest(new { error = $"Unknown scope '{request.Scope}'." });
+            try
+            {
+                var budget = AiUsageBudget.Create(
+                    scope, request.ScopeValue, request.LimitUsd, BudgetPeriod.Monthly,
+                    request.AlertThresholdPercent ?? 80, time.GetUtcNow());
+                await repo.AddAsync(budget, ct);
+                return Results.Created($"/api/admin/ai-usage/budgets/{budget.Id}", BudgetResponse.From(budget));
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        });
+
+        group.MapDelete("/budgets/{id:guid}", async (
+            Guid id, IAiUsageBudgetRepository repo, OrgAccess access, CancellationToken ct) =>
+        {
+            if (!await access.IsGlobalAdminAsync(ct)) return Results.Forbid();
+            return await repo.RemoveAsync(id, ct) ? Results.NoContent() : Results.NotFound();
+        });
+
         return app;
+    }
+
+    private sealed record CreateBudgetRequest(string Scope, string? ScopeValue, decimal LimitUsd, int? AlertThresholdPercent);
+
+    private sealed record BudgetResponse(
+        Guid Id, string Scope, string? ScopeValue, decimal LimitUsd, string Period, int AlertThresholdPercent, DateTimeOffset CreatedAt)
+    {
+        public static BudgetResponse From(AiUsageBudget b) =>
+            new(b.Id, b.Scope.ToString(), b.ScopeValue, b.LimitUsd, b.Period.ToString(), b.AlertThresholdPercent, b.CreatedAt);
+    }
+
+    private sealed record BudgetStatusResponse(BudgetResponse Budget, decimal SpendUsd, double PercentUsed, string Level)
+    {
+        public static BudgetStatusResponse From(BudgetSpendStatus s) =>
+            new(BudgetResponse.From(s.Budget), s.SpendUsd, s.PercentUsed, s.Level.ToString());
     }
 
     // Parses the shared filter query params (comma-separated lists). Invalid enum/guid tokens → 400.

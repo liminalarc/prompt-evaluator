@@ -21,7 +21,8 @@ public sealed class AiUsageEndpointTests : IAsyncLifetime
 
     private static readonly Guid OrgA = Guid.NewGuid();
     private static readonly Guid User1 = Guid.NewGuid();
-    private static readonly DateTimeOffset When = new(2026, 7, 10, 8, 0, 0, TimeSpan.Zero);
+    // Seed within the current month so budget status (which keys off the real clock) sees the spend.
+    private static readonly DateTimeOffset When = DateTimeOffset.UtcNow;
 
     private sealed class AdminFactory(string connectionString) : WebApplicationFactory<Program>
     {
@@ -173,5 +174,80 @@ public sealed class AiUsageEndpointTests : IAsyncLifetime
     {
         var res = await _factory.CreateClient().GetAsync("/api/admin/ai-usage/summary");
         Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
+    }
+
+    // ---- Budgets (T6) ----
+
+    private sealed record BudgetDto(Guid Id, string Scope, string? ScopeValue, decimal LimitUsd, int AlertThresholdPercent);
+    private sealed record BudgetStatusDto(BudgetDto Budget, decimal SpendUsd, double PercentUsed, string Level);
+
+    [Fact]
+    public async Task Admin_creates_a_global_and_a_scoped_budget_that_appear_in_the_list()
+    {
+        var admin = await AdminClientAsync();
+
+        var global = await admin.PostAsJsonAsync("/api/admin/ai-usage/budgets",
+            new { scope = "Global", limitUsd = 100m, alertThresholdPercent = 80 });
+        Assert.Equal(HttpStatusCode.Created, global.StatusCode);
+
+        var scoped = await admin.PostAsJsonAsync("/api/admin/ai-usage/budgets",
+            new { scope = "Model", scopeValue = "claude-opus-4-8", limitUsd = 25m, alertThresholdPercent = 90 });
+        Assert.Equal(HttpStatusCode.Created, scoped.StatusCode);
+
+        var list = (await admin.GetFromJsonAsync<List<BudgetDto>>("/api/admin/ai-usage/budgets"))!;
+        Assert.Equal(2, list.Count);
+        Assert.Contains(list, b => b.Scope == "Global" && b.LimitUsd == 100m);
+        Assert.Contains(list, b => b.Scope == "Model" && b.ScopeValue == "claude-opus-4-8");
+    }
+
+    [Fact]
+    public async Task Budget_status_reports_over_threshold_when_spend_exceeds_the_limit()
+    {
+        var admin = await AdminClientAsync();
+        Seed(); // total spend 0.007
+
+        await admin.PostAsJsonAsync("/api/admin/ai-usage/budgets",
+            new { scope = "Global", limitUsd = 0.005m, alertThresholdPercent = 80 });
+
+        var statuses = (await admin.GetFromJsonAsync<List<BudgetStatusDto>>("/api/admin/ai-usage/budgets/status"))!;
+
+        var global = Assert.Single(statuses);
+        Assert.Equal(0.007m, global.SpendUsd);
+        Assert.Equal("Over", global.Level);
+    }
+
+    [Fact]
+    public async Task Admin_deletes_a_budget()
+    {
+        var admin = await AdminClientAsync();
+        var created = await admin.PostAsJsonAsync("/api/admin/ai-usage/budgets",
+            new { scope = "Global", limitUsd = 10m });
+        var budget = (await created.Content.ReadFromJsonAsync<BudgetDto>())!;
+
+        var del = await admin.DeleteAsync($"/api/admin/ai-usage/budgets/{budget.Id}");
+        Assert.Equal(HttpStatusCode.NoContent, del.StatusCode);
+        Assert.Empty((await admin.GetFromJsonAsync<List<BudgetDto>>("/api/admin/ai-usage/budgets"))!);
+    }
+
+    [Fact]
+    public async Task Creating_a_budget_with_a_nonpositive_limit_is_400()
+    {
+        var admin = await AdminClientAsync();
+
+        var res = await admin.PostAsJsonAsync("/api/admin/ai-usage/budgets",
+            new { scope = "Global", limitUsd = 0m });
+
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task Non_admin_cannot_read_or_create_budgets()
+    {
+        var member = await _factory.CreateAuthenticatedClientAsync("member@test.local");
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await member.GetAsync("/api/admin/ai-usage/budgets")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await member.GetAsync("/api/admin/ai-usage/budgets/status")).StatusCode);
+        var create = await member.PostAsJsonAsync("/api/admin/ai-usage/budgets", new { scope = "Global", limitUsd = 10m });
+        Assert.Equal(HttpStatusCode.Forbidden, create.StatusCode);
     }
 }

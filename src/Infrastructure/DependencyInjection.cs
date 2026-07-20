@@ -64,6 +64,9 @@ public static class DependencyInjection
         // AI-usage read model (6.1.T3): filter / aggregate / calls / export.
         services.AddScoped<Application.AiUsage.IAiUsageQueries, AiUsageQueryService>();
 
+        // AI-usage budgets (6.1.T6): config repository (status handler is registered in the Api).
+        services.AddScoped<Application.AiUsage.IAiUsageBudgetRepository, AiUsageBudgetRepository>();
+
         // eval-runner is an internal trusted service (4.1): authenticate to it with a shared
         // service token attached by a DelegatingHandler. When the token is null/empty the handler
         // is a no-op, so dev/CI/test defaults keep working against an open eval-runner.

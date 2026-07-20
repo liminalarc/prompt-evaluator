@@ -85,6 +85,7 @@ builder.Services.AddScoped<RegressionAnalyticsHandler>();
 builder.Services.AddScoped<ComparisonAnalyticsHandler>();
 builder.Services.AddScoped<VarianceAnalyticsHandler>();
 builder.Services.AddScoped<VersionStatusHandler>();
+builder.Services.AddScoped<Application.AiUsage.BudgetStatusHandler>();
 builder.Services.AddSingleton<RegressionDetector>();
 builder.Services.AddSingleton<FixtureRedactor>();
 
