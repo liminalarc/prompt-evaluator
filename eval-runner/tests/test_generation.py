@@ -82,7 +82,7 @@ def test_generates_slm_shaped_fixtures_tagged_and_linked_to_seeds():
 
 
 def test_generate_response_carries_the_usage_block_for_the_ledger():
-    # 6.1: one generation call produces the whole batch; its usage rides on the response for the ledger.
+    # 6.1: one generation call produces the whole batch; its usage rides on the response.
     usage = UsageBlock(
         model="claude-opus-4-8", input_tokens=512, output_tokens=256, request_id="req_gen_1"
     )

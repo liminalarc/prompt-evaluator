@@ -60,7 +60,7 @@ class ExecutePromptResponse(BaseModel):
     input_tokens: int
     output_tokens: int
     cost_usd: float | None = None
-    # Full usage block for the AI-usage ledger (6.1). None on the captured/stub paths (no live call).
+    # Full usage block for the AI-usage ledger (6.1). None on the captured/stub paths.
     usage: UsageBlock | None = None
 
 

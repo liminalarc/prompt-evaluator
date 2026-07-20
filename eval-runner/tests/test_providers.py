@@ -261,7 +261,9 @@ def test_anthropic_structured_raises_a_clear_error_on_a_refusal():
     provider = AnthropicProvider(_RefusalAnthropicClient())
 
     with pytest.raises(ValueError, match="refusal"):
-        provider.structured(model="claude-opus-4-8", prompt="p", schema={"type": "object"}, max_tokens=64)
+        provider.structured(
+            model="claude-opus-4-8", prompt="p", schema={"type": "object"}, max_tokens=64
+        )
 
 
 # --- Registry: model id -> configured provider ---

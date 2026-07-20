@@ -51,7 +51,7 @@ class UsageBlock(BaseModel):
     """The full usage block for one model call (6.1), echoed to .NET's AI-usage ledger.
 
     ``model`` is the model the provider reports (falls back to the requested id). Cache tokens are 0
-    for providers/models without prompt caching. ``status`` is ``success`` | ``refusal`` | ``error``.
+    for providers/models without prompt caching. ``status`` is ``success``/``refusal``/``error``.
     """
 
     model: str
@@ -94,7 +94,7 @@ class Provider(Protocol):
     def structured(
         self, *, model: str, prompt: str, schema: dict, max_tokens: int
     ) -> StructuredResult:
-        """Run a structured-output completion; return the parsed object + usage matching `schema`."""
+        """Run a structured-output completion; return the parsed object + usage."""
         ...
 
 
@@ -147,13 +147,15 @@ class AnthropicProvider:
             messages=[{"role": "user", "content": prompt}],
         )
         # Defensive extraction (mirrors complete()): a refusal carries no text block. Without a
-        # default this raised StopIteration → opaque 500; surface a clear, typed error instead so the
-        # caller sees why (the structured path can't produce a verdict from a refusal).
+        # default this raised StopIteration → opaque 500; surface a clear, typed error instead
+        # (the structured path can't produce a verdict from a refusal).
         text = next((b.text for b in response.content if b.type == "text"), None)
         if text is None:
             stop = getattr(response, "stop_reason", None)
             raise ValueError(f"structured call returned no text block (stop_reason={stop!r}).")
-        return StructuredResult(data=json.loads(text), usage=self._usage(response, model, max_tokens))
+        return StructuredResult(
+            data=json.loads(text), usage=self._usage(response, model, max_tokens)
+        )
 
 
 class OpenAIProvider:
@@ -176,10 +178,10 @@ class OpenAIProvider:
         # OpenAI reports cached prompt tokens under usage.prompt_tokens_details.cached_tokens.
         details = getattr(usage, "prompt_tokens_details", None)
         cached = getattr(details, "cached_tokens", 0) or 0 if details is not None else 0
-        # OpenAI's prompt_tokens INCLUDES the cached subset, whereas the ledger prices input_tokens at
-        # the full input rate and cache_read_input_tokens at the cache-read rate. Report only the
-        # NON-cached prompt tokens as input so the cached portion isn't billed twice (finding: cost
-        # double-charge). Anthropic already separates the two, so its mapping is unchanged.
+        # OpenAI's prompt_tokens INCLUDES the cached subset, whereas the ledger prices input_tokens
+        # at the full input rate and cache_read_input_tokens at the cache-read rate. Report only the
+        # NON-cached prompt tokens as input so the cached portion isn't billed twice. Anthropic
+        # already separates the two, so its mapping is unchanged.
         prompt_tokens = getattr(usage, "prompt_tokens", 0) or 0
         return UsageBlock(
             model=getattr(response, "model", None) or requested_model,
