@@ -12,6 +12,7 @@ public sealed class EvalDbContext(DbContextOptions<EvalDbContext> options) : DbC
     public DbSet<Dataset> Datasets => Set<Dataset>();
     public DbSet<ScorerConfig> ScorerConfigs => Set<ScorerConfig>();
     public DbSet<ModelCatalogEntry> ModelCatalogEntries => Set<ModelCatalogEntry>();
+    public DbSet<AiUsageRecord> AiUsageRecords => Set<AiUsageRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

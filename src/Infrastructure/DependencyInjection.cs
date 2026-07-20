@@ -49,6 +49,12 @@ public static class DependencyInjection
         services.AddScoped<Application.Scoring.ScorerFactory>();
         services.AddSingleton(TimeProvider.System);
 
+        // AI-usage ledger (6.1): the ambient attribution carrier (pure AsyncLocal holder) and the
+        // recorder. The recorder writes on its own unit of work (own DbContext per record) so a ledger
+        // row survives even when the surrounding eval operation later fails.
+        services.AddSingleton<Application.Ports.IAiUsageContextAccessor, Application.AiUsage.AmbientAiUsageContext>();
+        services.AddSingleton<Application.Ports.IAiUsageRecorder, AiUsageRecorder>();
+
         // eval-runner is an internal trusted service (4.1): authenticate to it with a shared
         // service token attached by a DelegatingHandler. When the token is null/empty the handler
         // is a no-op, so dev/CI/test defaults keep working against an open eval-runner.

@@ -15,7 +15,7 @@ import os
 
 from pydantic import BaseModel
 
-from app.providers import Provider
+from app.providers import Provider, UsageBlock
 
 # Default to the latest capable model; overridable via env for cost/latency tuning.
 DEFAULT_MODEL = "claude-opus-4-8"
@@ -51,6 +51,9 @@ class GeneratedFixture(BaseModel):
 
 class GenerateFixturesResponse(BaseModel):
     fixtures: list[GeneratedFixture]
+    # Full usage block for the AI-usage ledger (6.1) — one model call produces the whole batch.
+    # None on the stub path (no live call).
+    usage: UsageBlock | None = None
 
 
 def model_name() -> str:
@@ -149,10 +152,12 @@ def generate_fixtures(
     provider: Provider, request: GenerateFixturesRequest
 ) -> GenerateFixturesResponse:
     """Call the provider with structured output and return the generated fixtures."""
-    data = provider.structured(
+    result = provider.structured(
         model=effective_model(request),
         prompt=build_prompt(request),
         schema=FIXTURES_SCHEMA,
         max_tokens=8192,
     )
-    return GenerateFixturesResponse.model_validate(data)
+    response = GenerateFixturesResponse.model_validate(result.data)
+    response.usage = result.usage
+    return response

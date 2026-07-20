@@ -17,7 +17,9 @@ public sealed class RunEvaluationHandler(
     IEvaluationRunner runner,
     ScorerFactory scorerFactory,
     IEvalRunRepository runs,
-    TimeProvider time)
+    TimeProvider time,
+    ICurrentUser currentUser,
+    IAiUsageContextAccessor usageContext)
 {
     /// <summary>Returns null when the prompt, version, or dataset does not exist (Api → 404).</summary>
     public async Task<EvalRun?> HandleAsync(
@@ -40,6 +42,10 @@ public sealed class RunEvaluationHandler(
         var scorers = configs.Select(c => scorerFactory.Create(c.Scorer)).ToList();
 
         var run = EvalRun.Create(promptId, promptVersionId, datasetId, time.GetUtcNow());
+
+        // Attribute every eval-runner call in this run (execute + judge-via-scorer) to the prompt's
+        // org and the calling user. Ambient so the judge call, which runs through IScorer, is covered.
+        using var _ = usageContext.Begin(new AiUsageAttribution(prompt.OrganizationId, currentUser.UserId));
 
         foreach (var fixture in dataset.Fixtures)
         {

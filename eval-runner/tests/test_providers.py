@@ -15,6 +15,7 @@ from app.providers import (
     Completion,
     OpenAIProvider,
     ProviderRegistry,
+    StructuredResult,
     UnknownProviderError,
     resolve_provider,
 )
@@ -22,9 +23,25 @@ from app.providers import (
 
 # --- Anthropic fakes (native shape: content blocks + usage.input_tokens) ---
 class FakeAnthropicMessages:
-    def __init__(self, text: str, input_tokens: int = 11, output_tokens: int = 7):
+    def __init__(
+        self,
+        text: str,
+        input_tokens: int = 11,
+        output_tokens: int = 7,
+        cache_creation_input_tokens: int = 0,
+        cache_read_input_tokens: int = 0,
+        response_id: str = "msg_fake",
+        model: str = "claude-opus-4-8",
+    ):
         self._text = text
-        self._usage = SimpleNamespace(input_tokens=input_tokens, output_tokens=output_tokens)
+        self._usage = SimpleNamespace(
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cache_creation_input_tokens=cache_creation_input_tokens,
+            cache_read_input_tokens=cache_read_input_tokens,
+        )
+        self._response_id = response_id
+        self._model = model
         self.last_kwargs: dict | None = None
 
     def create(self, **kwargs):
@@ -32,6 +49,9 @@ class FakeAnthropicMessages:
         return SimpleNamespace(
             content=[SimpleNamespace(type="text", text=self._text)],
             usage=self._usage,
+            id=self._response_id,
+            model=self._model,
+            stop_reason="end_turn",
         )
 
 
@@ -42,11 +62,23 @@ class FakeAnthropicClient:
 
 # --- OpenAI fakes (native shape: choices[].message.content + usage.prompt_tokens) ---
 class FakeOpenAICompletions:
-    def __init__(self, text: str, prompt_tokens: int = 13, completion_tokens: int = 5):
+    def __init__(
+        self,
+        text: str,
+        prompt_tokens: int = 13,
+        completion_tokens: int = 5,
+        cached_tokens: int = 0,
+        response_id: str = "chatcmpl_fake",
+        model: str = "gpt-4o",
+    ):
         self._text = text
         self._usage = SimpleNamespace(
-            prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            prompt_tokens_details=SimpleNamespace(cached_tokens=cached_tokens),
         )
+        self._response_id = response_id
+        self._model = model
         self.last_kwargs: dict | None = None
 
     def create(self, **kwargs):
@@ -55,6 +87,8 @@ class FakeOpenAICompletions:
         return SimpleNamespace(
             choices=[SimpleNamespace(message=message)],
             usage=self._usage,
+            id=self._response_id,
+            model=self._model,
         )
 
 
@@ -103,16 +137,47 @@ def test_anthropic_complete_uses_system_and_user_and_reports_usage():
     assert kwargs["max_tokens"] == 256
 
 
+def test_anthropic_complete_reports_the_full_usage_block():
+    client = FakeAnthropicClient(
+        "the answer",
+        input_tokens=1000,
+        output_tokens=500,
+        cache_creation_input_tokens=40,
+        cache_read_input_tokens=960,
+    )
+    provider = AnthropicProvider(client)
+
+    result = provider.complete(
+        model="claude-opus-4-8", system="s", user="u", max_tokens=256
+    )
+
+    usage = result.usage
+    assert usage is not None
+    assert usage.model == "claude-opus-4-8"
+    assert usage.input_tokens == 1000
+    assert usage.output_tokens == 500
+    assert usage.cache_creation_input_tokens == 40
+    assert usage.cache_read_input_tokens == 960
+    assert usage.request_id == "msg_fake"
+    assert usage.status == "success"
+    assert usage.max_tokens == 256
+
+
 def test_anthropic_structured_uses_native_json_schema_output_config():
     client = FakeAnthropicClient(json.dumps({"score": 0.5}))
     provider = AnthropicProvider(client)
     schema = {"type": "object", "properties": {"score": {"type": "number"}}}
 
-    data = provider.structured(
+    result = provider.structured(
         model="claude-opus-4-8", prompt="grade this", schema=schema, max_tokens=64
     )
 
-    assert data == {"score": 0.5}
+    assert isinstance(result, StructuredResult)
+    assert result.data == {"score": 0.5}
+    # The call's usage rides alongside the parsed verdict (6.1).
+    assert result.usage.model == "claude-opus-4-8"
+    assert result.usage.max_tokens == 64
+    assert result.usage.status == "success"
     kwargs = client.messages.last_kwargs
     # Native Anthropic structured output, never free-text parsing.
     assert kwargs["output_config"]["format"]["type"] == "json_schema"
@@ -142,13 +207,18 @@ def test_openai_complete_maps_system_user_and_token_usage():
 
 
 def test_openai_structured_uses_native_json_schema_response_format():
-    client = FakeOpenAIClient(json.dumps({"score": 0.9}))
+    client = FakeOpenAIClient(json.dumps({"score": 0.9}), cached_tokens=7)
     provider = OpenAIProvider(client)
     schema = {"type": "object", "properties": {"score": {"type": "number"}}}
 
-    data = provider.structured(model="gpt-4o", prompt="grade this", schema=schema, max_tokens=64)
+    result = provider.structured(model="gpt-4o", prompt="grade this", schema=schema, max_tokens=64)
 
-    assert data == {"score": 0.9}
+    assert isinstance(result, StructuredResult)
+    assert result.data == {"score": 0.9}
+    # OpenAI cached prompt tokens map to cache_read_input_tokens (6.1).
+    assert result.usage.cache_read_input_tokens == 7
+    assert result.usage.request_id == "chatcmpl_fake"
+    assert result.usage.model == "gpt-4o"
     fmt = client.chat.completions.last_kwargs["response_format"]
     # Native OpenAI structured output (json_schema), never free-text parsing.
     assert fmt["type"] == "json_schema"

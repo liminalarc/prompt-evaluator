@@ -4,22 +4,26 @@ from fastapi.testclient import TestClient
 
 from app.judging import JUDGE_MAX_TOKENS, VERDICT_SCHEMA
 from app.main import app, get_provider_registry
+from app.providers import StructuredResult, UsageBlock
 
 
 class FakeProvider:
-    """Records structured() calls and returns a canned verdict."""
+    """Records structured() calls and returns a canned verdict + usage."""
 
     name = "fake"
 
-    def __init__(self, verdict: dict):
+    def __init__(self, verdict: dict, usage: UsageBlock | None = None):
         self._verdict = verdict
+        self._usage = usage or UsageBlock(
+            model="claude-opus-4-8", input_tokens=120, output_tokens=30, request_id="req_j"
+        )
         self.calls: list[dict] = []
 
     def structured(self, *, model, prompt, schema, max_tokens):
         self.calls.append(
             {"model": model, "prompt": prompt, "schema": schema, "max_tokens": max_tokens}
         )
-        return dict(self._verdict)
+        return StructuredResult(data=dict(self._verdict), usage=self._usage)
 
     def complete(self, **kwargs):  # not used by the judge path
         raise AssertionError("judge must not call complete()")
@@ -56,10 +60,37 @@ def test_returns_structured_verdict():
     )
 
     assert resp.status_code == 200
-    assert resp.json() == {"score": 0.8, "passed": True, "rationale": "mostly accurate"}
+    body = resp.json()
+    assert body["score"] == 0.8
+    assert body["passed"] is True
+    assert body["rationale"] == "mostly accurate"
     # Structured output requested via the provider, using the verdict schema.
     assert provider.calls[0]["schema"] == VERDICT_SCHEMA
     assert provider.calls[0]["model"] == "claude-opus-4-8"
+
+
+def test_judge_response_carries_the_usage_block_for_the_ledger():
+    # 6.1: judge responses now surface the full usage block .NET records in the AI-usage ledger.
+    usage = UsageBlock(
+        model="claude-opus-4-8",
+        input_tokens=200,
+        output_tokens=45,
+        cache_read_input_tokens=180,
+        request_id="req_judge_1",
+    )
+    provider = FakeProvider({"score": 0.9, "passed": True, "rationale": "ok"}, usage=usage)
+    resp = client_with(provider).post(
+        "/judge",
+        json={"rubric": "r", "input": "i", "output": "o", "model": "claude-opus-4-8"},
+    )
+
+    block = resp.json()["usage"]
+    assert block["model"] == "claude-opus-4-8"
+    assert block["input_tokens"] == 200
+    assert block["output_tokens"] == 45
+    assert block["cache_read_input_tokens"] == 180
+    assert block["request_id"] == "req_judge_1"
+    assert block["status"] == "success"
 
 
 def test_requests_structured_output_and_includes_rubric_and_io():

@@ -26,6 +26,7 @@
 - **2.15** Structured, severity-tagged LLM-judge verdicts (per-criterion + failure-mode) — `NOT STARTED` — [detail](specs/2.15.md)
 - **2.16** Data-conditional / per-fixture rubric scoring — `NOT STARTED` — [detail](specs/2.16.md)
 - **2.17** Asynchronous eval runs (job + poll) — `NOT STARTED` — [detail](specs/2.17.md)
+- **2.22** Simplify navigation — drop the dashboard, lead with Prompts (+ org gear for members) — `NOT STARTED` — [detail](specs/2.22.md)
 
 ## Phase 3 — Integrations & Ops
 - **3.1** Zatomic-backed Prompt Registry — `NOT STARTED` — [detail](specs/3.1.md)

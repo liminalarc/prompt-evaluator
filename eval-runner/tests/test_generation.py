@@ -11,20 +11,26 @@ from app.generation import (
     build_prompt,
 )
 from app.main import app, get_provider_registry
+from app.providers import StructuredResult, UsageBlock
 
 
 class FakeProvider:
-    """Records structured() calls and returns canned fixtures."""
+    """Records structured() calls and returns canned fixtures + usage."""
 
     name = "fake"
 
-    def __init__(self, fixtures: list[dict]):
+    def __init__(self, fixtures: list[dict], usage: UsageBlock | None = None):
         self._fixtures = fixtures
+        self._usage = usage or UsageBlock(
+            model="claude-opus-4-8", input_tokens=300, output_tokens=150, request_id="req_g"
+        )
         self.calls: list[dict] = []
 
     def structured(self, *, model, prompt, schema, max_tokens):
         self.calls.append({"model": model, "prompt": prompt, "schema": schema})
-        return {"fixtures": [dict(f) for f in self._fixtures]}
+        return StructuredResult(
+            data={"fixtures": [dict(f) for f in self._fixtures]}, usage=self._usage
+        )
 
     def complete(self, **kwargs):  # not used by the generation path
         raise AssertionError("generation must not call complete()")
@@ -73,6 +79,27 @@ def test_generates_slm_shaped_fixtures_tagged_and_linked_to_seeds():
     assert fixture["input"] == "summarize this other thread"
     assert fixture["upstream_context"] == "slm-shaped output"
     assert fixture["seed_index"] == 0
+
+
+def test_generate_response_carries_the_usage_block_for_the_ledger():
+    # 6.1: one generation call produces the whole batch; its usage rides on the response for the ledger.
+    usage = UsageBlock(
+        model="claude-opus-4-8", input_tokens=512, output_tokens=256, request_id="req_gen_1"
+    )
+    provider = FakeProvider(
+        [{"input": "x", "upstream_context": None, "expected_output": None, "seed_index": 0}],
+        usage=usage,
+    )
+    resp = client_with(provider).post(
+        "/generate-fixtures",
+        json={"seed_examples": [{"input": "seed"}], "count": 1},
+    )
+
+    block = resp.json()["usage"]
+    assert block["model"] == "claude-opus-4-8"
+    assert block["input_tokens"] == 512
+    assert block["output_tokens"] == 256
+    assert block["request_id"] == "req_gen_1"
 
 
 def test_seed_examples_anchor_the_prompt_and_structured_output_is_requested():

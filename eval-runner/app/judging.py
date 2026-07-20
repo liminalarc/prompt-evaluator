@@ -11,7 +11,7 @@ Scorer series (1.3).
 
 from pydantic import BaseModel
 
-from app.providers import Provider
+from app.providers import Provider, UsageBlock
 
 DEFAULT_JUDGE_MODEL = "claude-opus-4-8"
 
@@ -37,6 +37,8 @@ class JudgeResponse(BaseModel):
     score: float  # normalized to [0, 1]
     passed: bool
     rationale: str
+    # Full usage block for the AI-usage ledger (6.1). None on the stub path (no live call).
+    usage: UsageBlock | None = None
 
 
 VERDICT_SCHEMA = {
@@ -82,12 +84,15 @@ def stub_judge(request: JudgeRequest) -> JudgeResponse:
 
 
 def judge(provider: Provider, request: JudgeRequest) -> JudgeResponse:
-    data = provider.structured(
+    result = provider.structured(
         model=request.model,
         prompt=build_judge_prompt(request),
         schema=VERDICT_SCHEMA,
         max_tokens=JUDGE_MAX_TOKENS,
     )
+    data = result.data
     # Structured outputs can't enforce numeric ranges, so clamp defensively.
     data["score"] = max(0.0, min(1.0, float(data["score"])))
-    return JudgeResponse.model_validate(data)
+    verdict = JudgeResponse.model_validate(data)
+    verdict.usage = result.usage
+    return verdict

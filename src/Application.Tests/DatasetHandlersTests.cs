@@ -1,3 +1,4 @@
+using Application.AiUsage;
 using Application.Datasets;
 using Application.Ports;
 using Domain;
@@ -52,6 +53,12 @@ public class DatasetHandlersTests
     private sealed class FixedTime(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    private sealed class StubCurrentUser(Guid? userId) : ICurrentUser
+    {
+        public bool IsAuthenticated => userId is not null;
+        public Guid? UserId => userId;
     }
 
     private static readonly DateTimeOffset When = new(2026, 7, 12, 12, 0, 0, TimeSpan.Zero);
@@ -213,6 +220,8 @@ public class DatasetHandlersTests
         public IReadOnlyList<SeedExampleData>? Seeds { get; private set; }
         public GenerationGuidanceData? Guidance { get; private set; }
         public int Count { get; private set; }
+        public IAiUsageContextAccessor? UsageContext { get; init; }
+        public AiUsageAttribution? Saw { get; private set; }
 
         public Task<string> EchoAsync(string prompt, CancellationToken ct = default) => Task.FromResult(prompt);
         public Task<IReadOnlyList<string>?> GetConfiguredProvidersAsync(CancellationToken ct = default)
@@ -227,6 +236,7 @@ public class DatasetHandlersTests
             Seeds = seeds;
             Guidance = guidance;
             Count = count;
+            Saw = UsageContext?.Current;
             return Task.FromResult(result);
         }
 
@@ -252,7 +262,9 @@ public class DatasetHandlersTests
         {
             new GeneratedFixtureData("generated variant", "slm-shaped", null, SeedIndex: 1),
         });
-        var handler = new GenerateSyntheticFixturesHandler(repo, runner, new FixedTime(When));
+        var handler = new GenerateSyntheticFixturesHandler(
+            repo, new InMemoryPromptRepo(), runner, new FixedTime(When),
+            new StubCurrentUser(null), new AmbientAiUsageContext());
 
         var updated = await handler.HandleAsync(dataset.Id, Guidance, count: 3);
 
@@ -270,6 +282,31 @@ public class DatasetHandlersTests
     }
 
     [Fact]
+    public async Task GenerateSynthetic_threads_org_and_user_attribution_to_the_runner()
+    {
+        // 6.1: the generate call is attributed to the owning prompt's org (dataset → prompt) + caller.
+        var promptRepo = new InMemoryPromptRepo();
+        var orgId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var prompt = Prompt.Create(orgId, "P");
+        await promptRepo.AddAsync(prompt);
+
+        var repo = new InMemoryDatasetRepo();
+        var dataset = Dataset.Create(prompt.Id, "Summaries");
+        dataset.AddCapturedFixture("captured 0", When);
+        await repo.AddAsync(dataset);
+
+        var usageContext = new AmbientAiUsageContext();
+        var runner = new RecordingRunner([]) { UsageContext = usageContext };
+        var handler = new GenerateSyntheticFixturesHandler(
+            repo, promptRepo, runner, new FixedTime(When), new StubCurrentUser(userId), usageContext);
+
+        await handler.HandleAsync(dataset.Id, Guidance, count: 1);
+
+        Assert.Equal(new AiUsageAttribution(orgId, userId), runner.Saw);
+    }
+
+    [Fact]
     public async Task GenerateSynthetic_falls_back_to_first_seed_when_index_is_null_or_out_of_range()
     {
         var repo = new InMemoryDatasetRepo();
@@ -282,7 +319,9 @@ public class DatasetHandlersTests
             new GeneratedFixtureData("no attribution", null, null, SeedIndex: null),
             new GeneratedFixtureData("bad attribution", null, null, SeedIndex: 99),
         });
-        var handler = new GenerateSyntheticFixturesHandler(repo, runner, new FixedTime(When));
+        var handler = new GenerateSyntheticFixturesHandler(
+            repo, new InMemoryPromptRepo(), runner, new FixedTime(When),
+            new StubCurrentUser(null), new AmbientAiUsageContext());
 
         var updated = await handler.HandleAsync(dataset.Id, Guidance, count: 2);
 
@@ -304,7 +343,9 @@ public class DatasetHandlersTests
             new GeneratedFixtureData("valid variant", null, null, 0),
             new GeneratedFixtureData("   ", null, null, 0),  // invalid: blank input
         });
-        var handler = new GenerateSyntheticFixturesHandler(repo, runner, new FixedTime(When));
+        var handler = new GenerateSyntheticFixturesHandler(
+            repo, new InMemoryPromptRepo(), runner, new FixedTime(When),
+            new StubCurrentUser(null), new AmbientAiUsageContext());
 
         var updated = await handler.HandleAsync(dataset.Id, Guidance, count: 2);
 
@@ -319,7 +360,9 @@ public class DatasetHandlersTests
         var dataset = Dataset.Create(Guid.NewGuid(), "Empty");
         await repo.AddAsync(dataset);
         var runner = new RecordingRunner([]);
-        var handler = new GenerateSyntheticFixturesHandler(repo, runner, new FixedTime(When));
+        var handler = new GenerateSyntheticFixturesHandler(
+            repo, new InMemoryPromptRepo(), runner, new FixedTime(When),
+            new StubCurrentUser(null), new AmbientAiUsageContext());
 
         await Assert.ThrowsAsync<ArgumentException>(() => handler.HandleAsync(dataset.Id, Guidance, count: 1));
     }
@@ -329,7 +372,9 @@ public class DatasetHandlersTests
     {
         var repo = new InMemoryDatasetRepo();
         var runner = new RecordingRunner([]);
-        var handler = new GenerateSyntheticFixturesHandler(repo, runner, new FixedTime(When));
+        var handler = new GenerateSyntheticFixturesHandler(
+            repo, new InMemoryPromptRepo(), runner, new FixedTime(When),
+            new StubCurrentUser(null), new AmbientAiUsageContext());
 
         var result = await handler.HandleAsync(Guid.NewGuid(), Guidance, count: 1);
 

@@ -12,8 +12,11 @@ namespace Application.Datasets;
 /// </summary>
 public sealed class GenerateSyntheticFixturesHandler(
     IDatasetRepository repository,
+    IPromptRepository prompts,
     IEvaluationRunner runner,
-    TimeProvider time)
+    TimeProvider time,
+    ICurrentUser currentUser,
+    IAiUsageContextAccessor usageContext)
 {
     public async Task<Dataset?> HandleAsync(
         Guid datasetId,
@@ -32,6 +35,10 @@ public sealed class GenerateSyntheticFixturesHandler(
         var seeds = capturedSeeds
             .Select(f => new SeedExampleData(f.Input, f.UpstreamContext, f.ExpectedOutput))
             .ToList();
+
+        // Attribute the generation call to the owning prompt's org (dataset → prompt) and the caller.
+        var prompt = await prompts.GetByIdAsync(dataset.PromptId, ct);
+        using var _ = usageContext.Begin(new AiUsageAttribution(prompt?.OrganizationId, currentUser.UserId));
 
         var generated = await runner.GenerateSyntheticFixturesAsync(seeds, guidance, count, ct);
 

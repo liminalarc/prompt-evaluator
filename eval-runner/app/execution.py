@@ -14,7 +14,7 @@ import time
 
 from pydantic import BaseModel
 
-from app.providers import Provider
+from app.providers import Provider, UsageBlock
 
 DEFAULT_SUBJECT_MODEL = "claude-opus-4-8"
 
@@ -49,6 +49,8 @@ class ExecutePromptResponse(BaseModel):
     input_tokens: int
     output_tokens: int
     cost_usd: float | None = None
+    # Full usage block for the AI-usage ledger (6.1). None on the captured/stub paths (no live call).
+    usage: UsageBlock | None = None
 
 
 def build_user_message(request: ExecutePromptRequest) -> str:
@@ -100,6 +102,14 @@ def execute_prompt(provider: Provider, request: ExecutePromptRequest) -> Execute
     )
     latency_ms = int((time.perf_counter() - start) * 1000)
 
+    # Prefer the provider's full usage block; synthesize one from the flat token counts otherwise.
+    usage = completion.usage or UsageBlock(
+        model=request.model,
+        input_tokens=completion.input_tokens,
+        output_tokens=completion.output_tokens,
+    )
+    usage.max_tokens = request.max_tokens
+
     return ExecutePromptResponse(
         output=completion.text,
         latency_ms=latency_ms,
@@ -108,4 +118,5 @@ def execute_prompt(provider: Provider, request: ExecutePromptRequest) -> Execute
         cost_usd=estimate_cost(
             request.model, completion.input_tokens, completion.output_tokens
         ),
+        usage=usage,
     )

@@ -1,3 +1,4 @@
+using Application.AiUsage;
 using Application.Datasets;
 using Application.EvalRuns;
 using Application.Ports;
@@ -15,12 +16,22 @@ public class EvalHarnessTests
         public override DateTimeOffset GetUtcNow() => now;
     }
 
+    private sealed class StubCurrentUser(Guid? userId) : ICurrentUser
+    {
+        public bool IsAuthenticated => userId is not null;
+        public Guid? UserId => userId;
+    }
+
     // Scripted eval-runner: execution echoes "OUT:{input}"; the judge encodes the judge model in
-    // its verdict so tests can prove the model reached the seam.
-    private sealed class ScriptedRunner : IEvaluationRunner
+    // its verdict so tests can prove the model reached the seam. When given a usage-context accessor
+    // it captures the ambient attribution at each call, so threading (6.1) can be asserted.
+    private sealed class ScriptedRunner(IAiUsageContextAccessor? usageContext = null) : IEvaluationRunner
     {
         public List<string> ExecutedInputs { get; } = [];
         public List<string> JudgeModels { get; } = [];
+        public AiUsageAttribution? ExecuteSaw { get; private set; }
+        public AiUsageAttribution? JudgeSaw { get; private set; }
+        public AiUsageAttribution? GenerateSaw { get; private set; }
 
         public Task<string> EchoAsync(string prompt, CancellationToken ct = default) => Task.FromResult(prompt);
         public Task<IReadOnlyList<string>?> GetConfiguredProvidersAsync(CancellationToken ct = default)
@@ -30,12 +41,16 @@ public class EvalHarnessTests
             => Task.FromResult<Application.ServiceVersion?>(null);
         public Task<IReadOnlyList<GeneratedFixtureData>> GenerateSyntheticFixturesAsync(
             IReadOnlyList<SeedExampleData> seeds, GenerationGuidanceData guidance, int count, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<GeneratedFixtureData>>([]);
+        {
+            GenerateSaw = usageContext?.Current;
+            return Task.FromResult<IReadOnlyList<GeneratedFixtureData>>([]);
+        }
 
         public Task<PromptExecution> ExecutePromptAsync(
             string promptContent, string targetModel, string input, string? upstreamContext, CancellationToken ct = default)
         {
             ExecutedInputs.Add(input);
+            ExecuteSaw = usageContext?.Current;
             return Task.FromResult(new PromptExecution(
                 $"OUT:{input}", LatencyMs: 100, InputTokens: 1000, OutputTokens: 500, CostUsd: 0.001m));
         }
@@ -44,6 +59,7 @@ public class EvalHarnessTests
             string rubric, string input, string output, string? expected, string judgeModel, CancellationToken ct = default)
         {
             JudgeModels.Add(judgeModel);
+            JudgeSaw = usageContext?.Current;
             var score = judgeModel == "claude-opus-4-8" ? 0.9 : 0.5;
             return Task.FromResult(new JudgeVerdict(score, Passed: true, Rationale: $"judged by {judgeModel}"));
         }
@@ -110,7 +126,9 @@ public class EvalHarnessTests
         InMemoryScorerConfigRepo ScorerConfigs,
         Prompt Prompt,
         PromptVersion Version,
-        Dataset Dataset);
+        Dataset Dataset,
+        Guid OrgId,
+        Guid UserId);
 
     private static async Task<Harness> BuildAsync(params ScorerDescriptor[] scorers)
     {
@@ -118,9 +136,12 @@ public class EvalHarnessTests
         var datasetRepo = new InMemoryDatasetRepo();
         var scorerRepo = new InMemoryScorerConfigRepo();
         var runRepo = new InMemoryEvalRunRepo();
-        var runner = new ScriptedRunner();
+        var usageContext = new AmbientAiUsageContext();
+        var runner = new ScriptedRunner(usageContext);
+        var orgId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
 
-        var prompt = Prompt.Create(Guid.NewGuid(), "Summarizer");
+        var prompt = Prompt.Create(orgId, "Summarizer");
         var version = prompt.AddVersion("You summarize text.", "claude-opus-4-8", When);
         await promptRepo.AddAsync(prompt);
 
@@ -133,9 +154,10 @@ public class EvalHarnessTests
             await scorerRepo.AddAsync(ScorerConfig.Create(dataset.Id, scorer, When));
 
         var handler = new RunEvaluationHandler(
-            promptRepo, datasetRepo, scorerRepo, runner, new ScorerFactory(runner), runRepo, new FixedTime(When));
+            promptRepo, datasetRepo, scorerRepo, runner, new ScorerFactory(runner), runRepo,
+            new FixedTime(When), new StubCurrentUser(userId), usageContext);
 
-        return new Harness(handler, runner, runRepo, scorerRepo, prompt, version, dataset);
+        return new Harness(handler, runner, runRepo, scorerRepo, prompt, version, dataset, orgId, userId);
     }
 
     [Fact]
@@ -168,6 +190,21 @@ public class EvalHarnessTests
 
         var persisted = Assert.Single(h.Runs.Saved);
         Assert.Equal(run.Id, persisted.Id);
+    }
+
+    [Fact]
+    public async Task Run_threads_org_and_user_attribution_to_every_runner_call_incl_judge()
+    {
+        // 6.1: the handler sets the ambient attribution (prompt's org + calling user); both the
+        // execute call and the judge call — which runs indirectly through LlmJudgeScorer via IScorer
+        // — must see it. Proves the AsyncLocal threading across the scorer seam.
+        var h = await BuildAsync(ScorerDescriptor.LlmJudge("rubric", "claude-opus-4-8"));
+
+        await h.Handler.HandleAsync(h.Prompt.Id, h.Version.Id, h.Dataset.Id);
+
+        var expected = new AiUsageAttribution(h.OrgId, h.UserId);
+        Assert.Equal(expected, h.Runner.ExecuteSaw);
+        Assert.Equal(expected, h.Runner.JudgeSaw);
     }
 
     [Fact]
@@ -249,7 +286,8 @@ public class EvalHarnessTests
 
         var handler = new RunEvaluationHandler(
             promptRepo, datasetRepo, new InMemoryScorerConfigRepo(), runner,
-            new ScorerFactory(runner), runRepo, new FixedTime(When));
+            new ScorerFactory(runner), runRepo, new FixedTime(When),
+            new StubCurrentUser(Guid.NewGuid()), new AmbientAiUsageContext());
 
         var run = await handler.HandleAsync(prompt.Id, version.Id, otherPromptsDataset.Id);
 
