@@ -86,12 +86,18 @@ public sealed class AiUsageBudget
         };
     }
 
+    /// <summary>
+    /// Percent of the limit used by <paramref name="spendUsd"/>. The single source of the ratio (both
+    /// <see cref="Classify"/> and the spend-status DTO read it). <see cref="LimitUsd"/> is always
+    /// positive (<see cref="Create"/> rejects a non-positive limit), so no divide-by-zero guard.
+    /// </summary>
+    public double PercentUsed(decimal spendUsd) => (double)(spendUsd / LimitUsd) * 100.0;
+
     /// <summary>Classifies current-period <paramref name="spendUsd"/> against this budget.</summary>
     public BudgetStatusLevel Classify(decimal spendUsd)
     {
         if (spendUsd >= LimitUsd)
             return BudgetStatusLevel.Over;
-        var percent = (double)(spendUsd / LimitUsd) * 100.0;
-        return percent >= AlertThresholdPercent ? BudgetStatusLevel.Warning : BudgetStatusLevel.Ok;
+        return PercentUsed(spendUsd) >= AlertThresholdPercent ? BudgetStatusLevel.Warning : BudgetStatusLevel.Ok;
     }
 }

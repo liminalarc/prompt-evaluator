@@ -34,8 +34,7 @@ public sealed class BudgetStatusHandler(
         {
             var filter = ToFilter(budget, periodStart);
             var spend = (await queries.SummaryAsync(filter, ct)).TotalCostUsd;
-            var percent = budget.LimitUsd == 0 ? 0 : (double)(spend / budget.LimitUsd) * 100.0;
-            result.Add(new BudgetSpendStatus(budget, spend, percent, budget.Classify(spend)));
+            result.Add(new BudgetSpendStatus(budget, spend, budget.PercentUsed(spend), budget.Classify(spend)));
         }
         return result;
     }

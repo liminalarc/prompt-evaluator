@@ -38,7 +38,7 @@
 - **5.1** Adopt LitmusAI across Cortex Golf & Stormboard (discover → onboard → improve every prompt) — `IN PROGRESS` — [detail](specs/5.1/5.1.md)
 
 ## Phase 6 — Cost & Operability
-- _All specs archived._
+- **6.3** AI-usage ledger accuracy & scale follow-ups (from the 6.1/6.2 review) — `NOT STARTED` — [detail](specs/6.3.md)
 
 ## Archive
 - **6.2** Unify Model Catalog display price with the authoritative ledger pricing table — `DONE` — [detail](specs/archive/6.2.md)

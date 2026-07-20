@@ -64,6 +64,9 @@ def test_returns_structured_verdict():
     assert body["score"] == 0.8
     assert body["passed"] is True
     assert body["rationale"] == "mostly accurate"
+    # Guard the response key-set: only score/passed/rationale/usage — never echoed prompt/response
+    # content (6.1 invariant: no prompt/response content flows into the .NET ledger via this seam).
+    assert set(body.keys()) == {"score", "passed", "rationale", "usage"}
     # Structured output requested via the provider, using the verdict schema.
     assert provider.calls[0]["schema"] == VERDICT_SCHEMA
     assert provider.calls[0]["model"] == "claude-opus-4-8"

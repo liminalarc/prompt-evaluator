@@ -98,6 +98,21 @@ public sealed class AiUsageEndpointTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task A_date_only_to_bound_includes_the_whole_final_day()
+    {
+        var admin = await AdminClientAsync();
+        Seed(); // records occur at When = UtcNow (some time today, after 00:00Z)
+
+        var today = DateTimeOffset.UtcNow.ToString("yyyy-MM-dd");
+        var summary = (await admin.GetFromJsonAsync<SummaryDto>(
+            $"/api/admin/ai-usage/summary?to={today}"))!;
+
+        // A date-only `to` is inclusive of the entire day; without the end-of-day extension the
+        // final day's records (occurring after midnight) would silently vanish.
+        Assert.Equal(3, summary.CallCount);
+    }
+
+    [Fact]
     public async Task Admin_gets_a_breakdown_by_feature()
     {
         var admin = await AdminClientAsync();

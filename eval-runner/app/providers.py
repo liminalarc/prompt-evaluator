@@ -146,7 +146,13 @@ class AnthropicProvider:
             output_config={"format": {"type": "json_schema", "schema": schema}},
             messages=[{"role": "user", "content": prompt}],
         )
-        text = next(b.text for b in response.content if b.type == "text")
+        # Defensive extraction (mirrors complete()): a refusal carries no text block. Without a
+        # default this raised StopIteration → opaque 500; surface a clear, typed error instead so the
+        # caller sees why (the structured path can't produce a verdict from a refusal).
+        text = next((b.text for b in response.content if b.type == "text"), None)
+        if text is None:
+            stop = getattr(response, "stop_reason", None)
+            raise ValueError(f"structured call returned no text block (stop_reason={stop!r}).")
         return StructuredResult(data=json.loads(text), usage=self._usage(response, model, max_tokens))
 
 
@@ -170,9 +176,14 @@ class OpenAIProvider:
         # OpenAI reports cached prompt tokens under usage.prompt_tokens_details.cached_tokens.
         details = getattr(usage, "prompt_tokens_details", None)
         cached = getattr(details, "cached_tokens", 0) or 0 if details is not None else 0
+        # OpenAI's prompt_tokens INCLUDES the cached subset, whereas the ledger prices input_tokens at
+        # the full input rate and cache_read_input_tokens at the cache-read rate. Report only the
+        # NON-cached prompt tokens as input so the cached portion isn't billed twice (finding: cost
+        # double-charge). Anthropic already separates the two, so its mapping is unchanged.
+        prompt_tokens = getattr(usage, "prompt_tokens", 0) or 0
         return UsageBlock(
             model=getattr(response, "model", None) or requested_model,
-            input_tokens=getattr(usage, "prompt_tokens", 0) or 0,
+            input_tokens=max(prompt_tokens - cached, 0),
             output_tokens=getattr(usage, "completion_tokens", 0) or 0,
             cache_read_input_tokens=cached,
             request_id=getattr(response, "id", None),

@@ -159,7 +159,13 @@ public sealed class EvalRunnerClient : IEvaluationRunner
         {
             var attribution = _usageContext?.Current ?? default;
             var status = usage?.Status is { } s ? ParseStatus(s) : fallbackStatus;
-            var model = string.IsNullOrWhiteSpace(usage?.Model) ? (requestedModel ?? "unknown") : usage!.Model!;
+            // Prefer the requested (catalog) model id — it is the identity the pricing table (6.1.T2),
+            // model-scoped budgets (6.1.T6), and the Model Catalog (6.2) are all keyed on. The
+            // provider-echoed id can be a dated snapshot (e.g. gpt-4o-2024-08-06) that misses the
+            // pricing table (→ null cost) and never matches a model budget. Fall back to the echoed id
+            // only when the request carried no model (synthetic generation uses the runner's default).
+            var model = !string.IsNullOrWhiteSpace(requestedModel) ? requestedModel!
+                : string.IsNullOrWhiteSpace(usage?.Model) ? "unknown" : usage!.Model!;
             var latencyMs = (int)_time.GetElapsedTime(start).TotalMilliseconds;
 
             var record = AiUsageRecord.Create(

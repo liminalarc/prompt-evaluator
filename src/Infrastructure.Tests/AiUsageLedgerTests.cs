@@ -144,6 +144,26 @@ public class AiUsageLedgerTests
     }
 
     [Fact]
+    public async Task Records_the_requested_catalog_model_id_not_the_provider_echoed_snapshot()
+    {
+        // The provider may echo a dated snapshot (e.g. gpt-4o-2024-08-06); the ledger must store the
+        // requested catalog id the pricing table + model-scoped budgets are keyed on, else cost snaps
+        // null and model budgets never match. (Generation, which has no requested model, still uses the
+        // echoed id — covered by the generate test.)
+        var recorder = new FakeRecorder();
+        var http = HttpWith(_ => Ok(new
+        {
+            output = "o", latency_ms = 10, input_tokens = 100, output_tokens = 50, cost_usd = 0.0,
+            usage = UsageJson(model: "gpt-4o-2024-08-06"),
+        }));
+        var client = new EvalRunnerClient(http, recorder, new AmbientAiUsageContext(), TimeProvider.System);
+
+        await client.ExecutePromptAsync("p", "gpt-4o", "in", null);
+
+        Assert.Equal("gpt-4o", Assert.Single(recorder.Records).Model);
+    }
+
+    [Fact]
     public async Task Refusal_status_from_the_usage_block_is_recorded()
     {
         var recorder = new FakeRecorder();

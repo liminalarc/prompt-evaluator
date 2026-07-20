@@ -153,6 +153,12 @@ public static class AiUsageEndpoints
         if (q.TryGetValue("to", out var toRaw) && !string.IsNullOrWhiteSpace(toRaw) &&
             !TryParseDate(toRaw!, "to", out to, out error)) return false;
 
+        // Inclusive upper bound: the filter uses `OccurredAt <= To`, and the web sends a date-only
+        // `to` (<input type="date">) that parses to 00:00:00Z — which would drop the entire final day.
+        // Extend a date-only `to` to the end of that day so the documented inclusive-date contract holds.
+        if (to is { } toValue && IsDateOnly(toRaw.ToString()))
+            to = toValue.AddDays(1).AddTicks(-1);
+
         var models = Split(q["models"]);
 
         if (!TryParseEnums<AiUsageFeature>(q["features"], "feature", out var features, out error)) return false;
@@ -163,6 +169,9 @@ public static class AiUsageEndpoints
         filter = new AiUsageFilter(from, to, models, features, users, orgs, statuses);
         return true;
     }
+
+    // A pure calendar date ("yyyy-MM-dd") carries no time component (no 'T' separator, no ':').
+    private static bool IsDateOnly(string raw) => !raw.Contains('T') && !raw.Contains(':');
 
     private static bool TryParseDate(string raw, string field, out DateTimeOffset? value, out string? error)
     {

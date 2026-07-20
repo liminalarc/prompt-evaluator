@@ -57,11 +57,8 @@ export class AiUsageApiService {
     });
   }
 
-  // Budgets (6.1.T6) — tracking + alerting only.
-  listBudgets(): Observable<AiUsageBudget[]> {
-    return this.http.get<AiUsageBudget[]>(`${this.base}/budgets`);
-  }
-
+  // Budgets (6.1.T6) — tracking + alerting only. The UI reads spend-vs-budget from budgetStatus()
+  // (budgets + current spend); a plain list without spend isn't needed, so no listBudgets() wrapper.
   budgetStatus(): Observable<BudgetStatus[]> {
     return this.http.get<BudgetStatus[]>(`${this.base}/budgets/status`);
   }

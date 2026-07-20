@@ -226,6 +226,44 @@ def test_openai_structured_uses_native_json_schema_response_format():
     assert fmt["json_schema"]["strict"] is True
 
 
+def test_openai_usage_excludes_cached_tokens_from_input():
+    # OpenAI's prompt_tokens includes the cached subset; report only the non-cached portion as input
+    # so the ledger doesn't bill cached tokens at both the input and cache-read rate (cost fix).
+    client = FakeOpenAIClient("ok", prompt_tokens=1000, completion_tokens=50, cached_tokens=200)
+    provider = OpenAIProvider(client)
+
+    result = provider.complete(model="gpt-4o", system="s", user="u", max_tokens=64)
+
+    assert result.usage.input_tokens == 800  # 1000 prompt - 200 cached
+    assert result.usage.cache_read_input_tokens == 200
+    assert result.input_tokens == 800  # the flat field mirrors the usage block
+
+
+class _RefusalAnthropicClient:
+    """An Anthropic client whose response carries no text block (a refusal)."""
+
+    class _Messages:
+        last_kwargs: dict | None = None
+
+        def create(self, **kwargs):
+            self.last_kwargs = kwargs
+            return SimpleNamespace(
+                content=[], usage=SimpleNamespace(input_tokens=5, output_tokens=0),
+                id="msg_refusal", model="claude-opus-4-8", stop_reason="refusal",
+            )
+
+    def __init__(self):
+        self.messages = self._Messages()
+
+
+def test_anthropic_structured_raises_a_clear_error_on_a_refusal():
+    # A refusal has no text block; extraction must not raise a bare StopIteration (opaque 500).
+    provider = AnthropicProvider(_RefusalAnthropicClient())
+
+    with pytest.raises(ValueError, match="refusal"):
+        provider.structured(model="claude-opus-4-8", prompt="p", schema={"type": "object"}, max_tokens=64)
+
+
 # --- Registry: model id -> configured provider ---
 def test_registry_routes_model_to_the_matching_provider():
     anthropic = AnthropicProvider(FakeAnthropicClient("a"))
