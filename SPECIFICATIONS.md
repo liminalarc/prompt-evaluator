@@ -21,7 +21,7 @@
 - **2.3** Prompt Authoring UX — `NOT STARTED` — [detail](specs/2.3.md)
 - **2.6** Adopt brand-tokens hero tokens (drop local stopgap) — `NOT STARTED` — [detail](specs/2.6.md)
 - **2.7** AI Prompt Authoring Assistant (proactive, best-practice) — `NOT STARTED` — [detail](specs/2.7.md)
-- **2.9** Weighted composite scoring (per-dataset scorer weights → one overall score) — `NOT STARTED` — [detail](specs/2.9.md)
+- **2.9** Weighted composite scoring (per-dataset scorer weights → one overall score) — `IN PROGRESS` — [detail](specs/2.9.md)
 - **2.13** Dataset Design Assistant (proactive fixture/dataset-curation guidance) — `NOT STARTED` — [detail](specs/2.13.md)
 - **2.15** Structured, severity-tagged LLM-judge verdicts (per-criterion + failure-mode) — `NOT STARTED` — [detail](specs/2.15.md)
 - **2.16** Data-conditional / per-fixture rubric scoring — `NOT STARTED` — [detail](specs/2.16.md)
