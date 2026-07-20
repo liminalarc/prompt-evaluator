@@ -5,6 +5,37 @@ SemVer (pre-1.0 `0.x`) across the API, web, and eval-runner. A release is a tagg
 as of `0.13.0` it also deploys to a hosted **dev** environment on every push to `main` (spec 3.2).
 There is no prod target yet.
 
+## [0.22.0] — 2026-07-20
+
+**Backport assistance.** Once LitmusAI flags the single backport target (1.16 / 2.9), the prompt
+workspace can now **generate the artifact to ship it**. A **Prepare backport** action on the
+Deployment summary assembles, for that target: the exact new prompt (copy-to-clipboard) or a
+downloadable markdown carrying the full new content, a **diff vs the version live in source**, a
+per-scorer **score-delta summary** (target vs Current), and an apply checklist. LitmusAI still
+**signals only** — it produces the artifact; the human applies it in the source repo's own process
+(wired-in PR / registry automation remains 3.1).
+
+### Added
+
+- **[#1.20] Backport assistance** ([detail](specs/archive/1.20.md)):
+  - New **`GET /api/prompts/{id}/backport-artifact`** (org-gated) → `404` when the prompt has no
+    backport target, else the assembled artifact: the target version's exact content, a line **diff
+    vs Current's content**, the per-`(dataset × scorer)` **score deltas** (target − Current), a
+    rendered markdown, and a suggested filename.
+  - **`BackportArtifactHandler`** reuses the 1.16 `VersionStatusHandler` (resolve the single target +
+    Current) and the analytics comparison (per-scorer deltas over every dataset the two share); a new
+    pure **`LineDiff`** (LCS line diff, mirroring the web diff) computes the diff vs Current.
+  - **Web:** a **Prepare backport** button on the Deployment summary — shown **only when a target
+    exists** — opens a drawer with a markdown preview, **Copy exact prompt** (target content →
+    clipboard), and **Download markdown** (`.md` blob).
+
+### Docs
+
+- **[#5.1]** Runbook **Step 8–10 rewritten for tool-native backporting** — the 1.16 *Current in
+  source* marker, the 2.9 weighted-composite target ranking, and the 1.20 artifact supersede the
+  hand-copy process; `daily-briefing` and `round-debrief` flagged for official **in-tool
+  re-formalization** (Set Current → Prepare backport → Mark backported).
+
 ## [0.21.0] — 2026-07-20
 
 **Weighted composite scoring.** A dataset's scorers now carry **weights** (default equal), and every
