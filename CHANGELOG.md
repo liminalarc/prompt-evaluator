@@ -5,6 +5,30 @@ SemVer (pre-1.0 `0.x`) across the API, web, and eval-runner. A release is a tagg
 as of `0.13.0` it also deploys to a hosted **dev** environment on every push to `main` (spec 3.2).
 There is no prod target yet.
 
+## [0.19.1] — 2026-07-19
+
+A dogfooding fix to the [#1.16] backport lifecycle, plus two specs added to the backlog.
+
+### Fixed
+
+- **[#1.16] Single backport target** ([detail](specs/archive/1.16.md)) — when several versions score
+  higher than Current, LitmusAI now recommends exactly **one** — the highest-scoring eligible version
+  (interim unweighted rank; weighted ranking still tracked in [#2.9]). Only that version carries the
+  **"Backport target"** badge and the Deployment summary / Mark-backported point at it (previously every
+  better-than-Current version was badged, which pointed the action at the earliest, not the best).
+- **[#1.16]** version-history table — fixed a layout glitch where the status cell's `display:flex` broke
+  table-cell rendering on rows without a badge.
+- **[#2.21]** e2e — create the first org via the org rail (not the removed zero-org header button), fixing
+  the `compose-smoke` gate after the no-org onboarding change.
+
+### Added
+
+- **[#1.20] Backport assistance** ([detail](specs/1.20.md)) — spec for generating the artifact to ship
+  the backport target (a copy-paste prompt or a downloadable markdown with the diff + score deltas);
+  wired-in automation deferred to [#3.1]. Backlog only — not yet implemented.
+- **[#6.1] AI Usage & Budget Tracker** ([detail](specs/6.1.md)) — spec for an admin AI usage/cost/budget
+  tracker, captured at the eval-runner seam. Backlog only — not yet implemented.
+
 ## [0.19.0] — 2026-07-19
 
 Organization lifecycle plus a prompt **backport lifecycle**: a user in no org now gets real
