@@ -63,7 +63,11 @@ improvements. An advisory layer (prompt-engineering advice) comes later.
   the marker. **Backport eligibility + the single target key off the normalized weighted composite vs
   Current (2.9)** — per-dataset-scorer weights (on `ScorerConfig`, default equal, excluded from scorer
   identity) blend into one score so a high-signal scorer (LLM-judge) outweighs a low-signal one (RegEx),
-  with a same-scorer-config no-regression floor retained. Veto gating + weight auto-tuning → 2.9a.
+  with a same-scorer-config no-regression floor retained. Veto gating + weight auto-tuning → 2.9a. For the
+single target, LitmusAI **generates a backport artifact** (1.20 — `GET /api/prompts/{id}/backport-artifact`,
+`BackportArtifactHandler`): the exact target prompt to copy, or a downloadable markdown (content + diff **vs
+Current** + per-scorer score deltas + apply checklist). Still signal-only — it produces the artifact; the
+human applies it (wired-in PR/registry write → 3.1).
 - **Angular SPA** for dashboards (score trends, regression flags), prompt/version
   browsing, and the human-review labeling UI.
 - **PostgreSQL** via EF Core (Npgsql). JSONB stores fixtures and raw model outputs; scores

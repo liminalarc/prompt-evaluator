@@ -25,8 +25,10 @@ tells you when a better version is sitting unshipped (backport-eligible).
 
 1. **Catch regressions before users do** — every version scored against the same test cases; drops are
    flagged, not discovered in production.
-2. **Know which version to ship** — a "Current in source" marker plus a backport-eligible signal when a
-   higher-scoring version exists.
+2. **Know which version to ship — and ship it fast** — a "Current in source" marker plus a
+   backport-eligible signal when a higher-scoring version exists, and a one-click **backport artifact**
+   (the exact new prompt to paste, or a markdown file with the diff vs live and the score deltas) so you
+   apply it in seconds without hand-diffing.
 3. **Trust the score** — deterministic checks + an LLM judge + human review, composed per dataset, with
    same-scorer-config comparisons so a rubric change can't hide a real drop.
 4. **See what evaluation costs** — every model call the harness makes (subject runs, LLM-judge scoring,

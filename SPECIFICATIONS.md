@@ -13,7 +13,6 @@
 - **1.15** Per-org model catalogs (per-organization customization) — `NOT STARTED` — [detail](specs/1.15.md)
 - **1.17** Multimodal / image fixtures (vision-input prompts) — `NOT STARTED` — [detail](specs/1.17.md)
 - **1.18** Tool-augmented evaluation (web_search / tool-loop prompts) — `NOT STARTED` — [detail](specs/1.18.md)
-- **1.20** Backport assistance (generate the artifact to ship the target — prompt or markdown) — `IN PROGRESS` — [detail](specs/1.20.md)
 
 ## Phase 2 — Review & Advisory
 - **2.1** Human Review UI — `NOT STARTED` — [detail](specs/2.1.md)
@@ -41,6 +40,7 @@
 - **6.3** AI-usage ledger accuracy & scale follow-ups (from the 6.1/6.2 review) — `NOT STARTED` — [detail](specs/6.3.md)
 
 ## Archive
+- **1.20** Backport assistance (generate the artifact to ship the target — prompt or markdown) — `DONE` — [detail](specs/archive/1.20.md)
 - **2.9** Weighted composite scoring (per-dataset scorer weights → one overall score) — `DONE` — [detail](specs/archive/2.9.md)
 - **6.2** Unify Model Catalog display price with the authoritative ledger pricing table — `DONE` — [detail](specs/archive/6.2.md)
 - **6.1** AI Usage & Budget Tracker (admin) — `DONE` — [detail](specs/archive/6.1/6.1.md)
