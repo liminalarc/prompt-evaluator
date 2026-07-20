@@ -16,6 +16,9 @@ describe('ModelAdmin (catalog management)', () => {
       roles: ['subject', 'judge', 'generator'],
       inputPricePerMTokUsd: 5,
       outputPricePerMTokUsd: 25,
+      effectiveInputPricePerMTokUsd: 5,
+      effectiveOutputPricePerMTokUsd: 25,
+      priceSource: 'override',
       isActive: true,
       available: true,
     },
@@ -27,6 +30,10 @@ describe('ModelAdmin (catalog management)', () => {
       roles: ['subject'],
       inputPricePerMTokUsd: null,
       outputPricePerMTokUsd: null,
+      // No override → the displayed price comes from the authoritative ledger table (6.2).
+      effectiveInputPricePerMTokUsd: 0.15,
+      effectiveOutputPricePerMTokUsd: 0.6,
+      priceSource: 'table',
       isActive: false,
       available: true,
     },
@@ -53,6 +60,24 @@ describe('ModelAdmin (catalog management)', () => {
     const table = el.querySelector('[data-testid="models-admin-table"]');
     expect(table?.textContent).toContain('claude-opus-4-8');
     expect(table?.textContent).toContain('gpt-legacy'); // inactive still shown
+  });
+
+  it('shows the effective (override ?? table) price and its source [6.2]', () => {
+    const fixture = setup();
+    const el: HTMLElement = fixture.nativeElement;
+    const rows = el.querySelectorAll('[data-testid="models-admin-table"] tbody tr');
+
+    // Overridden model: shows its override price, badged "Override".
+    const opusRow = rows[0];
+    expect(opusRow.querySelector('[data-testid="model-price"]')?.textContent).toContain('5');
+    expect(opusRow.querySelector('[data-testid="model-price"]')?.textContent).toContain('25');
+    expect(opusRow.textContent).toContain('Override');
+
+    // Non-overridden model: shows the authoritative table rate, badged "Table".
+    const legacyRow = rows[1];
+    expect(legacyRow.querySelector('[data-testid="model-price"]')?.textContent).toContain('0.15');
+    expect(legacyRow.querySelector('[data-testid="model-price"]')?.textContent).toContain('0.6');
+    expect(legacyRow.textContent).toContain('Table');
   });
 
   it('creates a model, posting the parsed body, then reloads', () => {

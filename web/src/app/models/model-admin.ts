@@ -1,7 +1,8 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ModelCatalogEntry, ModelRole } from '../model';
+import { ModelCatalogEntry, ModelRole, PriceSource } from '../model';
 import {
+  BadgeSpec,
   Breadcrumb,
   Card,
   ChipList,
@@ -59,6 +60,7 @@ const PROVIDERS = ['Anthropic', 'OpenAi'];
                 <th>Provider</th>
                 <th>Roles</th>
                 <th>Pricing (in/out $/MTok)</th>
+                <th>Price source</th>
                 <th>Status</th>
                 <th></th>
               </tr>
@@ -72,8 +74,15 @@ const PROVIDERS = ['Anthropic', 'OpenAi'];
                   </td>
                   <td>{{ m.provider }}</td>
                   <td><app-chip-list [labels]="m.roles" /></td>
+                  <td data-testid="model-price">
+                    {{ m.effectiveInputPricePerMTokUsd ?? '—' }} /
+                    {{ m.effectiveOutputPricePerMTokUsd ?? '—' }}
+                  </td>
                   <td>
-                    {{ m.inputPricePerMTokUsd ?? '—' }} / {{ m.outputPricePerMTokUsd ?? '—' }}
+                    <app-status-badge
+                      [variant]="priceSourceBadge(m.priceSource).variant"
+                      [label]="priceSourceBadge(m.priceSource).label"
+                    />
                   </td>
                   <td>
                     <app-status-badge
@@ -176,7 +185,7 @@ const PROVIDERS = ['Anthropic', 'OpenAi'];
               </label>
             </div>
             <div class="sb-field">
-              <label for="inPrice">Input price ($/MTok, optional)</label>
+              <label for="inPrice">Input price override ($/MTok, optional)</label>
               <input
                 id="inPrice"
                 name="inPrice"
@@ -188,7 +197,7 @@ const PROVIDERS = ['Anthropic', 'OpenAi'];
               />
             </div>
             <div class="sb-field">
-              <label for="outPrice">Output price ($/MTok, optional)</label>
+              <label for="outPrice">Output price override ($/MTok, optional)</label>
               <input
                 id="outPrice"
                 name="outPrice"
@@ -368,5 +377,17 @@ export class ModelAdmin implements OnInit {
     if (trimmed === '') return null;
     const n = Number(trimmed);
     return Number.isFinite(n) ? n : null;
+  }
+
+  /** Badge for where a model's displayed price comes from (6.2). */
+  protected priceSourceBadge(source: PriceSource): BadgeSpec {
+    switch (source) {
+      case 'override':
+        return { variant: 'accent', label: 'Override' };
+      case 'table':
+        return { variant: 'info', label: 'Table' };
+      default:
+        return { variant: 'neutral', label: 'None' };
+    }
   }
 }

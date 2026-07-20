@@ -9,7 +9,10 @@ namespace Domain;
 ///
 /// Roles are stored as three boolean flags rather than a <c>List&lt;<see cref="ModelRole"/>&gt;</c>
 /// (no such precedent in the schema; the set is small and fixed) and exposed via <see cref="Roles"/>.
-/// Pricing is <b>display-only</b> — the eval-runner remains the execution pricing authority (1.5).
+/// Pricing here is <b>display-only</b> and, since 6.2, an <b>optional per-model override</b>: the
+/// catalog's displayed price is <c>override ?? authoritative pricing-table rate</c> (the same
+/// <c>AiUsagePricingOptions</c> the AI-usage ledger charges against, 6.1). The eval-runner remains the
+/// execution pricing authority for per-run <c>FixtureRun</c> cost (1.5).
 /// </summary>
 public sealed class ModelCatalogEntry
 {

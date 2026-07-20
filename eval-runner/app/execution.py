@@ -22,6 +22,17 @@ DEFAULT_SUBJECT_MODEL = "claude-opus-4-8"
 # skill's model table (never from memory); OpenAI rates are public list prices as of 2026-07.
 # Unknown models yield cost_usd = None rather than a wrong number. Keyed by model id so the
 # lookup is provider-agnostic.
+#
+# Pricing ownership (spec 6.2 — three sources, each with a documented owner):
+#   1. This `_PRICING` table  → the per-execution `cost_usd` returned on `execute` and persisted
+#      on `FixtureRun` (per-run analytics). Owned here.
+#   2. .NET `AiUsagePricingOptions` (Infrastructure/Pricing) → **authoritative** for the AI-usage
+#      ledger's snapshotted cost (6.1) AND for the Model Catalog's *displayed* price (6.2).
+#   3. `ModelCatalogEntry.InputPricePerMTokUsd/OutputPricePerMTokUsd` → an optional per-model
+#      display *override* (6.2: catalog shows `override ?? table rate`).
+# Converging (1) into (2) is deliberately OUT of 6.2 (documented, not removed): the eval-runner
+# stays a self-contained execution detail and keeps computing its own execution cost. Keep this
+# table's rates in step with `AiUsagePricingOptions.Defaults()` by hand when either changes.
 _PRICING: dict[str, tuple[float, float]] = {
     "claude-fable-5": (10.0, 50.0),
     "claude-opus-4-8": (5.0, 25.0),

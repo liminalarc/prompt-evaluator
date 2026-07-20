@@ -38,9 +38,10 @@
 - **5.1** Adopt LitmusAI across Cortex Golf & Stormboard (discover → onboard → improve every prompt) — `IN PROGRESS` — [detail](specs/5.1/5.1.md)
 
 ## Phase 6 — Cost & Operability
-- **6.2** Unify Model Catalog display price with the authoritative ledger pricing table — `NOT STARTED` — [detail](specs/6.2.md)
+- _All specs archived._
 
 ## Archive
+- **6.2** Unify Model Catalog display price with the authoritative ledger pricing table — `DONE` — [detail](specs/archive/6.2.md)
 - **6.1** AI Usage & Budget Tracker (admin) — `DONE` — [detail](specs/archive/6.1/6.1.md)
 - **1.16** Version status & backport lifecycle (deployed marker + backport-eligible signal) — `DONE` — [detail](specs/archive/1.16.md)
 - **2.21** Org lifecycle — deletable Default org, no-org onboarding, and request-to-join access — `DONE` — [detail](specs/archive/2.21.md)

@@ -17,6 +17,7 @@ public static class ModelEndpoints
             bool? includeInactive,
             IModelCatalogRepository repository,
             IEvaluationRunner runner,
+            IUsagePricing pricing,
             OrgAccess access,
             CancellationToken ct) =>
         {
@@ -25,12 +26,12 @@ public static class ModelEndpoints
                 return Results.Forbid();
             var entries = await repository.ListAsync(wantInactive, ct);
             var configured = await runner.GetConfiguredProvidersAsync(ct);
-            return Results.Ok(entries.Select(e => ModelResponse.From(e, configured)));
+            return Results.Ok(entries.Select(e => ModelResponse.From(e, configured, pricing)));
         });
 
         // Admin management (1.13) — gated by the workspace-level global-admin flag. Non-admins 403.
         group.MapPost("/", async (
-            CreateModelRequest request, CreateModelHandler handler, OrgAccess access, CancellationToken ct) =>
+            CreateModelRequest request, CreateModelHandler handler, IUsagePricing pricing, OrgAccess access, CancellationToken ct) =>
         {
             if (!await access.IsGlobalAdminAsync(ct))
                 return Results.Forbid();
@@ -39,7 +40,7 @@ public static class ModelEndpoints
                 var entry = await handler.HandleAsync(
                     request.ModelId, request.DisplayName, request.Provider, request.Roles,
                     request.InputPricePerMTokUsd, request.OutputPricePerMTokUsd, ct);
-                return Results.Created($"/api/models/{entry.Id}", ModelResponse.From(entry, null));
+                return Results.Created($"/api/models/{entry.Id}", ModelResponse.From(entry, null, pricing));
             }
             catch (ArgumentException ex)
             {
@@ -48,7 +49,7 @@ public static class ModelEndpoints
         });
 
         group.MapPut("/{id:guid}", async (
-            Guid id, UpdateModelRequest request, UpdateModelHandler handler, OrgAccess access, CancellationToken ct) =>
+            Guid id, UpdateModelRequest request, UpdateModelHandler handler, IUsagePricing pricing, OrgAccess access, CancellationToken ct) =>
         {
             if (!await access.IsGlobalAdminAsync(ct))
                 return Results.Forbid();
@@ -57,7 +58,7 @@ public static class ModelEndpoints
                 var entry = await handler.HandleAsync(
                     id, request.DisplayName, request.Provider, request.Roles,
                     request.InputPricePerMTokUsd, request.OutputPricePerMTokUsd, ct);
-                return entry is null ? Results.NotFound() : Results.Ok(ModelResponse.From(entry, null));
+                return entry is null ? Results.NotFound() : Results.Ok(ModelResponse.From(entry, null, pricing));
             }
             catch (ArgumentException ex)
             {
@@ -66,21 +67,21 @@ public static class ModelEndpoints
         });
 
         group.MapPost("/{id:guid}/deactivate", async (
-            Guid id, SetModelActiveHandler handler, OrgAccess access, CancellationToken ct) =>
+            Guid id, SetModelActiveHandler handler, IUsagePricing pricing, OrgAccess access, CancellationToken ct) =>
         {
             if (!await access.IsGlobalAdminAsync(ct))
                 return Results.Forbid();
             var entry = await handler.HandleAsync(id, isActive: false, ct);
-            return entry is null ? Results.NotFound() : Results.Ok(ModelResponse.From(entry, null));
+            return entry is null ? Results.NotFound() : Results.Ok(ModelResponse.From(entry, null, pricing));
         });
 
         group.MapPost("/{id:guid}/activate", async (
-            Guid id, SetModelActiveHandler handler, OrgAccess access, CancellationToken ct) =>
+            Guid id, SetModelActiveHandler handler, IUsagePricing pricing, OrgAccess access, CancellationToken ct) =>
         {
             if (!await access.IsGlobalAdminAsync(ct))
                 return Results.Forbid();
             var entry = await handler.HandleAsync(id, isActive: true, ct);
-            return entry is null ? Results.NotFound() : Results.Ok(ModelResponse.From(entry, null));
+            return entry is null ? Results.NotFound() : Results.Ok(ModelResponse.From(entry, null, pricing));
         });
 
         return app;

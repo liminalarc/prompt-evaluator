@@ -74,6 +74,7 @@ public sealed class ModelsEndpointTests : IAsyncLifetime
     private sealed record ModelDto(
         Guid Id, string ModelId, string DisplayName, string Provider,
         List<string> Roles, decimal? InputPricePerMTokUsd, decimal? OutputPricePerMTokUsd,
+        decimal? EffectiveInputPricePerMTokUsd, decimal? EffectiveOutputPricePerMTokUsd, string PriceSource,
         bool IsActive, bool Available);
 
     [Fact]
@@ -125,6 +126,12 @@ public sealed class ModelsEndpointTests : IAsyncLifetime
         Assert.Equal("OpenAi", mini.Provider);
         Assert.Null(mini.InputPricePerMTokUsd);
         Assert.Null(mini.OutputPricePerMTokUsd);
+
+        // 6.2 — with no per-model override, the displayed (effective) price comes from the
+        // authoritative ledger pricing table, so the catalog shows what the ledger charges.
+        Assert.Equal(0.15m, mini.EffectiveInputPricePerMTokUsd);
+        Assert.Equal(0.60m, mini.EffectiveOutputPricePerMTokUsd);
+        Assert.Equal("table", mini.PriceSource);
     }
 
     [Fact]

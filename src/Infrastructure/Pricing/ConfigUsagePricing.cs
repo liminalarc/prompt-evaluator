@@ -27,4 +27,9 @@ public sealed class ConfigUsagePricing(IOptions<AiUsagePricingOptions> options) 
 
         return new UsageCost(decimal.Round(cost, 6), _options.RateVersion, PricingMissing: false);
     }
+
+    public UsageRate? GetRate(string model) =>
+        _options.Models.TryGetValue(model, out var rate)
+            ? new UsageRate(rate.InputPerMTokUsd, rate.OutputPerMTokUsd, rate.CacheWritePerMTokUsd, rate.CacheReadPerMTokUsd)
+            : null;
 }
