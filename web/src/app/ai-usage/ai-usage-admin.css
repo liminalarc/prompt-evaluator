@@ -1,0 +1,130 @@
+/* Admin → AI Usage (6.1.T5/T6) — screen-specific layout on top of the shared eval-loop layout
+   (prompts.css) and the shared UI kit. Colors come only from --sb-* brand tokens. */
+
+/* Filter bar — a responsive grid of fields. */
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--sb-space-md);
+  align-items: start;
+}
+
+.field-legend {
+  display: block;
+  margin-bottom: var(--sb-space-xs);
+  font-size: var(--sb-type-small-size);
+  color: var(--sb-text-secondary);
+}
+
+.check-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sb-space-xs);
+}
+
+.inline-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sb-space-xs);
+  font-weight: normal;
+}
+
+.filters select[multiple] {
+  min-height: 5.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Spend summary tiles. */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--sb-space-md);
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sb-space-xs);
+  padding: var(--sb-space-md);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--sb-radius-md);
+  background: var(--sb-surface);
+}
+
+.tile__label {
+  font-size: var(--sb-type-caption-size);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sb-text-muted);
+}
+
+.tile__value {
+  font-size: var(--sb-type-h3-size);
+  font-weight: var(--sb-type-h3-weight);
+  color: var(--sb-text);
+}
+
+/* Breakdown cards flow side by side on wide screens, stack on narrow. */
+.breakdowns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--sb-space-lg);
+  align-items: start;
+}
+
+.chart {
+  height: 320px;
+}
+
+.period-toggle {
+  display: flex;
+  gap: var(--sb-space-xs);
+  margin-bottom: var(--sb-space-md);
+}
+
+/* Calls table can be wide — let it scroll horizontally rather than break the layout. */
+.table-scroll {
+  overflow-x: auto;
+}
+
+.request-id {
+  font-family: var(--sb-font-mono, monospace);
+  font-size: var(--sb-type-caption-size);
+  color: var(--sb-text-secondary);
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  gap: var(--sb-space-md);
+  margin-top: var(--sb-space-md);
+}
+
+.pager__label {
+  color: var(--sb-text-secondary);
+  font-size: var(--sb-type-small-size);
+}
+
+.row-actions {
+  display: flex;
+  gap: var(--sb-space-sm);
+}
+
+.budget-form {
+  margin-top: var(--sb-space-lg);
+  padding-top: var(--sb-space-lg);
+  border-top: 1px solid var(--sb-border);
+}
+
+.form-error {
+  margin: 0;
+  color: var(--sb-error);
+  font-size: var(--sb-type-small-size);
+}
+
+.hint {
+  font-weight: normal;
+  color: var(--sb-text-muted);
+  font-size: var(--sb-type-caption-size);
+}

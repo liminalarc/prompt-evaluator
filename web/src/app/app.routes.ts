@@ -8,6 +8,7 @@ import { DatasetDetail } from './datasets/dataset-detail';
 import { EvalRunDetail } from './eval-runs/eval-run-detail';
 import { AnalyticsDashboard } from './analytics/analytics-dashboard';
 import { ModelAdmin } from './models/model-admin';
+import { AiUsageAdmin } from './ai-usage/ai-usage-admin';
 import { UserAdmin } from './users/user-admin';
 import { OrgAdmin } from './organizations/org-admin';
 import { OrgDetail } from './organizations/org-detail';
@@ -38,6 +39,7 @@ export const routes: Routes = [
   { path: 'organizations/:id', component: OrgDetail, canActivate: [authGuard] },
   // Workspace-admin (under the Admin folder), gated to global admins.
   { path: 'admin/models', component: ModelAdmin, canActivate: [authGuard, adminGuard] },
+  { path: 'admin/ai-usage', component: AiUsageAdmin, canActivate: [authGuard, adminGuard] },
   { path: 'admin/users', component: UserAdmin, canActivate: [authGuard, adminGuard] },
   { path: 'admin/organizations', component: OrgAdmin, canActivate: [authGuard, adminGuard] },
   // Any signed-in user's own account (self-service change-password, 4.3).

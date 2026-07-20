@@ -1,0 +1,523 @@
+<section class="panel panel--wide" data-testid="ai-usage-admin">
+  <app-breadcrumb [items]="crumbs()" />
+
+  @if (error(); as message) {
+    <app-error-state [message]="message" />
+  }
+
+  <app-page-header
+    heading="AI usage"
+    subtitle="Every model call the harness makes — subject runs, LLM-judge scoring, and synthetic generation — with spend, tokens, and budget tracking."
+  >
+    <button
+      actions
+      class="sb-btn sb-btn--secondary"
+      type="button"
+      data-testid="export-csv"
+      (click)="exportCsv()"
+    >
+      Export CSV
+    </button>
+  </app-page-header>
+
+  <!-- Filter bar — drives the dashboard, calls table, and export together. -->
+  <app-card heading="Filters">
+    <div class="filters" data-testid="filter-bar">
+      <div class="sb-field">
+        <label for="from">From</label>
+        <input
+          id="from"
+          name="from"
+          type="date"
+          data-testid="filter-from"
+          [ngModel]="draftFrom()"
+          (ngModelChange)="draftFrom.set($event)"
+        />
+      </div>
+      <div class="sb-field">
+        <label for="to">To</label>
+        <input
+          id="to"
+          name="to"
+          type="date"
+          data-testid="filter-to"
+          [ngModel]="draftTo()"
+          (ngModelChange)="draftTo.set($event)"
+        />
+      </div>
+
+      <div class="sb-field">
+        <span class="field-legend">Feature</span>
+        <div class="check-row">
+          @for (f of features; track f.value) {
+            <label class="inline-check">
+              <input
+                type="checkbox"
+                [attr.data-testid]="'filter-feature-' + f.value"
+                [ngModel]="draftFeatures().includes(f.value)"
+                (ngModelChange)="toggleFeature(f.value, $event)"
+                [name]="'feature-' + f.value"
+              />
+              {{ f.label }}
+            </label>
+          }
+        </div>
+      </div>
+
+      <div class="sb-field">
+        <span class="field-legend">Status</span>
+        <div class="check-row">
+          @for (s of statuses; track s.value) {
+            <label class="inline-check">
+              <input
+                type="checkbox"
+                [attr.data-testid]="'filter-status-' + s.value"
+                [ngModel]="draftStatuses().includes(s.value)"
+                (ngModelChange)="toggleStatus(s.value, $event)"
+                [name]="'status-' + s.value"
+              />
+              {{ s.label }}
+            </label>
+          }
+        </div>
+      </div>
+
+      <div class="sb-field">
+        <label for="models">Models</label>
+        <select
+          id="models"
+          name="models"
+          multiple
+          data-testid="filter-models"
+          [ngModel]="draftModels()"
+          (ngModelChange)="draftModels.set($event)"
+        >
+          @for (m of models(); track m.id) {
+            <option [value]="m.modelId">{{ m.displayName }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="sb-field">
+        <label for="users">Users</label>
+        <select
+          id="users"
+          name="users"
+          multiple
+          data-testid="filter-users"
+          [ngModel]="draftUsers()"
+          (ngModelChange)="draftUsers.set($event)"
+        >
+          @for (u of users(); track u.id) {
+            <option [value]="u.id">{{ u.displayName || u.email }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="sb-field">
+        <label for="orgs">Organizations</label>
+        <select
+          id="orgs"
+          name="orgs"
+          multiple
+          data-testid="filter-orgs"
+          [ngModel]="draftOrgs()"
+          (ngModelChange)="draftOrgs.set($event)"
+        >
+          @for (o of orgs(); track o.id) {
+            <option [value]="o.id">{{ o.name }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div foot class="form-actions">
+      <button
+        class="sb-btn sb-btn--primary"
+        type="button"
+        data-testid="apply-filters"
+        (click)="applyFilters()"
+      >
+        Apply filters
+      </button>
+      <button
+        class="sb-btn sb-btn--ghost"
+        type="button"
+        data-testid="reset-filters"
+        (click)="resetFilters()"
+      >
+        Reset
+      </button>
+    </div>
+  </app-card>
+
+  @if (loading()) {
+    <app-loading-state label="Loading AI usage…" />
+  } @else {
+    <!-- Spend summary tiles. -->
+    @if (summary(); as s) {
+      <div class="tiles" data-testid="summary-tiles">
+        <div class="tile">
+          <span class="tile__label">Total spend</span>
+          <span class="tile__value" data-testid="tile-total-cost">{{ money(s.totalCostUsd) }}</span>
+        </div>
+        <div class="tile">
+          <span class="tile__label">Calls</span>
+          <span class="tile__value" data-testid="tile-call-count">{{ num(s.callCount) }}</span>
+        </div>
+        <div class="tile">
+          <span class="tile__label">Avg cost / call</span>
+          <span class="tile__value">{{ money(s.avgCostPerCall) }}</span>
+        </div>
+        <div class="tile">
+          <span class="tile__label">Success rate</span>
+          <span class="tile__value" data-testid="tile-success-rate">{{ pct(s.successRate) }}</span>
+        </div>
+        <div class="tile">
+          <span class="tile__label">Input tokens</span>
+          <span class="tile__value">{{ num(s.inputTokens) }}</span>
+        </div>
+        <div class="tile">
+          <span class="tile__label">Output tokens</span>
+          <span class="tile__value">{{ num(s.outputTokens) }}</span>
+        </div>
+        <div class="tile">
+          <span class="tile__label">Cache tokens (w/r)</span>
+          <span class="tile__value"
+            >{{ num(s.cacheCreationTokens) }} / {{ num(s.cacheReadTokens) }}</span
+          >
+        </div>
+        <div class="tile">
+          <span class="tile__label">Latency p50 / p95</span>
+          <span class="tile__value">{{ num(s.latencyP50Ms) }} / {{ num(s.latencyP95Ms) }} ms</span>
+        </div>
+      </div>
+    }
+
+    <!-- Budget status (T6) — spend-vs-budget with threshold alerts. -->
+    <app-card heading="Budgets">
+      @if (budgetStatuses().length === 0) {
+        <app-empty-state message="No budgets yet — add one to track spend against a limit." />
+      } @else {
+        <table class="sb-table" data-testid="budgets-table">
+          <thead>
+            <tr>
+              <th>Scope</th>
+              <th>Limit</th>
+              <th>Spend (this month)</th>
+              <th>Used</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (b of budgetStatuses(); track b.budget.id) {
+              <tr [attr.data-budget-id]="b.budget.id">
+                <td>{{ budgetScopeLabel(b.budget) }}</td>
+                <td>{{ money(b.budget.limitUsd) }}</td>
+                <td>{{ money(b.spendUsd) }}</td>
+                <td>{{ b.percentUsed.toFixed(1) }}%</td>
+                <td>
+                  <app-status-badge
+                    [variant]="budgetLevelVariant(b.level)"
+                    [label]="b.level"
+                    data-testid="budget-status"
+                  />
+                </td>
+                <td class="row-actions">
+                  <button
+                    class="sb-btn sb-btn--sm sb-btn--secondary"
+                    type="button"
+                    data-testid="delete-budget"
+                    (click)="deleteBudget(b.budget)"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+
+      @if (showBudgetForm()) {
+        <form
+          class="form-stack budget-form"
+          (submit)="saveBudget($event)"
+          data-testid="budget-form"
+        >
+          @if (budgetError(); as be) {
+            <p class="form-error" data-testid="budget-error">{{ be }}</p>
+          }
+          <div class="sb-field">
+            <label for="bScope">Scope</label>
+            <select
+              id="bScope"
+              name="bScope"
+              data-testid="budget-scope"
+              [ngModel]="bScope()"
+              (ngModelChange)="bScope.set($event)"
+            >
+              @for (sc of scopes; track sc) {
+                <option [value]="sc">{{ sc }}</option>
+              }
+            </select>
+          </div>
+          @if (bScope() !== 'Global') {
+            <div class="sb-field">
+              <label for="bScopeValue">
+                Scope value
+                <span class="hint">
+                  @switch (bScope()) {
+                    @case ('Model') {
+                      (model id, e.g. claude-opus-4-8)
+                    }
+                    @case ('Feature') {
+                      (SubjectExecution | LlmJudge | SyntheticGeneration)
+                    }
+                    @case ('Organization') {
+                      (organization id)
+                    }
+                  }
+                </span>
+              </label>
+              <input
+                id="bScopeValue"
+                name="bScopeValue"
+                data-testid="budget-scope-value"
+                [ngModel]="bScopeValue()"
+                (ngModelChange)="bScopeValue.set($event)"
+              />
+            </div>
+          }
+          <div class="sb-field">
+            <label for="bLimit">Monthly limit (USD)</label>
+            <input
+              id="bLimit"
+              name="bLimit"
+              type="number"
+              min="0"
+              step="0.01"
+              data-testid="budget-limit"
+              [ngModel]="bLimit()"
+              (ngModelChange)="bLimit.set($event)"
+            />
+          </div>
+          <div class="sb-field">
+            <label for="bThreshold">Alert threshold (%)</label>
+            <input
+              id="bThreshold"
+              name="bThreshold"
+              type="number"
+              min="1"
+              max="100"
+              step="1"
+              data-testid="budget-threshold"
+              [ngModel]="bThreshold()"
+              (ngModelChange)="bThreshold.set($event)"
+            />
+          </div>
+          <div class="form-actions">
+            <button class="sb-btn sb-btn--primary" type="submit" data-testid="save-budget">
+              Add budget
+            </button>
+            <button class="sb-btn sb-btn--ghost" type="button" (click)="cancelBudget()">
+              Cancel
+            </button>
+          </div>
+        </form>
+      }
+
+      <button
+        foot
+        class="sb-btn sb-btn--sm sb-btn--secondary"
+        type="button"
+        data-testid="toggle-budget-form"
+        (click)="startCreateBudget()"
+      >
+        + Add budget
+      </button>
+    </app-card>
+
+    <!-- Spend over time. -->
+    <app-card heading="Spend over time">
+      <div class="period-toggle" data-testid="period-toggle">
+        @for (p of periods; track p) {
+          <button
+            class="sb-btn sb-btn--sm"
+            [class.sb-btn--primary]="period() === p"
+            [class.sb-btn--secondary]="period() !== p"
+            type="button"
+            [attr.data-testid]="'period-' + p"
+            (click)="setPeriod(p)"
+          >
+            {{ p }}
+          </button>
+        }
+      </div>
+      @if (chartData().length === 0) {
+        <app-empty-state message="No spend in this range yet." />
+      } @else {
+        <div class="chart" data-testid="spend-chart">
+          <ngx-charts-line-chart
+            [results]="chartData()"
+            [scheme]="scheme()"
+            [xAxis]="true"
+            [yAxis]="true"
+            [showXAxisLabel]="true"
+            [showYAxisLabel]="true"
+            xAxisLabel="Period"
+            yAxisLabel="Spend (USD)"
+            [legend]="false"
+            [roundDomains]="true"
+            [autoScale]="true"
+          />
+        </div>
+      }
+    </app-card>
+
+    <!-- Breakdowns. -->
+    <div class="breakdowns">
+      <app-card heading="By model (top 10)">
+        <ng-container
+          [ngTemplateOutlet]="breakdownTable"
+          [ngTemplateOutletContext]="{
+            rows: modelBreakdown(),
+            dimension: 'Model',
+            testid: 'breakdown-model',
+          }"
+        />
+      </app-card>
+      <app-card heading="By feature">
+        <ng-container
+          [ngTemplateOutlet]="breakdownTable"
+          [ngTemplateOutletContext]="{
+            rows: featureBreakdown(),
+            dimension: 'Feature',
+            testid: 'breakdown-feature',
+          }"
+        />
+      </app-card>
+      <app-card heading="By user (top 10)">
+        <ng-container
+          [ngTemplateOutlet]="breakdownTable"
+          [ngTemplateOutletContext]="{
+            rows: userBreakdown(),
+            dimension: 'User',
+            testid: 'breakdown-user',
+          }"
+        />
+      </app-card>
+      <app-card heading="By organization (top 10)">
+        <ng-container
+          [ngTemplateOutlet]="breakdownTable"
+          [ngTemplateOutletContext]="{
+            rows: orgBreakdown(),
+            dimension: 'Organization',
+            testid: 'breakdown-org',
+          }"
+        />
+      </app-card>
+    </div>
+
+    <!-- Calls table — drill to individual calls. -->
+    <app-card heading="Calls">
+      @if (callsPage(); as cp) {
+        @if (cp.items.length === 0) {
+          <app-empty-state message="No calls match the current filter." />
+        } @else {
+          <div class="table-scroll">
+            <table class="sb-table" data-testid="calls-table">
+              <thead>
+                <tr>
+                  <th>Time (UTC)</th>
+                  <th>Feature</th>
+                  <th>Model</th>
+                  <th>In</th>
+                  <th>Out</th>
+                  <th>Cache (w/r)</th>
+                  <th>Cost</th>
+                  <th>User</th>
+                  <th>Org</th>
+                  <th>Status</th>
+                  <th>Latency</th>
+                  <th>Request id</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of cp.items; track c.id) {
+                  <tr>
+                    <td>{{ c.occurredAt | date: 'short' : 'UTC' }}</td>
+                    <td>{{ featureLabel(c.feature) }}</td>
+                    <td>{{ c.model }}</td>
+                    <td>{{ num(c.inputTokens) }}</td>
+                    <td>{{ num(c.outputTokens) }}</td>
+                    <td>{{ num(c.cacheCreationTokens) }} / {{ num(c.cacheReadTokens) }}</td>
+                    <td>{{ money(c.costUsd) }}</td>
+                    <td>{{ userLabel(c.userId) }}</td>
+                    <td>{{ orgLabel(c.organizationId) }}</td>
+                    <td>
+                      <app-status-badge [variant]="statusVariant(c.status)" [label]="c.status" />
+                    </td>
+                    <td>{{ num(c.latencyMs) }} ms</td>
+                    <td class="request-id">{{ c.requestId ?? '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pager" data-testid="calls-pager">
+            <button
+              class="sb-btn sb-btn--sm sb-btn--secondary"
+              type="button"
+              data-testid="calls-prev"
+              [disabled]="page() <= 1"
+              (click)="prevPage()"
+            >
+              Previous
+            </button>
+            <span class="pager__label" data-testid="calls-page-label">
+              Page {{ page() }} of {{ totalPages() }} · {{ num(cp.totalCount) }} calls
+            </span>
+            <button
+              class="sb-btn sb-btn--sm sb-btn--secondary"
+              type="button"
+              data-testid="calls-next"
+              [disabled]="page() >= totalPages()"
+              (click)="nextPage()"
+            >
+              Next
+            </button>
+          </div>
+        }
+      }
+    </app-card>
+  }
+</section>
+
+<!-- Shared breakdown-table markup (model / feature / user / org). -->
+<ng-template #breakdownTable let-rows="rows" let-dimension="dimension" let-testid="testid">
+  @if (rows.length === 0) {
+    <app-empty-state message="No data for this dimension yet." />
+  } @else {
+    <table class="sb-table" [attr.data-testid]="testid">
+      <thead>
+        <tr>
+          <th>{{ dimension }}</th>
+          <th>Spend</th>
+          <th>Calls</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows; track row.key) {
+          <tr>
+            <td>{{ keyLabel(dimension, row.key) }}</td>
+            <td>{{ money(row.metrics.totalCostUsd) }}</td>
+            <td>{{ num(row.metrics.callCount) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</ng-template>

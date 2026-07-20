@@ -125,13 +125,14 @@ describe('App shell', () => {
     expect(el.querySelector('[data-testid="logout"]')).toBeTruthy();
   });
 
-  it('shows the Admin folder with Models and Users for a global admin', () => {
+  it('shows the Admin folder with Models, AI Usage and Users for a global admin', () => {
     configure(fakeAuth({ id: 'u1', email: 'a@b.co', displayName: 'Ada', isAdmin: true }));
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('[data-testid="nav-admin"]')).toBeTruthy();
     expect(el.querySelector('[data-testid="nav-admin-models"]')).toBeTruthy();
+    expect(el.querySelector('[data-testid="nav-admin-ai-usage"]')).toBeTruthy();
     expect(el.querySelector('[data-testid="nav-admin-users"]')).toBeTruthy();
   });
 
@@ -159,6 +160,7 @@ describe('App shell', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('[data-testid="nav-admin"]')).toBeFalsy();
     expect(el.querySelector('[data-testid="nav-admin-models"]')).toBeFalsy();
+    expect(el.querySelector('[data-testid="nav-admin-ai-usage"]')).toBeFalsy();
     expect(el.querySelector('[data-testid="nav-admin-users"]')).toBeFalsy();
   });
 
