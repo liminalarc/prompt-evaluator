@@ -21,7 +21,7 @@
 - **2.3** Prompt Authoring UX — `NOT STARTED` — [detail](specs/2.3.md)
 - **2.6** Adopt brand-tokens hero tokens (drop local stopgap) — `NOT STARTED` — [detail](specs/2.6.md)
 - **2.7** AI Prompt Authoring Assistant (proactive, best-practice) — `NOT STARTED` — [detail](specs/2.7.md)
-- **2.9** Weighted composite scoring (per-dataset scorer weights → one overall score) — `IN PROGRESS` — [detail](specs/2.9.md)
+- **2.9a** Composite scoring — advanced (must-pass/veto gating + weight auto-tuning) — `NOT STARTED` — [detail](specs/2.9a.md)
 - **2.13** Dataset Design Assistant (proactive fixture/dataset-curation guidance) — `NOT STARTED` — [detail](specs/2.13.md)
 - **2.15** Structured, severity-tagged LLM-judge verdicts (per-criterion + failure-mode) — `NOT STARTED` — [detail](specs/2.15.md)
 - **2.16** Data-conditional / per-fixture rubric scoring — `NOT STARTED` — [detail](specs/2.16.md)
@@ -41,6 +41,7 @@
 - **6.3** AI-usage ledger accuracy & scale follow-ups (from the 6.1/6.2 review) — `NOT STARTED` — [detail](specs/6.3.md)
 
 ## Archive
+- **2.9** Weighted composite scoring (per-dataset scorer weights → one overall score) — `DONE` — [detail](specs/archive/2.9.md)
 - **6.2** Unify Model Catalog display price with the authoritative ledger pricing table — `DONE` — [detail](specs/archive/6.2.md)
 - **6.1** AI Usage & Budget Tracker (admin) — `DONE` — [detail](specs/archive/6.1/6.1.md)
 - **1.16** Version status & backport lifecycle (deployed marker + backport-eligible signal) — `DONE` — [detail](specs/archive/1.16.md)

@@ -60,7 +60,10 @@ improvements. An advisory layer (prompt-engineering advice) comes later.
   app runs — from which `Backport-eligible` (a higher-scoring version above Current) and per-version
   `Regressed` badges derive. All such comparisons key off `ScorerDescriptor.Identity` (same-scorer-config
   only, never blended). **LitmusAI signals, never writes to a source repo**; mark-as-backported just moves
-  the marker. Weighted eligibility (scorers weighted, e.g. LLM-judge > RegEx) is future work in 2.9.
+  the marker. **Backport eligibility + the single target key off the normalized weighted composite vs
+  Current (2.9)** — per-dataset-scorer weights (on `ScorerConfig`, default equal, excluded from scorer
+  identity) blend into one score so a high-signal scorer (LLM-judge) outweighs a low-signal one (RegEx),
+  with a same-scorer-config no-regression floor retained. Veto gating + weight auto-tuning → 2.9a.
 - **Angular SPA** for dashboards (score trends, regression flags), prompt/version
   browsing, and the human-review labeling UI.
 - **PostgreSQL** via EF Core (Npgsql). JSONB stores fixtures and raw model outputs; scores
