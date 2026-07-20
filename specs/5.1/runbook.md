@@ -9,6 +9,11 @@
 > **defaults Target model to the latest version's** and **warns** if you change it (2.11/R5 — expected when a
 > validation deliberately switches models); a run failure now shows a **loud banner** (R2); and heavy runs no
 > longer time out at ~100s (R1 band-aid raised the limit to 5 min).
+> **Dev now v0.21.0+ (2026-07-20) — backporting is tool-native:** the prompt workspace **Deployment** card
+> tracks the **Current in source** marker + a single **Backport target** ranked by the **weighted composite**
+> (1.16 + 2.9), and **`Prepare backport`** generates the drop-in — copy the exact prompt or download a markdown
+> with the diff-vs-Current + score deltas (1.20). **Step 9 is rewritten around this** (supersedes the hand-copy
+> process); **`Mark backported`** is now the in-tool record of what's live.
 >
 > **Dev:** `https://dytjmtfgmj.us-east-1.awsapprunner.com`
 > **Score identity:** `Prompt × Version × Dataset × Scorer` — a **Version** is immutable (content +
@@ -92,37 +97,52 @@ is automatic (U4), don't repeat it in the label. → **`Add version`**.
 
 ## Step 8 — Compare
 **Analytics** (topbar → *Score Analytics*) → **`Prompt`** + **`Dataset`** (+ **`Regression threshold`**,
-default 0.05). **`Score trend`** charts v1→v2 per scorer; **`Regressions`** flags drops (Confirmed +
-Possible); **`Compare versions`** (**`From`**/**`To`**) gives per-fixture deltas — the **Fixture** column now
-shows your fixture **label** (U7), not a GUID. Iterate **v3+** on the *same dataset + scorers* until satisfied
-or diminishing returns.
+default 0.05). **`Score trend`** charts v1→v2 per scorer **plus a `weighted composite` line** (2.9) — one
+overall-quality number blending the per-scorer means by their per-dataset weights, so a high-signal scorer
+(LLM judge) outweighs a low-signal one (RegEx). **`Regressions`** flags drops (Confirmed + Possible);
+**`Compare versions`** (**`From`**/**`To`**) gives per-fixture deltas — the **Fixture** column now shows your
+fixture **label** (U7), not a GUID. Iterate **v3+** on the *same dataset + scorers* until satisfied or
+diminishing returns.
+> **The same composite drives the backport target.** Once you set a Current marker (Step 9), the workspace
+> **Deployment** card names the single version to ship — ranked by this weighted composite over same-scorer-config
+> series, so a mid-history rubric change can't mis-rank it (this is what now picks round-debrief **v7**, not v2).
 
-## Step 9 — Backport (prompts live here; a source-repo agent applies them)
-**Process (revised 2026-07-19): LitmusAI does NOT commit into the source repos.** The winning prompt is the
-**source of truth in `specs/5.1/backport/`**, and a source-repo agent applies it — LitmusAI never edits Golf/
-Stormboard directly:
-1. Copy the **winning version's exact content** into **`specs/5.1/backport/<name>.md`** — a clean, pure-prompt
-   drop-in (no LitmusAI metadata; byte-for-byte what the source file should hold). Update an existing file
-   when a better version wins.
-2. Record it in **`specs/5.1/backport/README.md`**: best version + eval evidence + the source-repo target path.
-3. A **source-repo agent** picks that up and applies it in the source app's own process/commit convention —
-   **or decline with a recorded reason** (marginal gain, model-specific, cost).
-> Target paths (for the README/agent): Golf → `server/src/AiService/AiService.WebApi/Prompts/<name>.md`;
-> Stormboard `.md` → `StormBoard.Claude/Prompts/<name>.md`. The 2 Stormboard **inline** prompts
-> (`wizard-prompts`, `asset-mapping`) also **extract to `Prompts/*.md`** via `FilePromptStore` (fixes the
-> smell) — Stormboard's call; see T4.
-> **Why the change:** we can't assume a source app runs our flow/spec system, and committing straight into a
-> source repo proved messy — an unrelated in-progress commit rode along on Golf `main`. This **supersedes** the
-> old "commit directly into the source repo" step (round-debrief walk, 2026-07-19).
-> **Before backporting, confirm on the *real* model + across runs:** hold the subject model (R5 now defaults
-> add-version to the latest version's model + warns on change), and remember a single run lies — a v6 F4 went
-> 0.82 then 0.72; read the **rationale**, not just the number (R4/R7), and run 2–3× on a noisy fixture.
-> *(No "deployed" marker inside LitmusAI yet — finding **F1** → [1.16]; until then the `backport/` file +
-> README + T3/T4 tick are the record of what's shipped.)*
+## Step 9 — Backport (tool-native: Set Current → Prepare backport → Mark backported)
+**Process (revised 2026-07-20 — now tool-native; supersedes the hand-copy step).** LitmusAI tracks deployment
+state (1.16) and generates the artifact (1.20); it still **never commits into a source repo** — a source-repo
+agent applies the drop-in.
+1. **Mark what's live.** Workspace → **`Versions`** tab → **`Deployment`** card (or a version row) →
+   **`Set as current in source`** on the version the app runs *today*; paste the source commit **SHA**. Exactly
+   one Current per prompt (nullable until first set).
+2. **Read the recommendation.** With Current set, the Deployment card badges the single **`Backport target`** —
+   the highest-scoring version above Current by the **weighted composite** (2.9; same-scorer-config, so a
+   mid-history rubric change can't mis-rank it). **No badge = nothing beats Current → done** (decline/log).
+3. **Generate the artifact.** Deployment card → **`Prepare backport`** (drawer opens). Two outputs:
+   - **`Copy exact prompt`** — the target version's exact content → clipboard; paste straight into the source file.
+   - **`Download markdown`** — a `.md` with `Current vN → target vM`, target model, Current's SHA, the full new
+     content, the **diff vs Current**, the per-scorer **score deltas**, and an apply checklist.
+4. **Record + apply.** Save the drop-in into **`specs/5.1/backport/<name>.md`** — now **produced by the tool**
+   (Copy/Download), no longer hand-copied — and note best-version + evidence in **`backport/README.md`**. A
+   **source-repo agent** applies it in the app's own process/commit convention — **or declines with a recorded
+   reason** (marginal gain, model-specific, cost).
+5. **Close the loop in-tool.** Once shipped, Deployment card → **`Mark backported → vN`**. This moves the Current
+   marker to the shipped version and is now the **official in-tool record of what's live**; the target badge
+   clears when Current is the top scorer.
+> Target paths (README/agent): Golf → `server/src/AiService/AiService.WebApi/Prompts/<name>.md`; Stormboard
+> `.md` → `StormBoard.Claude/Prompts/<name>.md`. The 2 Stormboard **inline** prompts (`wizard-prompts`,
+> `asset-mapping`) also **extract to `Prompts/*.md`** via `FilePromptStore` (fixes the smell) — Stormboard's call; T4.
+> **Before backporting, confirm on the *real* model + across runs:** hold the subject model (R5 — add-version
+> defaults to the latest model + warns on change), and a single run lies — read the **rationale**, not just the
+> number (R4/R7), and run a noisy fixture 2–3× (round-debrief F4 swung 0.82→0.72 on one run).
+> **Why tool-native now:** F1 (no deployed marker) shipped as **[1.16]**; weighted target ranking as **[2.9]**;
+> the artifact as **[1.20]**. Direct source-repo commits proved messy (an unrelated Golf commit rode along) and
+> were reverted — the `backport/` file + the in-tool marker are the record; wired-in PR/registry write is **[3.1]**.
 
 ## Step 10 — Log
 One line of learnings (what moved the needle). **Tick the prompt's row** in [T3](5.1.T3.md) (Golf) /
-[T4](5.1.T4.md) (Stormboard) and record the backport decision (done + commit SHA, or declined + reason).
+[T4](5.1.T4.md) (Stormboard) and record the backport decision — now **the in-tool `Mark backported` state**
+(target vN + source SHA) **or** declined + reason. The `backport/<name>.md` file stays as the committed drop-in
+the source-repo agent consumes.
 
 ---
 

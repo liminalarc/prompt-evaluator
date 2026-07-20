@@ -32,6 +32,10 @@ the prompt** (R5, quantified). Rationales (not scores) drove every call from the
 
 **Verdict: v7 → [../backport/round-debrief.md](../backport/round-debrief.md).** Applied by a source-repo agent
 (LitmusAI doesn't commit into Golf — the direct v2/v6 commits were reverted; new process, runbook Step 9).
+- **⏳ In-tool backport pending (2026-07-20).** With 1.16/1.20/2.9 shipped, re-formalize through the tool (by
+  hand): **Set as current in source** = v1 (Golf's shipped baseline), confirm the Deployment card recommends
+  **`Backport target` = v7** (the 2.9 weighted composite now picks v7 over v2 — the mis-pick this prompt
+  originally exposed), **Prepare backport**, then **Mark backported → v7**. See runbook Step 9.
 
 ## Learnings
 1. **Hold the subject model (R5).** A cross-model comparison overstated the prompt's effect ~4×; the real gain only showed on Golf's actual model.
