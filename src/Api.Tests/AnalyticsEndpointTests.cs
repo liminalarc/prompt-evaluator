@@ -71,6 +71,7 @@ public sealed class AnalyticsEndpointTests : IAsyncLifetime
     private sealed record ScorerRefDto(string Identity, string Kind, string? JudgeModel);
     private sealed record TrendPointDto(Guid PromptVersionId, int VersionNumber, string? VersionLabel, Guid RunId, double MeanValue, double? PassRate, int FixtureCount);
     private sealed record TrendSeriesDto(ScorerRefDto Scorer, List<TrendPointDto> Points);
+    private sealed record CompositeTrendPointDto(Guid PromptVersionId, int VersionNumber, string? VersionLabel, Guid RunId, double CompositeValue, int ScorerCount);
     private sealed record RegressionFlagDto(ScorerRefDto Scorer, int FromVersionNumber, int ToVersionNumber, double PriorMean, double CurrentMean, double Delta, double? PValue, int PairedFixtureCount, string Confidence);
     private sealed record FixtureDeltaDto(Guid FixtureId, double? FromValue, double? ToValue, double? Delta);
     private sealed record ScorerComparisonDto(ScorerRefDto Scorer, double? FromMean, double? ToMean, double? Delta, List<FixtureDeltaDto> Fixtures);
@@ -128,6 +129,22 @@ public sealed class AnalyticsEndpointTests : IAsyncLifetime
         Assert.Equal(0.9, s.Points[0].MeanValue, 3);
         Assert.Equal(0.5, s.Points[1].MeanValue, 3);
         Assert.Equal(4, s.Points[0].FixtureCount);
+    }
+
+    [Fact]
+    public async Task Composite_returns_one_weighted_point_per_version_ordered()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync();
+        var (promptId, _, _, datasetId) = await SeedTwoVersionsAsync(client);
+
+        var points = (await client.GetFromJsonAsync<List<CompositeTrendPointDto>>(
+            $"/api/analytics/composite?promptId={promptId}&datasetId={datasetId}"))!;
+
+        Assert.Equal([1, 2], points.Select(p => p.VersionNumber).ToArray());
+        // One scorer (the judge) → the composite is exactly the judge mean (0.9 then 0.5).
+        Assert.Equal(0.9, points[0].CompositeValue, 3);
+        Assert.Equal(0.5, points[1].CompositeValue, 3);
+        Assert.Equal(1, points[0].ScorerCount);
     }
 
     [Fact]

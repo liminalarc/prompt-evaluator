@@ -35,3 +35,18 @@ public sealed record TrendPoint(
 /// per version that has a run. Points are ordered by <see cref="TrendPoint.VersionNumber"/> ascending.
 /// </summary>
 public sealed record TrendSeries(ScorerRef Scorer, IReadOnlyList<TrendPoint> Points);
+
+/// <summary>
+/// One point on the <b>weighted composite</b> trend series (2.9): a version's single "overall quality"
+/// number over a dataset, the weight-blended mean of its latest run's per-scorer means.
+/// <see cref="ScorerCount"/> is how many scorers went into the blend (so the UI can flag when the
+/// scorer set changed between versions). Points are ordered by version number ascending.
+/// </summary>
+public sealed record CompositeTrendPoint(
+    Guid PromptVersionId,
+    int VersionNumber,
+    string? VersionLabel,
+    Guid RunId,
+    DateTimeOffset RunAt,
+    double CompositeValue,
+    int ScorerCount);

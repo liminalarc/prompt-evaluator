@@ -23,6 +23,17 @@ export interface TrendSeries {
   points: TrendPoint[];
 }
 
+/** Mirrors the .NET CompositeTrendPointResponse DTO — the weighted composite per version (2.9). */
+export interface CompositeTrendPoint {
+  promptVersionId: string;
+  versionNumber: number;
+  versionLabel: string | null;
+  runId: string;
+  runAt: string;
+  compositeValue: number;
+  scorerCount: number;
+}
+
 /**
  * How sure we are a threshold-clearing drop is a real regression. `Confirmed` — the drop is also
  * statistically significant. `Unverified` — the drop cleared the threshold but significance

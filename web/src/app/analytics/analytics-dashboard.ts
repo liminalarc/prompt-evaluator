@@ -3,6 +3,7 @@ import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import {
+  CompositeTrendPoint,
   RegressionFlag,
   ScorerRef,
   ScorerVariance,
@@ -19,6 +20,7 @@ import { OrgContextStore } from '../shared/org-context.store';
 import { PromptSummary, PromptVersion } from '../prompt';
 import { DatasetSummary } from '../dataset';
 import { TrendChart } from './trend-chart';
+import { VersionChangeTable } from './version-change-table';
 import { CompareDrawer } from './compare-drawer';
 import { BadgeVariant, Card, EmptyState, ErrorState, PageHeader, StatusBadge } from '../shared';
 
@@ -33,6 +35,7 @@ import { BadgeVariant, Card, EmptyState, ErrorState, PageHeader, StatusBadge } f
     DecimalPipe,
     NgTemplateOutlet,
     TrendChart,
+    VersionChangeTable,
     CompareDrawer,
     Card,
     EmptyState,
@@ -102,13 +105,21 @@ import { BadgeVariant, Card, EmptyState, ErrorState, PageHeader, StatusBadge } f
 
       @if (promptId() && datasetId()) {
         <app-card heading="Score trend">
-          <app-trend-chart [series]="visibleTrends()" />
+          <app-trend-chart [series]="visibleTrends()" [composite]="composite()" />
           @if (unrunVersions().length > 0) {
             <p class="subtitle" data-testid="unrun-versions">
               No runs yet (not on the trend):
               <strong>{{ unrunVersionsLabel() }}</strong> — run them to compare.
             </p>
           }
+        </app-card>
+
+        <app-card heading="Version-over-version change">
+          <p class="subtitle">
+            Each version's per-scorer mean and the <strong>weighted composite</strong>, with the
+            change vs the prior version.
+          </p>
+          <app-version-change-table [series]="visibleTrends()" [composite]="composite()" />
         </app-card>
 
         @if (stochasticVariance().length > 0 || hiddenVariance().length > 0) {
@@ -341,6 +352,7 @@ export class AnalyticsDashboard {
   protected readonly datasetId = signal<string | null>(null);
   protected readonly threshold = signal<number>(0.05);
   protected readonly trends = signal<TrendSeries[]>([]);
+  protected readonly composite = signal<CompositeTrendPoint[]>([]);
   protected readonly regressions = signal<RegressionFlag[] | null>(null);
   protected readonly error = signal<string | null>(null);
 
@@ -503,6 +515,10 @@ export class AnalyticsDashboard {
     this.api.getTrends(promptId, datasetId).subscribe({
       next: (series) => this.trends.set(series),
       error: () => this.error.set('Could not load trends.'),
+    });
+    this.api.getComposite(promptId, datasetId).subscribe({
+      next: (points) => this.composite.set(points),
+      error: () => this.error.set('Could not load the composite trend.'),
     });
     this.api.getRegressions(promptId, datasetId, threshold).subscribe({
       next: (flags) => this.regressions.set(flags),

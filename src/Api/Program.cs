@@ -81,6 +81,7 @@ builder.Services.AddScoped<GenerateSyntheticFixturesHandler>();
 builder.Services.AddScoped<ConfigureDatasetScorersHandler>();
 builder.Services.AddScoped<RunEvaluationHandler>();
 builder.Services.AddScoped<TrendAnalyticsHandler>();
+builder.Services.AddScoped<CompositeTrendHandler>();
 builder.Services.AddScoped<RegressionAnalyticsHandler>();
 builder.Services.AddScoped<ComparisonAnalyticsHandler>();
 builder.Services.AddScoped<VarianceAnalyticsHandler>();

@@ -1,6 +1,9 @@
 import { Component, Input, computed, signal } from '@angular/core';
 import { Color, LegendPosition, LineChartModule, ScaleType } from '@swimlane/ngx-charts';
-import { TrendSeries, scorerLabel } from '../analytics';
+import { CompositeTrendPoint, TrendSeries, scorerLabel } from '../analytics';
+
+/** The composite line's fixed series label, kept distinct from any scorer name. */
+export const COMPOSITE_SERIES_NAME = 'Weighted composite';
 
 // Categorical hues, in fixed order, sourced from the brand tokens (validated colorblind-safe in
 // light mode; dark mode passes CVD/chroma/contrast with secondary encoding — legend + markers).
@@ -51,6 +54,7 @@ interface ChartSeries {
 })
 export class TrendChart {
   private readonly _series = signal<TrendSeries[]>([]);
+  private readonly _composite = signal<CompositeTrendPoint[]>([]);
 
   protected readonly legendBelow = LegendPosition.Below;
 
@@ -58,15 +62,34 @@ export class TrendChart {
     this._series.set(value ?? []);
   }
 
-  protected readonly chartData = computed<ChartSeries[]>(() =>
-    this._series().map((s) => ({
+  /** The weighted-composite series (2.9), drawn as an extra distinct line alongside the scorers. */
+  @Input() set composite(value: CompositeTrendPoint[] | null) {
+    this._composite.set(value ?? []);
+  }
+
+  protected readonly chartData = computed<ChartSeries[]>(() => {
+    const versionName = (n: number, label: string | null) => (label ? `v${n} · ${label}` : `v${n}`);
+
+    const scorerLines = this._series().map((s) => ({
       name: scorerLabel(s.scorer),
       series: s.points.map((p) => ({
-        name: p.versionLabel ? `v${p.versionNumber} · ${p.versionLabel}` : `v${p.versionNumber}`,
+        name: versionName(p.versionNumber, p.versionLabel),
         value: p.meanValue,
       })),
-    })),
-  );
+    }));
+
+    const composite = this._composite();
+    if (composite.length > 0) {
+      scorerLines.push({
+        name: COMPOSITE_SERIES_NAME,
+        series: composite.map((p) => ({
+          name: versionName(p.versionNumber, p.versionLabel),
+          value: p.compositeValue,
+        })),
+      });
+    }
+    return scorerLines;
+  });
 
   protected readonly scheme = computed<Color>(() => ({
     name: 'brand',

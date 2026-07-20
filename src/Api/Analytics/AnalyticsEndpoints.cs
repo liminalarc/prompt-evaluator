@@ -21,6 +21,18 @@ public static class AnalyticsEndpoints
                     : Results.Ok(series.Select(TrendSeriesResponse.From));
             });
 
+        // Weighted composite trend (2.9): one "overall quality" point per version over a dataset.
+        group.MapGet("/composite",
+            async (Guid promptId, Guid datasetId, CompositeTrendHandler handler, OrgAccess access, CancellationToken ct) =>
+            {
+                if (await GateAsync(access, promptId, datasetId, ct) is { } problem)
+                    return problem;
+                var points = await handler.HandleAsync(promptId, datasetId, ct);
+                return points is null
+                    ? Results.NotFound()
+                    : Results.Ok(points.Select(CompositeTrendPointResponse.From));
+            });
+
         // Regression flags vs. the prior version; threshold/alpha are optional overrides.
         group.MapGet("/regressions",
             async (Guid promptId, Guid datasetId, double? threshold, double? alpha,

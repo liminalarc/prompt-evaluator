@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { TrendChart } from './trend-chart';
-import { TrendSeries } from '../analytics';
+import { COMPOSITE_SERIES_NAME, TrendChart } from './trend-chart';
+import { CompositeTrendPoint, TrendSeries } from '../analytics';
 
 const series: TrendSeries[] = [
   {
@@ -55,5 +55,29 @@ describe('TrendChart', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('[data-testid="trend-chart"]')).toBeTruthy();
     expect(el.querySelector('ngx-charts-line-chart')).toBeTruthy();
+  });
+
+  it('adds the weighted-composite as an extra distinct line [2.9]', () => {
+    const composite: CompositeTrendPoint[] = [
+      {
+        promptVersionId: 'v1',
+        versionNumber: 1,
+        versionLabel: 'baseline',
+        runId: 'r1',
+        runAt: '',
+        compositeValue: 0.7,
+        scorerCount: 2,
+      },
+    ];
+    const fixture = TestBed.createComponent(TrendChart);
+    fixture.componentInstance.series = series;
+    fixture.componentInstance.composite = composite;
+    fixture.detectChanges();
+
+    // The composite is present as its own named series alongside the scorer line.
+    const data = (
+      fixture.componentInstance as unknown as { chartData(): { name: string }[] }
+    ).chartData();
+    expect(data.map((s) => s.name)).toContain(COMPOSITE_SERIES_NAME);
   });
 });

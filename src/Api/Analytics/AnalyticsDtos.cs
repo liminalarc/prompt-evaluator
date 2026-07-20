@@ -23,6 +23,16 @@ public sealed record TrendSeriesResponse(ScorerRefResponse Scorer, IReadOnlyList
         ScorerRefResponse.From(s.Scorer), s.Points.Select(TrendPointResponse.From).ToList());
 }
 
+// ---- Weighted composite (2.9) ----
+
+public sealed record CompositeTrendPointResponse(
+    Guid PromptVersionId, int VersionNumber, string? VersionLabel, Guid RunId,
+    DateTimeOffset RunAt, double CompositeValue, int ScorerCount)
+{
+    public static CompositeTrendPointResponse From(CompositeTrendPoint p) => new(
+        p.PromptVersionId, p.VersionNumber, p.VersionLabel, p.RunId, p.RunAt, p.CompositeValue, p.ScorerCount);
+}
+
 // ---- Regressions ----
 
 public sealed record RegressionFlagResponse(

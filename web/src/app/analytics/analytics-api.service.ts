@@ -1,7 +1,13 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { RegressionFlag, ScorerVariance, TrendSeries, VersionComparison } from '../analytics';
+import {
+  CompositeTrendPoint,
+  RegressionFlag,
+  ScorerVariance,
+  TrendSeries,
+  VersionComparison,
+} from '../analytics';
 
 /**
  * The single API client for the analytics bounded area (trends, regressions, comparison).
@@ -13,6 +19,13 @@ export class AnalyticsApiService {
 
   getTrends(promptId: string, datasetId: string): Observable<TrendSeries[]> {
     return this.http.get<TrendSeries[]>('/api/analytics/trends', {
+      params: new HttpParams().set('promptId', promptId).set('datasetId', datasetId),
+    });
+  }
+
+  /** The weighted composite trend — one "overall quality" point per version (2.9). */
+  getComposite(promptId: string, datasetId: string): Observable<CompositeTrendPoint[]> {
+    return this.http.get<CompositeTrendPoint[]>('/api/analytics/composite', {
       params: new HttpParams().set('promptId', promptId).set('datasetId', datasetId),
     });
   }

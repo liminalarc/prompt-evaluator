@@ -218,6 +218,7 @@ describe('AnalyticsDashboard', () => {
     http.expectOne((r) => r.url === '/api/analytics/regressions').flush(flags);
     http.expectOne((r) => r.url === '/api/analytics/variance').flush([]);
     http.expectOne('/api/datasets/d1/scorers').flush([]);
+    http.expectOne((r) => r.url === '/api/analytics/composite').flush([]);
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
@@ -228,6 +229,80 @@ describe('AnalyticsDashboard', () => {
     expect(rows[0].textContent).toContain('v1 → v2');
     // A confirmed flag is not shown in the muted "possible" treatment.
     expect(el.querySelector('[data-testid="regression-unverified"]')).toBeFalsy();
+  });
+
+  it('renders the weighted-composite change table across versions [2.9]', () => {
+    const fixture = createAndLoadLists();
+    const cmp = fixture.componentInstance as unknown as {
+      promptId: { set(v: string): void };
+      datasetId: { set(v: string): void };
+    };
+    cmp.promptId.set('p1');
+    cmp.datasetId.set('d1');
+    fixture.detectChanges();
+
+    const trends: TrendSeries[] = [
+      {
+        scorer: { identity: 'abc', kind: 'LlmJudge', judgeModel: 'claude-opus-4-8' },
+        points: [
+          {
+            promptVersionId: 'v1',
+            versionNumber: 1,
+            versionLabel: null,
+            runId: 'r1',
+            runAt: '',
+            meanValue: 0.5,
+            passRate: 1,
+            fixtureCount: 4,
+          },
+          {
+            promptVersionId: 'v2',
+            versionNumber: 2,
+            versionLabel: null,
+            runId: 'r2',
+            runAt: '',
+            meanValue: 0.9,
+            passRate: 1,
+            fixtureCount: 4,
+          },
+        ],
+      },
+    ];
+
+    http.expectOne((r) => r.url === '/api/analytics/trends').flush(trends);
+    http.expectOne((r) => r.url === '/api/analytics/regressions').flush([]);
+    http.expectOne((r) => r.url === '/api/analytics/variance').flush([]);
+    http.expectOne('/api/datasets/d1/scorers').flush([]);
+    http
+      .expectOne((r) => r.url === '/api/analytics/composite')
+      .flush([
+        {
+          promptVersionId: 'v1',
+          versionNumber: 1,
+          versionLabel: null,
+          runId: 'r1',
+          runAt: '',
+          compositeValue: 0.5,
+          scorerCount: 1,
+        },
+        {
+          promptVersionId: 'v2',
+          versionNumber: 2,
+          versionLabel: null,
+          runId: 'r2',
+          runAt: '',
+          compositeValue: 0.8,
+          scorerCount: 1,
+        },
+      ]);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const table = el.querySelector('[data-testid="change-table"]');
+    expect(table).toBeTruthy();
+    expect(el.querySelectorAll('[data-testid="change-row"]').length).toBe(2);
+    const compositeCells = el.querySelectorAll('[data-testid="composite-cell"]');
+    expect(compositeCells[1].textContent).toContain('0.800 (+0.300)');
   });
 
   it('renders an unverified drop as a distinct "possible" regression, not the empty state', () => {
@@ -263,6 +338,7 @@ describe('AnalyticsDashboard', () => {
     http.expectOne((r) => r.url === '/api/analytics/regressions').flush(flags);
     http.expectOne((r) => r.url === '/api/analytics/variance').flush([]);
     http.expectOne('/api/datasets/d1/scorers').flush([]);
+    http.expectOne((r) => r.url === '/api/analytics/composite').flush([]);
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
@@ -327,6 +403,7 @@ describe('AnalyticsDashboard', () => {
     http.expectOne((r) => r.url === '/api/analytics/regressions').flush([]);
     http.expectOne((r) => r.url === '/api/analytics/variance').flush([]);
     http.expectOne('/api/datasets/d1/scorers').flush([]);
+    http.expectOne((r) => r.url === '/api/analytics/composite').flush([]);
     fixture.detectChanges();
 
     const note = (fixture.nativeElement as HTMLElement).querySelector(
@@ -351,6 +428,7 @@ describe('AnalyticsDashboard', () => {
     http.expectOne((r) => r.url === '/api/analytics/regressions').flush([]);
     http.expectOne((r) => r.url === '/api/analytics/variance').flush([]);
     http.expectOne('/api/datasets/d1/scorers').flush([]);
+    http.expectOne((r) => r.url === '/api/analytics/composite').flush([]);
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
@@ -387,6 +465,7 @@ describe('AnalyticsDashboard', () => {
         },
       ]);
     http.expectOne('/api/datasets/d1/scorers').flush([]);
+    http.expectOne((r) => r.url === '/api/analytics/composite').flush([]);
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
@@ -447,6 +526,7 @@ describe('AnalyticsDashboard', () => {
       },
       { id: 's2', kind: 'Regex', config: '[0-9]', judgeModel: null, identity: 'x', createdAt: '' },
     ]);
+    http.expectOne((r) => r.url === '/api/analytics/composite').flush([]);
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
