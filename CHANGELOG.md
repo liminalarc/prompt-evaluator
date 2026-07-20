@@ -5,6 +5,63 @@ SemVer (pre-1.0 `0.x`) across the API, web, and eval-runner. A release is a tagg
 as of `0.13.0` it also deploys to a hosted **dev** environment on every push to `main` (spec 3.2).
 There is no prod target yet.
 
+## [0.20.0] — 2026-07-20
+
+An admin **AI Usage & Budget Tracker**: every model call the harness makes — subject runs, LLM-judge
+scoring, synthetic generation — is now ledgered (tokens, model, cost, who/what/when/status) and a
+workspace admin can slice that spend by date/model/feature/user/org, see it over time, drill into
+individual calls, export CSV, and track it against budgets with over-threshold alerts. The Model
+Catalog's displayed price now derives from the same authoritative pricing table the ledger charges
+against, so catalog and ledger agree on one number.
+
+### Added
+
+- **[#6.1] AI Usage & Budget Tracker (admin)** ([detail](specs/archive/6.1/6.1.md)):
+  - **Capture at the eval-runner seam** — an `AiUsageRecord` on every `EvalRunnerClient` call (subject
+    execution, LLM-judge, synthetic generation) on **success and failure**, attributed to org + user
+    via an ambient `AiUsageContext`. The eval-runner's judge/generate responses now surface the full
+    usage block (model, input/output + cache tokens, request id, status). **Metadata + token counts
+    only — never prompt/response content or secrets.**
+  - **Immutable cost** — a versioned, config-backed per-model pricing table (input/output/cache-write/
+    cache-read + rate version); cost is computed and **snapshotted** on each record, so a later price
+    change never rewrites history. Unknown model → cost null + flagged, tokens still stored.
+  - **Query API** (`/api/admin/ai-usage/*`, global-admin gated) — filter by any combination of date
+    range / model / feature / user / org / status; aggregate by period / model / feature / user / org;
+    per-slice metrics (total cost, token totals, call count, avg per call, success rate, latency
+    p50/p95); time-series, breakdowns + top-N, a paginated calls drill-down, and CSV export.
+  - **Admin → AI Usage** SPA area (`/admin/ai-usage`) — a filter bar that drives the whole surface,
+    spend summary tiles, a spend-over-time chart, breakdown tables, the calls table, CSV export, and
+    the budget surface. Gated by `[authGuard, adminGuard]` with an `isAdmin` Admin-menu link.
+  - **Budgets** — a global (workspace) budget + optional scoped budgets (per model / feature / org),
+    monthly, with spend-vs-budget tracking and Ok/Warning/Over threshold alerts (tracking + alerting
+    only; no run-path enforcement).
+- **[#6.2] Model Catalog price ← authoritative ledger table** ([detail](specs/archive/6.2.md)) — the
+  catalog's **displayed** price is now `per-model override ?? authoritative pricing-table rate`, sourced
+  from the same 6.1 table the ledger uses. The entry's price columns are kept as an optional override
+  (author intent wins); a source badge shows override vs. table. Non-destructive — no migration.
+
+### Fixed
+
+Post-merge code-review + security-review hardening of the ledger (all part of [#6.1]):
+
+- **CSV formula injection** — the export now neutralizes cells beginning with a spreadsheet formula
+  trigger (`= + - @` / tab / CR), closing an org-member → admin-machine escalation via the exported file.
+- **OpenAI cached tokens were double-charged** — input now excludes the cached subset (billed once at
+  the cache-read rate), matching Anthropic's token semantics.
+- **Ledger stored the provider-echoed (dated) model id** — nulling OpenAI cost snapshots and making
+  model-scoped budgets match $0; it now records the requested catalog id the pricing table and budgets
+  are keyed on.
+- **Date-range `to` dropped the final day** — a date-only upper bound is now inclusive to end-of-day.
+- **Anthropic structured refusal** raised an opaque `StopIteration` (500); it now surfaces cleanly.
+- **Scoped budgets** with a mistyped feature/org value silently tracked the whole ledger — now rejected
+  at creation.
+
+### Backlog
+
+- **[#6.3] AI-usage ledger accuracy & scale follow-ups** ([detail](specs/6.3.md)) — two residuals
+  re-homed from the 6.1/6.2 review (phantom usage-less rows; in-memory aggregation at scale). Not yet
+  implemented.
+
 ## [0.19.1] — 2026-07-19
 
 A dogfooding fix to the [#1.16] backport lifecycle, plus two specs added to the backlog.
