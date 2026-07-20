@@ -44,6 +44,40 @@ export interface PromptVersionStatus {
   versions: VersionStatus[];
 }
 
+/** Mirrors the .NET BackportDiffLineResponse DTO (1.20) — one line of the diff vs Current. */
+export interface BackportDiffLine {
+  kind: 'context' | 'added' | 'removed';
+  text: string;
+}
+
+/** Mirrors the .NET BackportScoreDeltaResponse DTO (1.20) — one per-scorer delta (target vs Current). */
+export interface BackportScoreDelta {
+  datasetName: string;
+  scorerLabel: string;
+  currentMean: number;
+  targetMean: number;
+  delta: number;
+}
+
+/**
+ * Mirrors the .NET BackportArtifactResponse DTO (1.20): the generated artifact for the prompt's single
+ * backport target. `content` is the copy-to-clipboard exact prompt; `markdown` is the downloadable
+ * `.md`; `diff`/`scoreDeltas` are the structured building blocks.
+ */
+export interface BackportArtifact {
+  promptId: string;
+  promptName: string;
+  currentVersionNumber: number;
+  currentVersionSha: string | null;
+  targetVersionNumber: number;
+  targetModel: string;
+  content: string;
+  diff: BackportDiffLine[];
+  scoreDeltas: BackportScoreDelta[];
+  markdown: string;
+  fileName: string;
+}
+
 /** Mirrors the .NET PromptSummaryResponse DTO (list/browse projection). */
 export interface PromptSummary {
   id: string;

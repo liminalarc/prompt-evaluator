@@ -557,4 +557,160 @@ describe('PromptDetail (unified workspace)', () => {
     expect(trends.request.method).toBe('GET');
     trends.flush([]);
   });
+
+  // --- 1.20 Backport assistance -------------------------------------------------------------------
+  const promptTwo = {
+    ...prompt,
+    currentVersionId: 'v1',
+    currentVersionSha: 'abc1234',
+    versions: [
+      { ...prompt.versions[0], content: 'Summarize: {input}' },
+      {
+        id: 'v2',
+        versionNumber: 2,
+        content: 'Summarize concisely: {input}',
+        targetModel: 'claude-opus-4-8',
+        label: null,
+        sourceApp: null,
+        createdAt: '2026-07-13T00:00:00Z',
+      },
+    ],
+  };
+  const statusTargeted = {
+    promptId: 'p1',
+    currentVersionId: 'v1',
+    backportTargetVersionId: 'v2',
+    versions: [
+      {
+        versionId: 'v1',
+        versionNumber: 1,
+        label: null,
+        isCurrent: true,
+        backportEligible: false,
+        isBackportTarget: false,
+        regressed: false,
+      },
+      {
+        versionId: 'v2',
+        versionNumber: 2,
+        label: null,
+        isCurrent: false,
+        backportEligible: true,
+        isBackportTarget: true,
+        regressed: false,
+      },
+    ],
+  };
+  const artifact = {
+    promptId: 'p1',
+    promptName: 'Summarizer',
+    currentVersionNumber: 1,
+    currentVersionSha: 'abc1234',
+    targetVersionNumber: 2,
+    targetModel: 'claude-opus-4-8',
+    content: 'Summarize concisely: {input}',
+    diff: [
+      { kind: 'removed', text: 'Summarize: {input}' },
+      { kind: 'added', text: 'Summarize concisely: {input}' },
+    ],
+    scoreDeltas: [
+      {
+        datasetName: 'Summaries',
+        scorerLabel: 'Regex',
+        currentMean: 0.5,
+        targetMean: 0.9,
+        delta: 0.4,
+      },
+    ],
+    markdown: '# Backport: Summarizer\n\nSummarize concisely: {input}\n',
+    fileName: 'backport-summarizer-v1-to-v2.md',
+  };
+
+  function setupTargeted() {
+    TestBed.configureTestingModule({
+      imports: [PromptDetail],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { paramMap: { get: () => 'p1' }, queryParamMap: { get: () => null } },
+          },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(PromptDetail);
+    httpMock = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/prompts/p1').flush(promptTwo);
+    httpMock.expectOne('/api/prompts/p1/version-status').flush(statusTargeted);
+    httpMock.expectOne('/api/prompts/p1/datasets').flush(datasets);
+    httpMock.expectOne('/api/models').flush(models);
+    httpMock.expectOne('/api/datasets/d1/eval-runs').flush([]);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('offers "Prepare backport" only when a backport target exists [1.20]', () => {
+    const withTarget = setupTargeted();
+    expect(
+      (withTarget.nativeElement as HTMLElement).querySelector('[data-testid="prepare-backport"]'),
+    ).not.toBeNull();
+
+    TestBed.resetTestingModule();
+    const noTarget = setup(); // base fixtures — no target
+    expect(
+      (noTarget.nativeElement as HTMLElement).querySelector('[data-testid="prepare-backport"]'),
+    ).toBeNull();
+  });
+
+  it('fetches the artifact and shows the markdown preview [1.20]', () => {
+    const fixture = setupTargeted();
+    (fixture.nativeElement as HTMLElement)
+      .querySelector<HTMLButtonElement>('[data-testid="prepare-backport"]')!
+      .click();
+    fixture.detectChanges();
+
+    const req = httpMock.expectOne('/api/prompts/p1/backport-artifact');
+    expect(req.request.method).toBe('GET');
+    req.flush(artifact);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="backport-drawer"]')).not.toBeNull();
+    expect(el.querySelector('[data-testid="backport-markdown"]')?.textContent).toContain(
+      '# Backport: Summarizer',
+    );
+  });
+
+  it('copies the exact target content to the clipboard [1.20]', () => {
+    const writeText = jasmine.createSpy('writeText').and.returnValue(Promise.resolve());
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+
+    const fixture = setupTargeted();
+    const cmp = fixture.componentInstance as unknown as {
+      copyExactPrompt: (a: typeof artifact) => void;
+    };
+    cmp.copyExactPrompt(artifact);
+
+    expect(writeText).toHaveBeenCalledWith('Summarize concisely: {input}');
+  });
+
+  it('downloads the markdown as a .md blob [1.20]', () => {
+    const createUrl = spyOn(URL, 'createObjectURL').and.returnValue('blob:x');
+    spyOn(URL, 'revokeObjectURL');
+    const click = spyOn(HTMLAnchorElement.prototype, 'click');
+
+    const fixture = setupTargeted();
+    const cmp = fixture.componentInstance as unknown as {
+      downloadMarkdown: (a: typeof artifact) => void;
+    };
+    cmp.downloadMarkdown(artifact);
+
+    expect(createUrl).toHaveBeenCalledWith(jasmine.any(Blob));
+    expect(click).toHaveBeenCalled();
+  });
 });

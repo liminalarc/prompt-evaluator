@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Prompt, PromptSummary, PromptVersionStatus } from '../prompt';
+import { BackportArtifact, Prompt, PromptSummary, PromptVersionStatus } from '../prompt';
 
 export interface AddVersionBody {
   content: string;
@@ -76,6 +76,14 @@ export class PromptsApiService {
       `/api/prompts/${id}/versions/${versionId}/set-current`,
       { commitSha },
     );
+  }
+
+  /**
+   * The generated backport artifact for the prompt's single backport target (1.20): the ready-to-apply
+   * exact prompt + downloadable markdown. 404 when the prompt has no target (nothing to ship).
+   */
+  getBackportArtifact(id: string): Observable<BackportArtifact> {
+    return this.http.get<BackportArtifact>(`/api/prompts/${id}/backport-artifact`);
   }
 
   /** Deletes a prompt and everything it owns — versions, datasets, and their runs/scores (1.10). */

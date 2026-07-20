@@ -3,7 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, forkJoin, map, of } from 'rxjs';
-import { Prompt, PromptVersionStatus } from '../prompt';
+import { BackportArtifact, Prompt, PromptVersionStatus } from '../prompt';
 import { DatasetSummary } from '../dataset';
 import { EvalRunSummary } from '../eval-run';
 import { ModelCatalogEntry } from '../model';
@@ -21,6 +21,7 @@ import {
   ChipList,
   ConfirmService,
   Crumb,
+  Drawer,
   EmptyState,
   ErrorState,
   LoadingState,
@@ -51,6 +52,7 @@ type WorkspaceTab = 'versions' | 'datasets' | 'analytics' | 'runs';
     ChipList,
     DatePipe,
     DecimalPipe,
+    Drawer,
     EmptyState,
     ErrorState,
     LoadingState,
@@ -146,6 +148,15 @@ type WorkspaceTab = 'versions' | 'datasets' | 'analytics' | 'runs';
                     >v{{ target.versionNumber }} is the highest-scoring version above Current — ship
                     it, then mark it backported.</span
                   >
+                  <button
+                    type="button"
+                    class="sb-btn sb-btn--sm sb-btn--secondary"
+                    data-testid="prepare-backport"
+                    [disabled]="backportLoading()"
+                    (click)="prepareBackport()"
+                  >
+                    Prepare backport
+                  </button>
                   <button
                     type="button"
                     class="sb-btn sb-btn--sm sb-btn--primary"
@@ -611,6 +622,59 @@ type WorkspaceTab = 'versions' | 'datasets' | 'analytics' | 'runs';
             (closed)="showCompare.set(false)"
           />
         }
+
+        <!-- 1.20 Backport assistance: the ready-to-apply artifact for the single backport target.
+             LitmusAI signals only — copy the exact prompt or download the markdown; apply it in the
+             source app's own process. -->
+        <app-drawer
+          [open]="showBackport()"
+          heading="Prepare backport"
+          (closed)="showBackport.set(false)"
+        >
+          @if (backportLoading()) {
+            <app-loading-state message="Assembling the backport artifact…" />
+          } @else if (backportError()) {
+            <app-error-state [message]="backportError()!" />
+          } @else if (backportArtifact(); as art) {
+            <div class="backport" data-testid="backport-drawer">
+              <p class="backport__head">
+                Ship <strong>v{{ art.currentVersionNumber }}</strong> →
+                <strong>v{{ art.targetVersionNumber }}</strong> ·
+                <app-chip [label]="art.targetModel" />
+              </p>
+              <p class="subtitle">
+                LitmusAI produces the artifact — apply it in the source app, then
+                <strong>Mark backported</strong>. Nothing is written to a source repo.
+              </p>
+
+              <div class="backport__actions">
+                <button
+                  type="button"
+                  class="sb-btn sb-btn--sm sb-btn--primary"
+                  data-testid="copy-exact-prompt"
+                  (click)="copyExactPrompt(art)"
+                >
+                  {{ copied() ? 'Copied ✓' : 'Copy exact prompt' }}
+                </button>
+                <button
+                  type="button"
+                  class="sb-btn sb-btn--sm sb-btn--secondary"
+                  data-testid="download-markdown"
+                  (click)="downloadMarkdown(art)"
+                >
+                  Download markdown
+                </button>
+              </div>
+
+              <div class="sb-field">
+                <label>Artifact preview ({{ art.fileName }})</label>
+                <pre class="backport__preview" data-testid="backport-markdown">{{
+                  art.markdown
+                }}</pre>
+              </div>
+            </div>
+          }
+        </app-drawer>
       }
     </section>
   `,
@@ -698,6 +762,29 @@ type WorkspaceTab = 'versions' | 'datasets' | 'analytics' | 'runs';
         align-items: center;
         gap: var(--sb-space-sm);
         margin-top: var(--sb-space-xs);
+      }
+      .backport__head {
+        display: flex;
+        align-items: center;
+        gap: var(--sb-space-sm);
+        margin: 0 0 var(--sb-space-xs);
+      }
+      .backport__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--sb-space-sm);
+        margin: var(--sb-space-md) 0 var(--sb-space-lg);
+      }
+      .backport__preview {
+        white-space: pre-wrap;
+        overflow-x: auto;
+        max-height: 24rem;
+        overflow-y: auto;
+        padding: var(--sb-space-md);
+        border-radius: var(--sb-radius-md);
+        background: var(--sb-surface-variant);
+        font-family: var(--sb-font-mono, monospace);
+        font-size: var(--sb-type-small-size);
       }
     `,
   ],
@@ -892,6 +979,53 @@ export class PromptDetail implements OnInit {
         this.error.set('Could not update the current version.');
       },
     });
+  }
+
+  // Backport assistance (1.20): the generated artifact for the single backport target, shown in a
+  // drawer with copy-exact-prompt + download-markdown. Fetched on demand (only when the maintainer
+  // asks) so the workspace load stays lean.
+  protected readonly showBackport = signal(false);
+  protected readonly backportArtifact = signal<BackportArtifact | null>(null);
+  protected readonly backportLoading = signal(false);
+  protected readonly backportError = signal<string | null>(null);
+  protected readonly copied = signal(false);
+
+  /** Open the drawer and fetch the artifact for this prompt's backport target. */
+  protected prepareBackport(): void {
+    this.showBackport.set(true);
+    this.backportArtifact.set(null);
+    this.backportError.set(null);
+    this.copied.set(false);
+    this.backportLoading.set(true);
+    this.api.getBackportArtifact(this.id).subscribe({
+      next: (art) => {
+        this.backportArtifact.set(art);
+        this.backportLoading.set(false);
+      },
+      error: () => {
+        this.backportError.set('Could not assemble the backport artifact.');
+        this.backportLoading.set(false);
+      },
+    });
+  }
+
+  /** Copy the target version's exact content to the clipboard — ready to paste into the source app. */
+  protected copyExactPrompt(art: BackportArtifact): void {
+    void navigator.clipboard?.writeText(art.content).then(
+      () => this.copied.set(true),
+      () => this.backportError.set('Could not copy to the clipboard.'),
+    );
+  }
+
+  /** Download the markdown artifact as a `.md` file. */
+  protected downloadMarkdown(art: BackportArtifact): void {
+    const blob = new Blob([art.markdown], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = art.fileName;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   private loadDatasets(): void {
