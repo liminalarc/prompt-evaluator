@@ -156,8 +156,12 @@ with the user before tagging — it decides the **tag name**, nothing else.
   deferral protocol (see *No silent deferrals*).
 - Every spec in the release is `DONE` in `SPECIFICATIONS.md`.
 - The four CI gates are green on the release commit: `backend`, `eval-runner`, `web`,
-  `compose-smoke`. Locally: `cd src && dotnet test`; `cd eval-runner && pytest`;
-  `cd web && npm run test:ci && npm run build`; optionally `docker compose up --build --wait`.
+  `compose-smoke`. Locally: `cd src && dotnet test`; `cd eval-runner && ruff check . && pytest`;
+  `cd web && npm run lint && npm run test:ci && npm run build`; optionally `docker compose up --build --wait`.
+  - **The lint steps are real gates, not optional.** The `eval-runner` CI job runs `ruff check .`
+    (line-length 100 + E/F/I/UP/B) *before* pytest, and the `web` job runs `npm run lint` (prettier)
+    before the tests — a green test suite does **not** imply a green gate. Run both locally; skipping
+    them has broken releases (prettier twice; `ruff` E501s once, latent in committed work).
 - (Dev deploy is continuous on `main` via the `deploy-dev` job — it runs after the four gates and
   is **not** a pre-ship gate itself, but a red `deploy-dev` means the running dev app is stale.)
 
