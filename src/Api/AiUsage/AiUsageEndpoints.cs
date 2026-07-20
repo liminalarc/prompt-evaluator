@@ -48,7 +48,9 @@ public static class AiUsageEndpoints
         {
             if (!await access.IsGlobalAdminAsync(ct)) return Results.Forbid();
             if (!TryBuildFilter(req, out var filter, out var error)) return Results.BadRequest(new { error });
-            return Results.Ok(await queries.CallsAsync(filter, page ?? 1, pageSize ?? 50, ct));
+            var result = await queries.CallsAsync(filter, page ?? 1, pageSize ?? 50, ct);
+            return Results.Ok(new CallsPageResponse(
+                result.Items.Select(CallResponse.From).ToList(), result.Page, result.PageSize, result.TotalCount));
         });
 
         group.MapGet("/export.csv", async (
@@ -107,6 +109,21 @@ public static class AiUsageEndpoints
 
         return app;
     }
+
+    // Calls response stringifies the feature/status enums (the app has no global string-enum
+    // converter; the convention is to map enums to strings at the Api edge).
+    private sealed record CallResponse(
+        Guid Id, DateTimeOffset OccurredAt, string Feature, string Model,
+        int InputTokens, int OutputTokens, int CacheCreationTokens, int CacheReadTokens,
+        decimal? CostUsd, Guid? OrganizationId, Guid? UserId, string Status, int LatencyMs, string? RequestId)
+    {
+        public static CallResponse From(AiUsageCall c) => new(
+            c.Id, c.OccurredAt, c.Feature.ToString(), c.Model,
+            c.InputTokens, c.OutputTokens, c.CacheCreationTokens, c.CacheReadTokens,
+            c.CostUsd, c.OrganizationId, c.UserId, c.Status.ToString(), c.LatencyMs, c.RequestId);
+    }
+
+    private sealed record CallsPageResponse(IReadOnlyList<CallResponse> Items, int Page, int PageSize, int TotalCount);
 
     private sealed record CreateBudgetRequest(string Scope, string? ScopeValue, decimal LimitUsd, int? AlertThresholdPercent);
 
