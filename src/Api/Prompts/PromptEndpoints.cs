@@ -140,6 +140,18 @@ public static class PromptEndpoints
                 };
             });
 
+        // The generated backport artifact for the prompt's single backport target (1.20): the
+        // ready-to-apply prompt + downloadable markdown. 404 when the prompt has no target (nothing
+        // to ship) — the UI only offers "Prepare backport" when a target exists.
+        group.MapGet("/{id:guid}/backport-artifact",
+            async (Guid id, BackportArtifactHandler handler, OrgAccess access, CancellationToken ct) =>
+            {
+                if ((await access.CanAccessPromptAsync(id, ct)).ToProblem() is { } problem)
+                    return problem;
+                var artifact = await handler.HandleAsync(id, ct);
+                return artifact is null ? Results.NotFound() : Results.Ok(BackportArtifactResponse.From(artifact));
+            });
+
         return app;
     }
 }
