@@ -55,11 +55,11 @@ public sealed record VersionStatusResponse(
 /// <summary>A prompt's per-version status + its Current-in-source pointer and single backport target (1.16).</summary>
 public sealed record PromptVersionStatusResponse(
     Guid PromptId, Guid? CurrentVersionId, Guid? BackportTargetVersionId,
-    IReadOnlyList<VersionStatusResponse> Versions)
+    IReadOnlyList<VersionStatusResponse> Versions, int CrossModelVersionsExcluded)
 {
     public static PromptVersionStatusResponse From(PromptVersionStatus s) =>
         new(s.PromptId, s.CurrentVersionId, s.BackportTargetVersionId,
-            s.Versions.Select(VersionStatusResponse.From).ToList());
+            s.Versions.Select(VersionStatusResponse.From).ToList(), s.CrossModelVersionsExcluded);
 }
 
 /// <summary>One line of the backport artifact's diff vs Current (1.20). Kind is <c>context</c> /

@@ -168,6 +168,16 @@ type WorkspaceTab = 'versions' | 'datasets' | 'analytics' | 'runs';
                   </button>
                 </div>
               }
+              @if (crossModelExcluded() > 0) {
+                <p class="deploy-warn" data-testid="cross-model-warning">
+                  ⚠ {{ crossModelExcluded() }}
+                  {{ crossModelExcluded() === 1 ? 'version' : 'versions' }} ran on a different
+                  subject model than the current version and
+                  {{ crossModelExcluded() === 1 ? 'is' : 'are' }} excluded from the backport
+                  comparison — a score across models isn’t comparable, so it can’t be the backport
+                  target. Compare prompts on the same subject model.
+                </p>
+              }
             </app-card>
           }
 
@@ -763,6 +773,11 @@ type WorkspaceTab = 'versions' | 'datasets' | 'analytics' | 'runs';
         gap: var(--sb-space-sm);
         margin-top: var(--sb-space-xs);
       }
+      .deploy-warn {
+        margin: var(--sb-space-sm) 0 0;
+        font-size: var(--sb-type-small-size);
+        color: var(--sb-text-secondary);
+      }
       .backport__head {
         display: flex;
         align-items: center;
@@ -883,6 +898,15 @@ export class PromptDetail implements OnInit {
     if (!target) return null;
     return { id: target.versionId, versionNumber: target.versionNumber };
   });
+
+  /**
+   * R9 (2.9a): how many versions are held out of the backport comparison for running on a different
+   * subject model than Current. Drives a card warning so an excluded (possibly higher-scoring) version
+   * isn't mistaken for a missed opportunity — its score isn't comparable across models.
+   */
+  protected readonly crossModelExcluded = computed(
+    () => this.versionStatus()?.crossModelVersionsExcluded ?? 0,
+  );
 
   // Datasets + analytics — this prompt's, shown together with it (1.7).
   protected readonly datasets = signal<DatasetSummary[] | null>(null);

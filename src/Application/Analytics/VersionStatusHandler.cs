@@ -93,8 +93,22 @@ public sealed class VersionStatusHandler(
                     regressed.Add(flag.ToVersionId);
         }
 
+        // R9 (2.9a): hold the subject model constant. Only versions sharing Current's model can be
+        // eligible / the target — a version scored on a different (e.g. stronger) model would confound
+        // the prompt's effect with the model's (the R5 confound, resurfacing in the backport recommender).
+        // Cross-model versions are excluded from the comparison and counted for the UI warning.
+        var currentModel = currentId is { } curId
+            ? versions.FirstOrDefault(v => v.Id == curId)?.TargetModel
+            : null;
+
+        bool SharesCurrentModel(Domain.PromptVersion v) => currentModel is null || v.TargetModel == currentModel;
+
+        var crossModelVersionsExcluded = currentModel is null
+            ? 0
+            : versions.Count(v => v.Id != currentId && v.TargetModel != currentModel);
+
         var eligibleIds = versions
-            .Where(v => IsBackportEligible(v.Id, currentId, seriesList))
+            .Where(v => SharesCurrentModel(v) && IsBackportEligible(v.Id, currentId, seriesList))
             .Select(v => v.Id)
             .ToHashSet();
 
@@ -120,7 +134,7 @@ public sealed class VersionStatusHandler(
                 Regressed: regressed.Contains(v.Id)))
             .ToList();
 
-        return new PromptVersionStatus(promptId, currentId, targetId, statuses);
+        return new PromptVersionStatus(promptId, currentId, targetId, statuses, crossModelVersionsExcluded);
     }
 
     // Current per-scorer weights for a dataset, keyed by scorer identity (2.9). Last write wins if a

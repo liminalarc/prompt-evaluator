@@ -22,9 +22,15 @@ public sealed record VersionStatus(
 /// A prompt's per-version status set (1.16) plus its Current-in-source pointer (null until first set)
 /// and the single recommended <see cref="BackportTargetVersionId"/> (the highest-scoring version above
 /// Current, or null when none beats it).
+///
+/// <see cref="CrossModelVersionsExcluded"/> (R9, 2.9a) is how many versions were left out of the backport
+/// comparison because they ran on a <b>different subject model</b> than Current — eligibility and the
+/// target hold the subject model constant, so a version scored on a stronger model can't win on the model
+/// rather than the prompt. 0 when no Current is set. The UI surfaces a warning when it is positive.
 /// </summary>
 public sealed record PromptVersionStatus(
     Guid PromptId,
     Guid? CurrentVersionId,
     Guid? BackportTargetVersionId,
-    IReadOnlyList<VersionStatus> Versions);
+    IReadOnlyList<VersionStatus> Versions,
+    int CrossModelVersionsExcluded);

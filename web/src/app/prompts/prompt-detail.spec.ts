@@ -713,4 +713,48 @@ describe('PromptDetail (unified workspace)', () => {
     expect(createUrl).toHaveBeenCalledWith(jasmine.any(Blob));
     expect(click).toHaveBeenCalled();
   });
+
+  it('warns when versions are excluded from the backport comparison for a different model [2.9a/R9]', () => {
+    // Default targeted status has no cross-model exclusions → no warning.
+    const noWarn = setupTargeted();
+    expect(
+      (noWarn.nativeElement as HTMLElement).querySelector('[data-testid="cross-model-warning"]'),
+    ).toBeNull();
+
+    TestBed.resetTestingModule();
+
+    // A status that held 2 cross-model versions out of the comparison → the warning renders.
+    TestBed.configureTestingModule({
+      imports: [PromptDetail],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { paramMap: { get: () => 'p1' }, queryParamMap: { get: () => null } },
+          },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(PromptDetail);
+    httpMock = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/prompts/p1').flush(promptTwo);
+    httpMock
+      .expectOne('/api/prompts/p1/version-status')
+      .flush({ ...statusTargeted, crossModelVersionsExcluded: 2 });
+    httpMock.expectOne('/api/prompts/p1/datasets').flush(datasets);
+    httpMock.expectOne('/api/models').flush(models);
+    httpMock.expectOne('/api/datasets/d1/eval-runs').flush([]);
+    fixture.detectChanges();
+
+    const warn = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-testid="cross-model-warning"]',
+    );
+    expect(warn).not.toBeNull();
+    expect(warn?.textContent?.replace(/\s+/g, ' ')).toContain('different subject model');
+  });
 });

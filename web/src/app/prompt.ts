@@ -42,6 +42,11 @@ export interface PromptVersionStatus {
   /** The single version to actually ship (highest-scoring above Current), or null when none beats it. */
   backportTargetVersionId: string | null;
   versions: VersionStatus[];
+  /**
+   * How many versions were excluded from the backport comparison for running on a different subject
+   * model than Current (R9, 2.9a) — eligibility/target hold the model constant. 0 when no Current set.
+   */
+  crossModelVersionsExcluded: number;
 }
 
 /** Mirrors the .NET BackportDiffLineResponse DTO (1.20) — one line of the diff vs Current. */

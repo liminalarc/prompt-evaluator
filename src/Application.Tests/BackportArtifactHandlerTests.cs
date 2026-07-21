@@ -79,9 +79,11 @@ public class BackportArtifactHandlerTests
     private static (BackportArtifactHandler Handler, Prompt Prompt, PromptVersion Current, PromptVersion Target)
         BuildEligible(string currentContent, string targetContent, double currentScore, double targetScore)
     {
+        // Same subject model on both versions — a backport target must share Current's model (R9, 2.9a),
+        // else it's excluded from the comparison and no artifact is generated.
         var prompt = Prompt.Create(Guid.NewGuid(), "Summarizer");
         var v1 = prompt.AddVersion(currentContent, "claude-sonnet-5", When);
-        var v2 = prompt.AddVersion(targetContent, "claude-opus-4-8", When.AddDays(1));
+        var v2 = prompt.AddVersion(targetContent, "claude-sonnet-5", When.AddDays(1));
         prompt.SetCurrentVersion(v1.Id, "abc1234", When);
 
         var promptRepo = new InMemoryPromptRepo(); promptRepo.AddAsync(prompt).Wait();
@@ -128,7 +130,7 @@ public class BackportArtifactHandlerTests
         Assert.Equal(current.VersionNumber, artifact.CurrentVersionNumber);
         Assert.Equal("abc1234", artifact.CurrentVersionSha);
         Assert.Equal(target.VersionNumber, artifact.TargetVersionNumber);
-        Assert.Equal("claude-opus-4-8", artifact.TargetModel);
+        Assert.Equal("claude-sonnet-5", artifact.TargetModel);
         Assert.Equal("Summarize concisely: {input}", artifact.Content); // exact-prompt payload
     }
 
@@ -170,7 +172,7 @@ public class BackportArtifactHandlerTests
         Assert.Contains("Summarizer", md);
         Assert.Contains("v1", md);
         Assert.Contains("v2", md);
-        Assert.Contains("claude-opus-4-8", md); // target model
+        Assert.Contains("claude-sonnet-5", md); // target model
         Assert.Contains("Summarize concisely: {input}", md); // full new content
         Assert.Contains("Golden set", md); // score-delta row
         Assert.Contains("Mark backported", md); // apply checklist

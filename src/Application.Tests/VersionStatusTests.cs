@@ -304,6 +304,67 @@ public class VersionStatusTests
         Assert.Single(status.Versions, v => v.IsBackportTarget);
     }
 
+    // R9 (2.9a): the subject-model confound. Current v1 (sonnet-4-6). v2 ran on a STRONGER model
+    // (sonnet-5) and scores higher — but that "win" is the model, not the prompt, so it must NOT be the
+    // backport target. v3 (same model as Current) modestly beats Current → v3 is the honest target.
+    [Fact]
+    public async Task Backport_target_holds_the_subject_model_constant()
+    {
+        var prompt = Prompt.Create(Guid.NewGuid(), "round-debrief");
+        var v1 = prompt.AddVersion("v1", "claude-sonnet-4-6", When);              // Current (Golf's model)
+        var v2 = prompt.AddVersion("v2", "claude-sonnet-5", When.AddDays(1));     // cross-model, scores high
+        var v3 = prompt.AddVersion("v3", "claude-sonnet-4-6", When.AddDays(2));   // same model, honest gain
+        prompt.SetCurrentVersion(v1.Id, null, When);
+
+        var promptRepo = new InMemoryPromptRepo(); await promptRepo.AddAsync(prompt);
+        var datasetRepo = new InMemoryDatasetRepo();
+        var ds = Dataset.Create(prompt.Id, "DS"); await datasetRepo.AddAsync(ds);
+        var runs = new InMemoryEvalRunRepo();
+        var regex = ScorerDescriptor.Deterministic(ScorerKind.Regex, "^out");
+        var f = Guid.NewGuid();
+        await runs.AddAsync(RunWith(prompt.Id, v1.Id, ds.Id, regex, When, (f, 0.60, true)));
+        await runs.AddAsync(RunWith(prompt.Id, v2.Id, ds.Id, regex, When.AddDays(1), (f, 0.95, true)));
+        await runs.AddAsync(RunWith(prompt.Id, v3.Id, ds.Id, regex, When.AddDays(2), (f, 0.75, true)));
+
+        var status = await Handler(promptRepo, runs, datasetRepo).HandleAsync(prompt.Id);
+
+        // v2 out-scores everything but ran on a different model → excluded, not eligible, not the target.
+        Assert.False(status!.Versions.Single(v => v.VersionId == v2.Id).BackportEligible);
+        Assert.False(status.Versions.Single(v => v.VersionId == v2.Id).IsBackportTarget);
+        // v3 (same model as Current) is the honest backport target.
+        Assert.True(status.Versions.Single(v => v.VersionId == v3.Id).BackportEligible);
+        Assert.True(status.Versions.Single(v => v.VersionId == v3.Id).IsBackportTarget);
+        Assert.Equal(v3.Id, status.BackportTargetVersionId);
+        // The card is told one version was dropped from the comparison for running on another model.
+        Assert.Equal(1, status.CrossModelVersionsExcluded);
+    }
+
+    // R9: when the ONLY version that beats Current ran on a different model, there is no honest target —
+    // the card clears to "nothing beats Current," and the cross-model version is counted for the warning.
+    [Fact]
+    public async Task A_cross_model_winner_yields_no_target_and_is_counted()
+    {
+        var prompt = Prompt.Create(Guid.NewGuid(), "P");
+        var v1 = prompt.AddVersion("v1", "claude-sonnet-4-6", When);
+        var v2 = prompt.AddVersion("v2", "claude-sonnet-5", When.AddDays(1));     // higher, but cross-model
+        prompt.SetCurrentVersion(v1.Id, null, When);
+
+        var promptRepo = new InMemoryPromptRepo(); await promptRepo.AddAsync(prompt);
+        var datasetRepo = new InMemoryDatasetRepo();
+        var ds = Dataset.Create(prompt.Id, "DS"); await datasetRepo.AddAsync(ds);
+        var runs = new InMemoryEvalRunRepo();
+        var regex = ScorerDescriptor.Deterministic(ScorerKind.Regex, "^out");
+        var f = Guid.NewGuid();
+        await runs.AddAsync(RunWith(prompt.Id, v1.Id, ds.Id, regex, When, (f, 0.60, true)));
+        await runs.AddAsync(RunWith(prompt.Id, v2.Id, ds.Id, regex, When.AddDays(1), (f, 0.95, true)));
+
+        var status = await Handler(promptRepo, runs, datasetRepo).HandleAsync(prompt.Id);
+
+        Assert.Null(status!.BackportTargetVersionId);
+        Assert.False(status.Versions.Single(v => v.VersionId == v2.Id).BackportEligible);
+        Assert.Equal(1, status.CrossModelVersionsExcluded);
+    }
+
     // A run for `version` over `datasetId` where one fixture is scored by several (scorer, value) pairs.
     private static EvalRun RunWithScores(
         Guid promptId, Guid versionId, Guid datasetId, DateTimeOffset at, Guid fixtureId,
