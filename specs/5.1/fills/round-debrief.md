@@ -32,10 +32,16 @@ the prompt** (R5, quantified). Rationales (not scores) drove every call from the
 
 **Verdict: v7 → [../backport/round-debrief.md](../backport/round-debrief.md).** Applied by a source-repo agent
 (LitmusAI doesn't commit into Golf — the direct v2/v6 commits were reverted; new process, runbook Step 9).
-- **⏳ In-tool backport pending (2026-07-20).** With 1.16/1.20/2.9 shipped, re-formalize through the tool (by
-  hand): **Set as current in source** = v1 (Golf's shipped baseline), confirm the Deployment card recommends
-  **`Backport target` = v7** (the 2.9 weighted composite now picks v7 over v2 — the mis-pick this prompt
-  originally exposed), **Prepare backport**, then **Mark backported → v7**. See runbook Step 9.
+- **✅ In-tool backport DONE (2026-07-20) — and it re-exposed the mis-pick as a *tool* bug (R9).** The
+  prediction here (that the 2.9 weighted composite would now pick v7 over v2) was **wrong**: with Current = v1
+  (Sonnet 4.6), the Deployment card badged **`Backport target` = v2 (Sonnet 5)**. 2.9 holds the *scorer config*
+  constant but **not the subject model**, so v2's Sonnet-5 scores out-rank the honest real-model winner v7 —
+  the **R5 confound, now in the backport recommender** → logged **R9**, folded into **[2.9a](../../2.9a.md)**.
+  So we **bypassed** the v2 target button + the (v2) `Prepare backport` artifact: a source-repo agent applied
+  the hand-made **v7** drop-in ([../backport/round-debrief.md](../backport/round-debrief.md)) to Golf, clean
+  one-file commit **`d04617ed`**, then in-tool **Set as current in source → v7** via the v7 row.
+  ⚠️ The card **still shows `Backport target = v2`** — known R9 artifact (cross-model versions perpetually
+  out-score any real-model Current); ignore until 2.9a ships.
 
 ## Learnings
 1. **Hold the subject model (R5).** A cross-model comparison overstated the prompt's effect ~4×; the real gain only showed on Golf's actual model.

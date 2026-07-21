@@ -112,8 +112,11 @@ diminishing returns.
 state (1.16) and generates the artifact (1.20); it still **never commits into a source repo** — a source-repo
 agent applies the drop-in.
 1. **Mark what's live.** Workspace → **`Versions`** tab → **`Deployment`** card (or a version row) →
-   **`Set as current in source`** on the version the app runs *today*; paste the source commit **SHA**. Exactly
-   one Current per prompt (nullable until first set).
+   **`Set as current in source`** on the version the app runs *today*. Exactly one Current per prompt
+   (nullable until first set). *(The marker records **which version** is live — not a commit SHA. The
+   optional `commitSha` field is plumbed in the API/domain but has **no UI input** and is deliberately **not
+   tracked by hand** — it goes stale immediately and source git history + `backport/` is the provenance;
+   auto-capture waits for [3.1]'s wired-in write. See finding **D2**.)*
 2. **Read the recommendation.** With Current set, the Deployment card badges the single **`Backport target`** —
    the highest-scoring version above Current by the **weighted composite** (2.9; same-scorer-config, so a
    mid-history rubric change can't mis-rank it). **No badge = nothing beats Current → done** (decline/log).
@@ -141,7 +144,7 @@ agent applies the drop-in.
 ## Step 10 — Log
 One line of learnings (what moved the needle). **Tick the prompt's row** in [T3](5.1.T3.md) (Golf) /
 [T4](5.1.T4.md) (Stormboard) and record the backport decision — now **the in-tool `Mark backported` state**
-(target vN + source SHA) **or** declined + reason. The `backport/<name>.md` file stays as the committed drop-in
+(Current moved to target vN) **or** declined + reason. The `backport/<name>.md` file stays as the committed drop-in
 the source-repo agent consumes.
 
 ---

@@ -10,24 +10,29 @@ commit into the source repos (5.1 process decision, 2026-07-19).
 > (1.16) is the official record of what's live. Runbook **Step 9** is the click-by-click. This supersedes
 > the earlier hand-copy framing above (kept for provenance).
 
-## ⏳ Pending official in-tool backport (do these through the tool)
-Both prompts below were decided under the *old* hand-copy process, before the 1.16 marker / 1.20 artifact
-existed. Re-formalize each **through the tool** (all by hand — 5.1 stays manual) so LitmusAI holds the truth:
-- **`round-debrief` (Golf)** — in the tool: **Set as current in source** = the version Golf runs today
-  (**v1** baseline / Golf's shipped prompt, paste its live SHA) → confirm the Deployment card recommends
-  **`Backport target` = v7** (weighted composite; this is the 2.9 fix that picks v7 over v2) → **Prepare
-  backport** → apply → **Mark backported → v7**.
-- **`daily-briefing` (Golf)** — in the tool: **Set as current in source** = **v1** (Golf runs v1 again — the
-  direct v2 commit `660a3ff2` was reverted; see below) → target should be **v2** → **Prepare backport** →
-  apply → **Mark backported → v2**.
+## Official in-tool backport — both DONE (2026-07-20)
+Both prompts were decided under the *old* hand-copy process, before the 1.16 marker / 1.20 artifact existed,
+and have now been re-formalized **through the tool** (all by hand — 5.1 stays manual) so LitmusAI holds the truth:
+- ~~**`round-debrief` (Golf)**~~ — ✅ **DONE (2026-07-20).** The tool's `Backport target` badge **mis-picked
+  v2** (Sonnet 5) over v7 (Sonnet 4.6) — the **R9** subject-model confound (see `../findings.md`; homed to
+  [2.9a](../../2.9a.md)). So we **bypassed the target button and the v2 artifact**: a source-repo agent applied
+  the hand-made **v7** drop-in (`round-debrief.md`, this dir) to Golf in a clean one-file commit **`d04617ed`**,
+  then in-tool **Set as current in source → v7** via the v7 row (NOT `Mark backported → v2`). ⚠️ The Deployment
+  card **still badges `Backport target = v2`** — a known R9 artifact (cross-model versions perpetually out-score
+  any real-model Current); ignore until 2.9a ships. `Prepare backport` was **not** usable here (it would emit a
+  v2 artifact) — so this drop-in stays hand-made, unlike daily-briefing's.
+- ~~**`daily-briefing` (Golf)**~~ — ✅ **DONE (2026-07-20).** Re-formalized through the tool: Set Current = v1
+  → target badge = v2 → **Prepare backport** (artifact reproduced the committed drop-in byte-for-byte — 1.20
+  dogfood pass) → a **source-repo agent applied v2 to Golf**, clean one-file commit **`abd385f8`** → **Mark
+  backported → v2**. (Commit SHA **not** recorded in-tool — no UI input; deliberate, finding **D2**.)
 
 Provenance, eval evidence, and the version history that produced each prompt live in the fill sheets
 (`../fills/<prompt>.md`) and findings (`../findings.md`).
 
 | File | App | Best version | In-tool backport | Eval evidence (Sonnet 4.6 subject · Opus 4.8 judge · data-conditional rubric) |
 |------|-----|--------------|------------------|-------------------------------------------------------------------------------|
-| `round-debrief.md` | Cortex Golf | **v7** | ⏳ pending (Set Current v1 → Mark backported → v7) | avg ~0.84 (Sonnet 4.6); v7 adds an input-whitelist + anti-filler rule that **fixed the sparse over-inference** v6 still had (F4 rationale: drills tied only to putts, no invented GIR/ball-striking) — chosen over v6 for safer edge-case behavior (rich-fixture cost was within noise). Golf path: `server/src/AiService/AiService.WebApi/Prompts/round-debrief.md`. |
-| `daily-briefing.md` | Cortex Golf | **v2** | ⏳ pending (Set Current v1 → Mark backported → v2) | eval v1 0.55 → v2 0.88 (T2 shakeout); firm length + ban computed stats. Golf path: `server/src/AiService/AiService.WebApi/Prompts/daily-briefing.md`. |
+| `round-debrief.md` | Cortex Golf | **v7** | ✅ done — applied to Golf `d04617ed`; Set current → v7 by hand (tool mis-picked v2 — R9) (2026-07-20) | avg ~0.84 (Sonnet 4.6); v7 adds an input-whitelist + anti-filler rule that **fixed the sparse over-inference** v6 still had (F4 rationale: drills tied only to putts, no invented GIR/ball-striking) — chosen over v6 for safer edge-case behavior (rich-fixture cost was within noise). Golf path: `server/src/AiService/AiService.WebApi/Prompts/round-debrief.md`. |
+| `daily-briefing.md` | Cortex Golf | **v2** | ✅ done — applied to Golf `abd385f8`; Mark backported → v2 (2026-07-20) | eval v1 0.55 → v2 0.88 (T2 shakeout); firm length + ban computed stats. Golf path: `server/src/AiService/AiService.WebApi/Prompts/daily-briefing.md`. |
 
 > **Golf commits reverted 2026-07-19** — the direct backport commits (round-debrief v2/v6, daily-briefing)
 > were removed from Golf `main` (kept the unrelated polygon commit); recoverable via the Golf tag

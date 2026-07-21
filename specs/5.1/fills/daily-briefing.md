@@ -143,9 +143,11 @@ Deduct for markdown, vagueness, generic filler, wrong or invented numbers, and w
   clear quality win, cost bump immaterial for a once-daily 24h-cached call). The direct Golf commit
   `660a3ff2` was **reverted (2026-07-19, new process)** — the drop-in [../backport/daily-briefing.md](../backport/daily-briefing.md)
   is the record for the source-repo agent.
-  - **⏳ In-tool backport pending (2026-07-20).** Now that 1.16/1.20 shipped, re-formalize through the tool
-    (by hand): **Set as current in source** = v1 (what Golf runs), confirm target **v2**, **Prepare
-    backport**, then **Mark backported → v2**. See runbook Step 9.
+  - **✅ In-tool backport DONE (2026-07-20).** Re-formalized through the tool-native flow: Set Current = v1
+    → target badge = v2 → **Prepare backport** (the 1.20 artifact reproduced this drop-in byte-for-byte —
+    clean dogfood pass) → a **source-repo agent applied v2 to Golf** in a clean one-file commit **`abd385f8`**
+    → **Mark backported → v2**. The commit SHA is **not** recorded in-tool (no UI input; deliberate — finding
+    **D2**: SHA goes stale, git history + this ledger is the provenance, auto-capture waits for 3.1).
 - **Learnings:** "N words **maximum**" reads as a ceiling → models undershoot; reframe to a firm target
   reached by **citing more real data**, and **explicitly ban computing new stats** (models will fabricate
   derived numbers to fill space). Likely applies to other narrative prompts (golf-dna, hole-notes,

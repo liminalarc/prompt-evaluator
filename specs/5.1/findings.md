@@ -66,6 +66,21 @@
 - **U9 — Scorers need the add/edit table pattern** (add or edit → fields → save). → *home: 2.8*
 
 ## Design (decision needed)
+- **D2 — The `Current in source` marker's commit SHA is plumbed everywhere except the UI input — decided
+  NOT to track it (2026-07-20, tool-native backport walk).** The optional `commitSha` is threaded end-to-end:
+  the `set-current` endpoint accepts it, `Prompt.CurrentVersionSha` stores it, the Deployment card *renders*
+  it when present, and the 1.20 artifact markdown carries a "Current commit" line — **but** `prompt-detail`'s
+  `setCurrent(versionId)` calls the API with `commitSha` unset for **both** buttons (`Set as current in
+  source` *and* `Mark backported → vN`), and **no text field exists** to enter one. So the feature is
+  half-wired: supported by the model/API, unreachable from the screen. Surfaced when trying to record Golf's
+  `daily-briefing` v2 apply (`abd385f8`) — there was nowhere to paste it. **Decision (user):** don't track the
+  SHA by hand. It goes stale the moment the source repo takes its next commit (it pins *the applying commit*,
+  not current source state), it duplicates provenance we already hold (source git history + this spec's
+  `backport/` ledger), and manual entry is skip-/typo-prone. The SHA earns its keep only under **[3.1]**
+  (wired-in source write), which can capture it **automatically and freshly**. **Resolution:** leave the
+  optional `commitSha` field in domain/API (harmless; 3.1 populates it), build **no** manual input now, and
+  correct the runbook Step 9/10 to stop instructing a SHA paste. → *home: decision logged; auto-capture is
+  [3.1]'s when the write is wired in. No UI work in 5.1.*
 - **D1 — System-prompt vs "normal" prompt / prompt *shape*.** Today execution is fixed: version content →
   *system* prompt, fixture input → *user* turn (+ optional upstream context). That fits **all 54** current
   prompts (Golf + Stormboard are both system-prompt + serialized-input). A distinction would matter only for
@@ -228,6 +243,32 @@
   *reactive* critique in [[2.2]] (given run history), but the **proactive, at-build-time** craft guidance —
   the dataset sibling of 2.7's proactive prompt authoring — has no home. → *home: **new spec [2.13](../2.13.md)**
   (Dataset Design Assistant), drafted concept-only 2026-07-19 (user). Not built.*
+
+## Eval methodology — backport recommender (2026-07-20, tool-native backport walk)
+- **R9 — The backport-target recommender blends across subject models (R5 confound, now in the "ship this"
+  engine).** Walking `round-debrief`'s in-tool backport: Current = **v1** (`claude-sonnet-4-6`, Golf's real
+  model), and the Deployment card badges **`Backport target` = v2** — but **v2 ran on `claude-sonnet-5`**
+  (v2/v3/v4 = Sonnet 5; v1/v5/v6/v7 = Sonnet 4.6, confirmed from the Version-history model chips). v2's
+  Sonnet-5 scores (sparse ~0.90) outrank the honest real-model winner **v7** (Sonnet 4.6, ~0.84), so the
+  tool recommends shipping a version whose "win" is **the model, not the prompt** — the exact ~4×
+  overstatement **R5** documented, now steering the backport recommendation itself.
+  **Root cause:** `VersionStatusHandler` keys every series off **(dataset × `ScorerRef.Identity`)** — the
+  subject model (`PromptVersion.TargetModel`) is **not** part of the key. It takes the latest run per version
+  and compares raw means regardless of which model produced them. **2.9** closed the *scorer-config/rubric*
+  confound (a stale-rubric version can't win); the **subject-model** confound was never closed for the
+  deployment/backport engine — **R5**'s fix (2.12) only added add-version model-default+warn and a
+  cross-model flag in **Analytics/Compare**, *not* in `VersionStatusHandler` / the Deployment card.
+  **Impact:** (a) the recommendation can crown a spuriously-higher cross-model version; (b) worse, once *any*
+  stronger-model version exists in history, *every* real-model `Current` is **perpetually** nagged to backport
+  to it (the cross-model score always "wins"), so the card can **never** reach a clean "nothing beats
+  Current → done." This blocks round-debrief from ever showing an honest recommendation and would silently
+  mislead any future prompt whose history spans models. **Fix:** hold the subject model constant in
+  eligibility + target selection — only compare versions sharing `Current`'s subject model (exclude or flag
+  cross-model series), the sibling of the same-scorer-config rule; add a cross-model warning on the
+  Deployment card. **The fill sheet's earlier prediction that "2.9 picks v7 over v2" was wrong** — 2.9 holds
+  the *scorer config* constant, not the *model*. → *home: **[2.9a](../2.9a.md)** — folded in 2026-07-20
+  (user decision), as the sibling of its same-scorer-config rigor. Not built in 5.1; round-debrief backport
+  routed to v7 by hand meanwhile.*
 
 ## Ops / infra
 - **O1 — Dev deployed without the Anthropic key set.** Provisioning shipped the secret as a placeholder;
