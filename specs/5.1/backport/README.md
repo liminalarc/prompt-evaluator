@@ -17,10 +17,11 @@ and have now been re-formalized **through the tool** (all by hand — 5.1 stays 
   v2** (Sonnet 5) over v7 (Sonnet 4.6) — the **R9** subject-model confound (see `../findings.md`; homed to
   [2.9a](../../2.9a.md)). So we **bypassed the target button and the v2 artifact**: a source-repo agent applied
   the hand-made **v7** drop-in (`round-debrief.md`, this dir) to Golf in a clean one-file commit **`d04617ed`**,
-  then in-tool **Set as current in source → v7** via the v7 row (NOT `Mark backported → v2`). ⚠️ The Deployment
-  card **still badges `Backport target = v2`** — a known R9 artifact (cross-model versions perpetually out-score
-  any real-model Current); ignore until 2.9a ships. `Prepare backport` was **not** usable here (it would emit a
-  v2 artifact) — so this drop-in stays hand-made, unlike daily-briefing's.
+  then in-tool **Set as current in source → v7** via the v7 row (NOT `Mark backported → v2`). At the time the
+  Deployment card mis-badged `Backport target = v2` — the **R9** subject-model confound — so `Prepare backport`
+  was **not** usable (it would have emitted a v2 artifact) and this drop-in stayed hand-made, unlike
+  daily-briefing's. **✅ R9 fixed + deployed 2026-07-20 (`2ccc27f`, [2.9a](../../2.9a.md)):** the card now shows
+  **no target** (v7 is top among Sonnet-4.6 versions) + **⚠ 3 cross-model versions excluded**.
 - ~~**`daily-briefing` (Golf)**~~ — ✅ **DONE (2026-07-20).** Re-formalized through the tool: Set Current = v1
   → target badge = v2 → **Prepare backport** (artifact reproduced the committed drop-in byte-for-byte — 1.20
   dogfood pass) → a **source-repo agent applied v2 to Golf**, clean one-file commit **`abd385f8`** → **Mark

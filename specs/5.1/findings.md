@@ -268,9 +268,9 @@
   Deployment card. **The fill sheet's earlier prediction that "2.9 picks v7 over v2" was wrong** — 2.9 holds
   the *scorer config* constant, not the *model*. → *home: **[2.9a](../2.9a.md)** — folded in + **R9 slice
   SHIPPED 2026-07-20 (`c362be7`)**: eligibility/target now hold the subject model constant + a cross-model
-  card warning. round-debrief's card self-corrects on next deploy (status is derived live). The deliberate
-  cross-model-comparison counterpart → new spec **[1.21](../1.21.md)**. round-debrief was routed to v7 by
-  hand meanwhile.*
+  card warning. **Verified live on dev** (`2ccc27f`): round-debrief's card now shows **no target** (the v2
+  mis-pick gone; v7 is top among Sonnet-4.6 versions) + **⚠ 3 cross-model versions excluded**. The deliberate
+  cross-model-comparison counterpart → new spec **[1.21](../1.21.md)**.*
 
 ## Ops / infra
 - **O1 — Dev deployed without the Anthropic key set.** Provisioning shipped the secret as a placeholder;

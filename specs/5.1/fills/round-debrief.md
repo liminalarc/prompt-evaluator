@@ -40,8 +40,9 @@ the prompt** (R5, quantified). Rationales (not scores) drove every call from the
   So we **bypassed** the v2 target button + the (v2) `Prepare backport` artifact: a source-repo agent applied
   the hand-made **v7** drop-in ([../backport/round-debrief.md](../backport/round-debrief.md)) to Golf, clean
   one-file commit **`d04617ed`**, then in-tool **Set as current in source → v7** via the v7 row.
-  ⚠️ The card **still shows `Backport target = v2`** — known R9 artifact (cross-model versions perpetually
-  out-score any real-model Current); ignore until 2.9a ships.
+  At the time the card mis-showed `Backport target = v2` (the R9 confound). **✅ R9 fixed + deployed
+  2026-07-20 (`2ccc27f`, [../../2.9a.md](../../2.9a.md)):** the card now shows **no target** (v7 is top among
+  the Sonnet-4.6 versions) + **⚠ 3 cross-model versions excluded** — the mis-pick this prompt exposed is gone.
 
 ## Learnings
 1. **Hold the subject model (R5).** A cross-model comparison overstated the prompt's effect ~4×; the real gain only showed on Golf's actual model.
