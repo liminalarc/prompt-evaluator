@@ -127,6 +127,16 @@
   results into synthetic fixtures (evaluates the reasoning, not the retrieval) — partial fidelity only.
   → *home: **[1.18](../1.18.md)** — new standalone spec (user 2026-07-18); or decline-with-reason per
   prompt. Not built in 5.1.*
+- **F4 — Auto-repeat a run N times (variance-native runs).** Gauging run-to-run noise (R4 / spec 2.14's
+  "one run lies") today means manually re-triggering the *same* `version × dataset × scorers` run 2–3× and
+  reading the **Variance view**. A **run-count** control on the run form ("run this N times") that fires N
+  runs in one action and feeds the variance aggregation directly would make **stability a first-class,
+  one-click operation** instead of hand-repetition. Surfaced walking `golf-dna` — the JSON-fence defect is
+  **stochastic** (v1 2/5 fenced; v2 run 1 = 0/5), so a single run can't confirm a fix; you *must* repeat.
+  **Couplings:** it's the producer half of **[2.14](../2.14.md)** (the variance consumer already shipped),
+  and it depends on **[2.17](../2.17.md)** async runs (N sequential runs multiply wall-clock and blow past
+  the sync timeout — R1). Design notes: pick a small N (e.g. 3/5/10), surface progress, one aggregated result.
+  → *home: **[2.17](../2.17.md)** — folded into async runs' scope (user 2026-07-22); async is the enabler.*
 - **Corollary (process, not a feature):** we do **not** create backport specs in source repos as a rule —
   can't assume a source app is on our process. The backport *process* is defined in 5.1 (playbook step 9:
   manual commit, or decline with reason); the *record* is the fill sheet + T3/T4 tick + source git history.
@@ -271,6 +281,57 @@
   card warning. **Verified live on dev** (`2ccc27f`): round-debrief's card now shows **no target** (the v2
   mis-pick gone; v7 is top among Sonnet-4.6 versions) + **⚠ 3 cross-model versions excluded**. The deliberate
   cross-model-comparison counterpart → new spec **[1.21](../1.21.md)**.*
+
+## UX / consistency (2026-07-22, golf-dna walk)
+- **U17 — Add/reveal forms stay open after a successful submit — revisit the 2.4 decision.** After
+  **`Add version`** (workspace), **`Add test case`** and **`Add scorer`** (dataset) succeed, the reveal form
+  stays open (fields clear, but `showCapture`/`showAddScorer`/the add-version toggle are **not** reset to
+  closed — `dataset-detail.ts` success paths reset fields only; the `set(false)` lives in the *cancel* paths).
+  This is
+  **working as designed** — 2.4 explicitly chose "creation forms reveal behind `+` toggles **that stay open
+  after submit**" (web/CLAUDE.md) so you can add several in a row. **Operator feedback (2026-07-22):** it reads
+  as clutter — the add surface looks "always present," and for **add-version** the content is pre-seeded from
+  the latest version (U11), so an open post-submit form invites an accidental duplicate version. Requested
+  behavior: **collapse back to the summary/`+` after a successful add** (revealed again on `+`); if a
+  rapid-multi-add affordance is still wanted, make it explicit ("Add another"). Not a bug — a deliberate-UX
+  reversal, and it applies uniformly to **all three** reveal forms (version / test case / scorer). Observed
+  registering `golf-dna` v1 + F1 + scorers. → *home: **[2.23](../../2.23.md)**.*
+
+- **U18 — Add-test-case `Origin` defaults to `Captured` — manual entry mislabels as real capture.** The
+  add form's `fixtureOrigin` signal (`dataset-detail.ts` ~L817) initialises to `'Captured'` and resets to
+  `'Captured'` after each add (~L1004/L1205); the form is literally the capture form (`data-testid="capture"`).
+  So an inattentive hand-add stamps a synthetic case `Captured`. This is **U8 landed incompletely** — 2.8 added
+  the Origin selector but left the default on the value that's *wrong* for the common manual-entry path.
+  Hit registering `golf-dna` F1 (synthetic) as `Captured`. Fix: default **`Synthetic`** (manual entry is
+  hand-written by definition), or no default (force a pick). → *home: **[2.23](../../2.23.md)**.*
+- **U19 — A wrong `Origin` is unrecoverable without deleting the whole dataset.** `Origin` is immutable
+  (2.8: input/origin/seed fixed; `editFixture` patches only label/description) **and** there is **no
+  single-test-case delete** in the web client (`datasets-api.service.ts` exposes `deleteDataset` only) — so
+  fixing U18's mislabel means nuking the entire dataset + every case in it. `Origin` is provenance metadata,
+  **not** part of score identity (`Prompt × Version × Dataset × Scorer`), unlike `input`/`seed` — so making it
+  editable is defensible on its own terms. Fix (chosen): **per-test-case delete** (delete + re-add), keeping
+  `Origin` immutable per the domain. → *home: **[2.23](../../2.23.md)**.*
+- **U20 — Test-case `Prompt input` textarea is 2 rows — too short; and it should NOT be markdown.** The
+  input (and `Upstream SLM output` / `Expected output`) render `<textarea rows="2">` (`dataset-detail.ts`
+  ~L234/244/254) — cramped for a multi-section JSON block. Make it **taller / auto-growing, monospace**
+  (JSON pretty-print/validate would help). **Not** the 2.10 MarkdownEditor: the input is *data* (JSON for
+  golf-dna; serialized input generally), not prose — markdown would mangle it, which is exactly why 2.10
+  gated the editor to Content/Rubric and kept Regex/JsonSchema configs plain. → *home: **[2.23](../../2.23.md)**.*
+
+- **U21 — Eval-run per-test-case scorer badges render in an unstable order (varies row to row).** On the
+  run page each test-case summary row lists its per-scorer badges in a **different order** (observed on
+  `golf-dna` baseline: `JsonSchema·LlmJudge·Regex`, `LlmJudge·Regex·JsonSchema`, `LlmJudge·JsonSchema·Regex`,
+  `Regex·LlmJudge·JsonSchema`, … across the 5 rows). Almost certainly rendered from an unordered map of
+  scores (keyed by scorer id) with no sort. Kills at-a-glance scanning — your eye can't track "the JsonSchema
+  column" down the list, which is exactly how the 2/5 JSON failures were easy to miss. Fix: sort badges by a
+  **stable key** on every row (scorer kind, or scorer creation order / `ScorerRef.Identity`) so the columns
+  line up. → *home: **[2.23](../../2.23.md)**.*
+
+- **U22 (minor) — `Prepare backport → Copy exact prompt` omits the trailing newline.** The copied artifact
+  is byte-identical to the version content but has **no EOF newline**; pasted straight into a source file that
+  conventionally ends with one (Golf's `golf-dna.md` does), it adds a spurious "\ No newline at end of file"
+  to the diff. Likely the stored version content is trimmed. Low priority. Caught verifying golf-dna v2 (used
+  the newline-correct staged `backport/golf-dna.md` instead). → *home: **TBD** (1.20 `Prepare backport` follow-up).*
 
 ## Ops / infra
 - **O1 — Dev deployed without the Anthropic key set.** Provisioning shipped the secret as a placeholder;

@@ -45,10 +45,12 @@ rubric) and what the app actually runs it on (→ fidelity). Capture the values 
    - **`Label (optional description)`** — e.g. `baseline`; the v-number is automatic.
    - **`Add version.`** Confirm the history row shows the right **Target model**.
 
-## Step 3 — Dataset + fixtures
+## Step 3 — Dataset + test cases
+> **Terminology:** the UI labels these **Test cases** (renamed 2026-07-22). The domain/architecture term is
+> still **fixture** (capture-first fixtures, `Fixture.Input`) — same thing; `catalog.md`/`findings.md` use it.
 1. Workspace → **`Datasets`** card → **`+ New dataset`**: **`New dataset name`** (coverage, not a version)
    + **`Description (optional)`**. → **`Add dataset`**. Open it (`/datasets/<id>`).
-2. **`Fixtures`** card → **`+ Add fixture`**, once per fixture. Fields in order:
+2. **`Test cases`** card → **`+ Add test case`**, once per test case. Fields in order:
    - **`Label (optional)`** — a short scenario name ("improving mid-handicapper"); shown in the table.
    - **`Description (optional)`**.
    - **`Origin`** — **`Captured (from real app traffic)`** for real inputs; **`Synthetic (hand-written)`**
@@ -58,7 +60,7 @@ rubric) and what the app actually runs it on (→ fidelity). Capture the values 
      model's output (then paste it; it's prepended as context).
    - **`Expected output (optional)`** — blank for freeform prompts (judged by rubric); fill only with a real
      reference answer (e.g. extraction ground-truth).
-   - **`Add fixture.`** Repeat. Confirm the row count and the `Origin` filter.
+   - **`Add test case.`** Repeat. Confirm the row count and the `Origin` filter.
 > To grow coverage from a captured seed, use **`+ Generate synthetic`** (Coverage goals / Edge cases /
 > Count → **Generate**) — it correctly stamps origin **Synthetic**.
 
@@ -80,13 +82,13 @@ Two entry points (same run):
 - **From the dataset** — **`Run evaluation`** card: **`Prompt`** is fixed to the owning prompt (read-only,
   B3) → **`Version`** = `v1 · <target model>` (confirm it's the app's model) → **`Run evaluation`**.
 
-Lands on `/eval-runs/<id>`: each fixture is a **summary row** (label + per-scorer badges) that **expands**
+Lands on `/eval-runs/<id>`: each test case is a **summary row** (label + per-scorer badges) that **expands**
 (U10) to output, latency/tokens/cost, and a score row per scorer. **Record the baseline** in the fill sheet —
-judge value per fixture + aggregate, and which fixtures fail any guardrail. That's the number to beat. The
-dataset's **`Runs`** table shows `Version · Model · Scorers · Fixtures` (U14).
+judge value per test case + aggregate, and which test cases fail any guardrail. That's the number to beat. The
+dataset's **`Runs`** table shows `Version · Model · Scorers · Test cases` (U14).
 
 ## Step 6 — Diagnose
-On the run page, expand the **low-scoring fixtures** and read output + judge detail. Form **one** hypothesis
+On the run page, expand the **low-scoring test cases** and read output + judge detail. Form **one** hypothesis
 (e.g. "over-runs the word limit on sparse data," "vague when only stats are present").
 
 ## Step 7 — Improve → v2
@@ -100,8 +102,8 @@ is automatic (U4), don't repeat it in the label. → **`Add version`**.
 default 0.05). **`Score trend`** charts v1→v2 per scorer **plus a `weighted composite` line** (2.9) — one
 overall-quality number blending the per-scorer means by their per-dataset weights, so a high-signal scorer
 (LLM judge) outweighs a low-signal one (RegEx). **`Regressions`** flags drops (Confirmed + Possible);
-**`Compare versions`** (**`From`**/**`To`**) gives per-fixture deltas — the **Fixture** column now shows your
-fixture **label** (U7), not a GUID. Iterate **v3+** on the *same dataset + scorers* until satisfied or
+**`Compare versions`** (**`From`**/**`To`**) gives per-test-case deltas — the **Test case** column now shows your
+test-case **label** (U7), not a GUID. Iterate **v3+** on the *same dataset + scorers* until satisfied or
 diminishing returns.
 > **The same composite drives the backport target.** Once you set a Current marker (Step 9), the workspace
 > **Deployment** card names the single version to ship — ranked by this weighted composite over same-scorer-config
@@ -136,7 +138,7 @@ agent applies the drop-in.
 > `asset-mapping`) also **extract to `Prompts/*.md`** via `FilePromptStore` (fixes the smell) — Stormboard's call; T4.
 > **Before backporting, confirm on the *real* model + across runs:** hold the subject model (R5 — add-version
 > defaults to the latest model + warns on change), and a single run lies — read the **rationale**, not just the
-> number (R4/R7), and run a noisy fixture 2–3× (round-debrief F4 swung 0.82→0.72 on one run).
+> number (R4/R7), and run a noisy test case 2–3× (round-debrief F4 swung 0.82→0.72 on one run).
 > **Why tool-native now:** F1 (no deployed marker) shipped as **[1.16]**; weighted target ranking as **[2.9]**;
 > the artifact as **[1.20]**. Direct source-repo commits proved messy (an unrelated Golf commit rode along) and
 > were reverted — the `backport/` file + the in-tool marker are the record; wired-in PR/registry write is **[3.1]**.
@@ -149,6 +151,10 @@ the source-repo agent consumes.
 
 ---
 
-## Fill sheets — one per prompt
-Copy-paste form values (all fields in UI order + a baseline/iteration log) live in **`fills/<name>.md`**.
-Template & first example: [fills/daily-briefing.md](fills/daily-briefing.md).
+## Per-prompt sheets — one per prompt (self-contained walkthroughs)
+Each prompt gets a **standalone walkthrough** at **`fills/<name>.md`**: this runbook's Steps 0–10 inlined
+with that prompt's exact copy-paste values (v1 content, test cases, scorer configs/rubric, backport paths) +
+a baseline table. Drive it top-to-bottom without cross-referencing this file.
+**Template / current example:** [fills/golf-dna.md](fills/golf-dna.md).
+*(The earlier `daily-briefing.md` / `round-debrief.md` sheets are closed prompts, kept in the older condensed
+durable-record form; new walks use the standalone format.)*
