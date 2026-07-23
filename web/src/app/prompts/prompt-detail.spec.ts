@@ -456,6 +456,38 @@ describe('PromptDetail (unified workspace)', () => {
     expect(cmp.content()).toBe('Summarize: {input}'); // pre-filled from v1 to edit, not paste
   });
 
+  // U17 (2.23) — the add-version reveal form collapses + resets after a successful add.
+  it('collapses the add-version form and resets fields after a successful add [U17]', () => {
+    const fixture = setup();
+    const cmp = fixture.componentInstance as unknown as {
+      toggleAddVersion: () => void;
+      content: { set: (v: string) => void } & (() => string);
+      label: { set: (v: string) => void } & (() => string);
+      targetModel: { set: (v: string) => void };
+      addVersion: (e: Event) => void;
+      showAddVersion: () => boolean;
+    };
+    cmp.toggleAddVersion();
+    fixture.detectChanges();
+    cmp.content.set('You summarize concisely.');
+    cmp.targetModel.set('claude-sonnet-5');
+    cmp.label.set('v2');
+    cmp.addVersion(new Event('submit'));
+
+    const post = httpMock.expectOne('/api/prompts/p1/versions');
+    expect(post.request.method).toBe('POST');
+    post.flush(prompt);
+    // load() refreshes the prompt + version-status.
+    httpMock.expectOne('/api/prompts/p1').flush(prompt);
+    httpMock.expectOne('/api/prompts/p1/version-status').flush(versionStatus);
+    fixture.detectChanges();
+
+    expect(cmp.showAddVersion()).toBe(false); // collapsed
+    expect(cmp.content()).toBe(''); // reset
+    expect(cmp.label()).toBe('');
+    expect(fixture.nativeElement.querySelector('[data-testid="add-version"]')).toBeNull();
+  });
+
   // 2.11 — Cancel on the reveal/expand surfaces (add-version, create-dataset, edit-label, run).
   it('cancels the add-version form, discarding seeded/typed content and collapsing it [2.11]', () => {
     const fixture = setup();

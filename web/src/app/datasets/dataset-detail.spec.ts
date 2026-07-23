@@ -293,6 +293,52 @@ describe('DatasetDetail run form + scorer config', () => {
     ]);
   });
 
+  // U17 (2.23) — reveal forms collapse + reset after a successful add (reverses 2.4's stay-open).
+  it('collapses the add-fixture form and resets fields after a successful capture [U17]', () => {
+    const fixture = render();
+    const api = TestBed.inject(DatasetsApiService) as unknown as {
+      captureFixtures: (id: string, t: unknown) => unknown;
+    };
+    api.captureFixtures = () => of(dataset);
+    const cmp = fixture.componentInstance as unknown as {
+      showCapture: { set: (v: boolean) => void } & (() => boolean);
+      promptInput: { set: (v: string) => void } & (() => string);
+      fixtureLabel: { set: (v: string) => void } & (() => string);
+      capture: (e: Event) => void;
+    };
+    cmp.showCapture.set(true);
+    fixture.detectChanges();
+    cmp.promptInput.set('a hand-written case');
+    cmp.fixtureLabel.set('a label');
+    cmp.capture(new Event('submit'));
+    fixture.detectChanges();
+
+    expect(cmp.showCapture()).toBe(false); // collapsed
+    expect(cmp.promptInput()).toBe(''); // reset
+    expect(cmp.fixtureLabel()).toBe('');
+    expect(fixture.nativeElement.querySelector('[data-testid="capture"]')).toBeNull();
+  });
+
+  it('collapses the add-scorer form and resets fields after a successful add [U17]', () => {
+    const fixture = render();
+    const cmp = fixture.componentInstance as unknown as {
+      showAddScorer: { set: (v: boolean) => void } & (() => boolean);
+      scorerKind: { set: (v: string) => void };
+      scorerConfig: { set: (v: string) => void } & (() => string);
+      addScorer: (e: Event) => void;
+    };
+    cmp.showAddScorer.set(true);
+    cmp.scorerKind.set('Regex');
+    cmp.scorerConfig.set('^OUT:');
+    fixture.detectChanges();
+    cmp.addScorer(new Event('submit'));
+    fixture.detectChanges();
+
+    expect(cmp.showAddScorer()).toBe(false); // collapsed
+    expect(cmp.scorerConfig()).toBe(''); // reset
+    expect(fixture.nativeElement.querySelector('[data-testid="add-scorer"]')).toBeNull();
+  });
+
   // 2.11 — Cancel on the reveal/expand surfaces (add-fixture, generate, edit-fixture, scorers).
   it('cancels the add-fixture form, discarding input and collapsing it without a capture [2.11]', () => {
     let captureCalled = false;

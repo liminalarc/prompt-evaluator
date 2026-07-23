@@ -1251,6 +1251,8 @@ export class PromptDetail implements OnInit {
         next: () => {
           this.content.set('');
           this.label.set('');
+          // U17: collapse the reveal form after a successful add — reopen via `+`.
+          this.showAddVersion.set(false);
           this.load();
         },
         error: () => this.error.set('Could not add the version.'),

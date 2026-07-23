@@ -1002,6 +1002,8 @@ export class DatasetDetail implements OnInit {
           this.fixtureLabel.set('');
           this.fixtureDescription.set('');
           this.fixtureOrigin.set('Captured');
+          // U17: collapse the reveal form after a successful add — reopen via `+`.
+          this.showCapture.set(false);
         },
         error: (err) => this.error.set(serverError(err) ?? 'Could not add the test case.'),
       });
@@ -1085,6 +1087,8 @@ export class DatasetDetail implements OnInit {
         next: () => {
           this.scorerConfig.set('');
           this.scorerWeight.set(1);
+          // U17: collapse the reveal form after a successful add — reopen via `+`.
+          this.showAddScorer.set(false);
           this.loadScorers();
         },
         error: (err) =>
