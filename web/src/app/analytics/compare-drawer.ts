@@ -24,14 +24,18 @@ type Tab = 'content' | 'scores' | 'rationale';
         <form class="compare__pickers">
           <div class="sb-field">
             <label for="cmp-from">From</label>
+            <!-- U22 (2.23): drive the selection with [selected] on each option, not [value] on the
+                 select. A [value] on a native <select> whose <option>s come from @for is assigned
+                 before the options exist, so the box falls back to its first option (To showed v1
+                 while toId was v2). [selected] is re-evaluated per option each CD, so the rendered
+                 selection always tracks the signal. -->
             <select
               id="cmp-from"
               data-testid="compare-from"
-              [value]="fromId() ?? ''"
               (change)="fromId.set($any($event.target).value)"
             >
               @for (v of versions(); track v.id) {
-                <option [value]="v.id">{{ vLabel(v) }}</option>
+                <option [value]="v.id" [selected]="v.id === fromId()">{{ vLabel(v) }}</option>
               }
             </select>
           </div>
@@ -41,11 +45,10 @@ type Tab = 'content' | 'scores' | 'rationale';
             <select
               id="cmp-to"
               data-testid="compare-to"
-              [value]="toId() ?? ''"
               (change)="toId.set($any($event.target).value)"
             >
               @for (v of versions(); track v.id) {
-                <option [value]="v.id">{{ vLabel(v) }}</option>
+                <option [value]="v.id" [selected]="v.id === toId()">{{ vLabel(v) }}</option>
               }
             </select>
           </div>

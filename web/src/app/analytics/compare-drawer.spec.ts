@@ -147,6 +147,21 @@ describe('CompareDrawer [2.19 W7]', () => {
     expect(el.querySelector('[data-testid="fixture-deltas"]')).toBeFalsy();
   });
 
+  // U22 (2.23) — the To select's rendered selection must reflect toId() (v2), not fall back to the
+  // first option (v1). The seeded pair is From=v1 → To=v2; the picker showed v1 in the To box.
+  it('renders the To picker on the seeded target version, not the first option [U22]', () => {
+    const fixture = TestBed.createComponent(Host);
+    fixture.detectChanges();
+    http.expectOne((r) => r.url === '/api/analytics/comparison').flush(comparison);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    const from = el.querySelector('[data-testid="compare-from"]') as HTMLSelectElement;
+    const to = el.querySelector('[data-testid="compare-to"]') as HTMLSelectElement;
+    expect(from.value).toBe('v1'); // From seeded to the prior version
+    expect(to.value).toBe('v2'); // To seeded to the latest — the box must show it
+  });
+
   it('switches to Scores and Rationale tabs off the one From→To pick', () => {
     const fixture = TestBed.createComponent(Host);
     fixture.detectChanges();
