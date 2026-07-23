@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { Dataset } from '../dataset';
+import { ConfirmService } from '../shared';
 import { DatasetDetail } from './dataset-detail';
 import { DatasetsApiService } from './datasets-api.service';
 import { EvalRunsApiService } from '../eval-runs/eval-runs-api.service';
@@ -473,6 +474,63 @@ describe('DatasetDetail run form + scorer config', () => {
     cmp.editFixtureLabel.set('renamed');
     cmp.saveFixtureMeta(new Event('submit'), 'f1');
     expect(patched).toEqual(jasmine.objectContaining({ fixtureId: 'f1', label: 'renamed' }));
+  });
+
+  // U19 (2.23) — a single test case can be deleted (the recovery path for a mislabeled origin).
+  it('confirms, then deletes one test case and refreshes the dataset [U19]', async () => {
+    let deleted: { id: string; fixtureId: string } | null = null;
+    const fixture = render();
+    const confirmSvc = TestBed.inject(ConfirmService);
+    const askSpy = spyOn(confirmSvc, 'ask').and.returnValue(Promise.resolve(true));
+    const api = TestBed.inject(DatasetsApiService) as unknown as {
+      deleteFixture: (id: string, fixtureId: string) => unknown;
+    };
+    // The updated dataset comes back with only f1 (f2 removed).
+    api.deleteFixture = (id, fixtureId) => {
+      deleted = { id, fixtureId };
+      return of({ ...dataset, fixtures: dataset.fixtures.filter((f) => f.id !== fixtureId) });
+    };
+    const cmp = fixture.componentInstance as unknown as {
+      deleteFixture: (fixtureId: string) => Promise<void>;
+      dataset: () => Dataset;
+    };
+
+    await cmp.deleteFixture('f2');
+    fixture.detectChanges();
+
+    expect(askSpy).toHaveBeenCalledTimes(1); // asked before deleting
+    expect(deleted!.fixtureId).toBe('f2'); // deletes the named case
+    expect(cmp.dataset().fixtures.map((f) => f.id)).toEqual(['f1']); // only that case went
+  });
+
+  it('does not delete a test case when the confirmation is cancelled [U19]', async () => {
+    let called = false;
+    const fixture = render();
+    const confirm = TestBed.inject(ConfirmService);
+    spyOn(confirm, 'ask').and.returnValue(Promise.resolve(false));
+    const api = TestBed.inject(DatasetsApiService) as unknown as {
+      deleteFixture: () => unknown;
+    };
+    api.deleteFixture = () => {
+      called = true;
+      return of(dataset);
+    };
+    const cmp = fixture.componentInstance as unknown as {
+      deleteFixture: (fixtureId: string) => Promise<void>;
+    };
+
+    await cmp.deleteFixture('f2');
+    expect(called).toBe(false); // nothing deleted on cancel
+  });
+
+  it('exposes a per-row delete action on an expanded fixture [U19]', () => {
+    const fixture = render();
+    const cmp = fixture.componentInstance as unknown as { toggleFixture: (id: string) => void };
+    cmp.toggleFixture('f1');
+    fixture.detectChanges();
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="delete-fixture"]'),
+    ).not.toBeNull();
   });
 
   it('expands a scorer row to edit (reconfigure) or remove it [U9]', () => {

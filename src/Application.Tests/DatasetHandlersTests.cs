@@ -170,6 +170,47 @@ public class DatasetHandlersTests
     }
 
     [Fact]
+    public async Task DeleteFixture_removes_only_that_fixture_and_saves()
+    {
+        var repo = new InMemoryDatasetRepo();
+        var existing = Dataset.Create(Guid.NewGuid(), "Summaries");
+        var keep = existing.AddCapturedFixture("keep me", When, label: "keep");
+        var drop = existing.AddManualFixture(FixtureOrigin.Synthetic, "wrong origin", When);
+        await repo.AddAsync(existing);
+        var handler = new DeleteFixtureHandler(repo);
+
+        var updated = await handler.HandleAsync(existing.Id, drop.Id);
+
+        Assert.NotNull(updated);
+        var f = Assert.Single(updated!.Fixtures);
+        Assert.Equal(keep.Id, f.Id); // the other case survives
+        Assert.Equal(1, repo.SaveChangesCalls);
+    }
+
+    [Fact]
+    public async Task DeleteFixture_returns_null_when_the_fixture_does_not_exist()
+    {
+        var repo = new InMemoryDatasetRepo();
+        var existing = Dataset.Create(Guid.NewGuid(), "Summaries");
+        existing.AddCapturedFixture("keep me", When);
+        await repo.AddAsync(existing);
+        var handler = new DeleteFixtureHandler(repo);
+
+        Assert.Null(await handler.HandleAsync(existing.Id, Guid.NewGuid()));
+        Assert.Equal(0, repo.SaveChangesCalls);
+    }
+
+    [Fact]
+    public async Task DeleteFixture_returns_null_when_the_dataset_does_not_exist()
+    {
+        var repo = new InMemoryDatasetRepo();
+        var handler = new DeleteFixtureHandler(repo);
+
+        Assert.Null(await handler.HandleAsync(Guid.NewGuid(), Guid.NewGuid()));
+        Assert.Equal(0, repo.SaveChangesCalls);
+    }
+
+    [Fact]
     public async Task CaptureFixtures_redacts_pii_before_persisting()
     {
         var repo = new InMemoryDatasetRepo();

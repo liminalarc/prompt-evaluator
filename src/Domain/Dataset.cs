@@ -143,6 +143,22 @@ public sealed class Dataset
         return true;
     }
 
+    /// <summary>
+    /// Removes a single fixture from the dataset (U19 — the recovery path for a mislabeled origin:
+    /// delete + re-add, since origin is immutable). Past eval-runs reference the fixture by id in a
+    /// separate aggregate, so they are unaffected. Returns false when the fixture is not in this
+    /// dataset.
+    /// </summary>
+    public bool RemoveFixture(Guid fixtureId)
+    {
+        var fixture = _fixtures.FirstOrDefault(f => f.Id == fixtureId);
+        if (fixture is null)
+            return false;
+
+        _fixtures.Remove(fixture);
+        return true;
+    }
+
     private static string RequireInput(string input)
     {
         if (string.IsNullOrWhiteSpace(input))

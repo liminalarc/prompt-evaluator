@@ -222,6 +222,44 @@ public sealed class DatasetsEndpointTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Delete_fixture_removes_only_that_fixture()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync();
+        var promptId = await CreatePromptAsync(client);
+        var create = await client.PostAsJsonAsync($"/api/prompts/{promptId}/datasets", new { name = "Del", description = (string?)null });
+        var created = await create.Content.ReadFromJsonAsync<DatasetDto>();
+        await client.PostAsJsonAsync($"/api/datasets/{created!.Id}/fixtures/capture", new
+        {
+            tuples = new[]
+            {
+                new { promptInput = "keep", input = (string?)null, slmOutput = (string?)null, downstreamResult = (string?)null },
+                new { promptInput = "drop", input = (string?)null, slmOutput = (string?)null, downstreamResult = (string?)null },
+            },
+        });
+        var withFixtures = await client.GetFromJsonAsync<DatasetDto>($"/api/datasets/{created.Id}");
+        var dropId = withFixtures!.Fixtures.Single(f => f.Input == "drop").Id;
+
+        var delete = await client.DeleteAsync($"/api/datasets/{created.Id}/fixtures/{dropId}");
+        Assert.Equal(HttpStatusCode.OK, delete.StatusCode);
+
+        var fetched = await client.GetFromJsonAsync<DatasetDto>($"/api/datasets/{created.Id}");
+        var fixture = Assert.Single(fetched!.Fixtures);
+        Assert.Equal("keep", fixture.Input); // only the named case went
+    }
+
+    [Fact]
+    public async Task Delete_unknown_fixture_returns_404()
+    {
+        var client = await _factory.CreateAuthenticatedClientAsync();
+        var promptId = await CreatePromptAsync(client);
+        var create = await client.PostAsJsonAsync($"/api/prompts/{promptId}/datasets", new { name = "D404", description = (string?)null });
+        var created = await create.Content.ReadFromJsonAsync<DatasetDto>();
+
+        var delete = await client.DeleteAsync($"/api/datasets/{created!.Id}/fixtures/{Guid.NewGuid()}");
+        Assert.Equal(HttpStatusCode.NotFound, delete.StatusCode);
+    }
+
+    [Fact]
     public async Task List_returns_a_summary_with_origin_counts()
     {
         var client = await _factory.CreateAuthenticatedClientAsync();

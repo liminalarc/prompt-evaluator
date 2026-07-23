@@ -77,6 +77,7 @@ builder.Services.AddScoped<SetModelActiveHandler>();
 builder.Services.AddScoped<CreateDatasetHandler>();
 builder.Services.AddScoped<CaptureFixturesHandler>();
 builder.Services.AddScoped<EditFixtureHandler>();
+builder.Services.AddScoped<DeleteFixtureHandler>();
 builder.Services.AddScoped<GenerateSyntheticFixturesHandler>();
 builder.Services.AddScoped<ConfigureDatasetScorersHandler>();
 builder.Services.AddScoped<RunEvaluationHandler>();

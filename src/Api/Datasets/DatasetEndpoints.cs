@@ -104,6 +104,18 @@ public static class DatasetEndpoints
                 return dataset is null ? Results.NotFound() : Results.Ok(DatasetResponse.From(dataset));
             });
 
+        // Delete a single test case (U19) — the recovery path for a mislabeled origin (delete +
+        // re-add, since origin is immutable). Other fixtures/scorers/runs are untouched. Org-scoped
+        // via the owning prompt; a missing dataset/fixture is 404.
+        group.MapDelete("/{id:guid}/fixtures/{fixtureId:guid}",
+            async (Guid id, Guid fixtureId, DeleteFixtureHandler handler, OrgAccess access, CancellationToken ct) =>
+            {
+                if ((await access.CanAccessDatasetAsync(id, ct)).ToProblem() is { } problem)
+                    return problem;
+                var dataset = await handler.HandleAsync(id, fixtureId, ct);
+                return dataset is null ? Results.NotFound() : Results.Ok(DatasetResponse.From(dataset));
+            });
+
         group.MapPost("/{id:guid}/fixtures/generate",
             async (Guid id, GenerateFixturesRequest request, GenerateSyntheticFixturesHandler handler, OrgAccess access, CancellationToken ct) =>
             {

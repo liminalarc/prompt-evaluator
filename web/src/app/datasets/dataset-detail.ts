@@ -179,6 +179,16 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                             >
                               Cancel
                             </button>
+                            <!-- U19: delete this one test case — the recovery path for a wrong
+                                 origin (origin is immutable, so it's delete + re-add). -->
+                            <button
+                              class="sb-btn sb-btn--danger sb-btn--sm"
+                              type="button"
+                              data-testid="delete-fixture"
+                              (click)="deleteFixture(f.id)"
+                            >
+                              Delete test case
+                            </button>
                           </div>
                         </form>
                       </td>
@@ -1169,6 +1179,28 @@ export class DatasetDetail implements OnInit {
         this.loadScorers();
       },
       error: (err) => this.error.set(serverError(err) ?? 'Could not remove the scorer.'),
+    });
+  }
+
+  // U19: delete a single test case. Origin is immutable (2.8/domain), so a mislabeled case is
+  // recovered by deleting it and re-adding with the right origin. Past runs reference the fixture by
+  // id in a separate aggregate, so they're untouched. Confirms first, then swaps in the updated set.
+  protected async deleteFixture(fixtureId: string): Promise<void> {
+    const ok = await this.confirm.ask({
+      title: 'Delete test case',
+      message:
+        'Removes this one test case from the dataset. Past runs keep their scores; the dataset’s ' +
+        'other test cases and scorers are untouched. This cannot be undone.',
+      confirmLabel: 'Delete test case',
+    });
+    if (!ok) return;
+    this.error.set(null);
+    this.api.deleteFixture(this.id, fixtureId).subscribe({
+      next: (d) => {
+        this.dataset.set(d);
+        this.expandedFixtureId.set(null);
+      },
+      error: (err) => this.error.set(serverError(err) ?? 'Could not delete the test case.'),
     });
   }
 

@@ -128,6 +128,30 @@ public class DatasetTests
     }
 
     [Fact]
+    public void RemoveFixture_removes_only_the_named_fixture()
+    {
+        var dataset = Dataset.Create(PromptId, "Summaries");
+        var keep = dataset.AddCapturedFixture("keep me", When, label: "keep");
+        var drop = dataset.AddManualFixture(FixtureOrigin.Synthetic, "wrong origin", When);
+
+        var ok = dataset.RemoveFixture(drop.Id);
+
+        Assert.True(ok);
+        Assert.Single(dataset.Fixtures);
+        Assert.Equal(keep.Id, dataset.Fixtures[0].Id); // the other case is untouched
+    }
+
+    [Fact]
+    public void RemoveFixture_returns_false_for_an_unknown_fixture()
+    {
+        var dataset = Dataset.Create(PromptId, "Summaries");
+        dataset.AddCapturedFixture("Summarize this", When);
+
+        Assert.False(dataset.RemoveFixture(Guid.NewGuid()));
+        Assert.Single(dataset.Fixtures); // nothing removed
+    }
+
+    [Fact]
     public void AddSyntheticFixture_rejects_an_empty_seed()
     {
         var dataset = Dataset.Create(PromptId, "Summaries");

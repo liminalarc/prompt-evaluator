@@ -72,4 +72,11 @@ describe('DatasetsApiService', () => {
     expect(req.request.method).toBe('DELETE');
     req.flush(null);
   });
+
+  it('deletes a single fixture and returns the updated dataset [U19]', () => {
+    service.deleteFixture('abc', 'f2').subscribe();
+    const req = httpMock.expectOne('/api/datasets/abc/fixtures/f2');
+    expect(req.request.method).toBe('DELETE');
+    req.flush({ id: 'abc', name: 'x', description: null, fixtures: [] });
+  });
 });

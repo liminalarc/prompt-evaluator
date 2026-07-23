@@ -55,4 +55,12 @@ export class DatasetsApiService {
   deleteDataset(id: string): Observable<void> {
     return this.http.delete<void>(`/api/datasets/${id}`);
   }
+
+  /**
+   * Deletes a single test case (U19) — the recovery path for a mislabeled origin (delete + re-add,
+   * since origin is immutable). Returns the updated dataset; other cases/scorers/runs are untouched.
+   */
+  deleteFixture(id: string, fixtureId: string): Observable<Dataset> {
+    return this.http.delete<Dataset>(`/api/datasets/${id}/fixtures/${fixtureId}`);
+  }
 }
