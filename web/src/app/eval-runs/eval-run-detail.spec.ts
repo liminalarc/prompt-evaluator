@@ -105,6 +105,62 @@ describe('EvalRunDetail', () => {
     expect(hrefs).toContain('/datasets/d1');
   });
 
+  // U21 (2.23) — scorer badges render in a stable order on every row, even when the API returns
+  // each fixture's scores in a different order, so the columns line up for scanning.
+  it('renders scorer badges in the same stable order on every test-case row [U21]', () => {
+    const fixture = TestBed.createComponent(EvalRunDetail);
+    fixture.detectChanges();
+
+    const regex = {
+      scorerKind: 'Regex',
+      scorerIdentity: 'a',
+      judgeModel: null,
+      value: 1,
+      passed: true,
+      detail: null,
+    };
+    const judge = {
+      scorerKind: 'LlmJudge',
+      scorerIdentity: 'b',
+      judgeModel: 'claude-opus-4-8',
+      value: 0.9,
+      passed: true,
+      detail: 'judged',
+    };
+    httpMock.expectOne('/api/eval-runs/run-1').flush({
+      id: 'run-1',
+      promptId: 'p1',
+      promptVersionId: 'v1',
+      datasetId: 'd1',
+      createdAt: '2026-07-12T12:00:00Z',
+      results: [
+        // f1: Regex then LlmJudge …
+        { fixtureId: 'f1', modelOutput: 'x', latencyMs: 1, inputTokens: 1, outputTokens: 1, costUsd: 0, scores: [regex, judge] },
+        // f2: LlmJudge then Regex — the reverse order from the API.
+        { fixtureId: 'f2', modelOutput: 'y', latencyMs: 1, inputTokens: 1, outputTokens: 1, costUsd: 0, scores: [judge, regex] },
+      ],
+    });
+    httpMock
+      .expectOne('/api/prompts/p1')
+      .flush({ id: 'p1', folderId: null, name: 'Summarizer', description: null, versions: [] });
+    httpMock
+      .expectOne('/api/datasets/d1')
+      .flush({ id: 'd1', promptId: 'p1', name: 'Summaries', description: null, fixtures: [] });
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const rows = el.querySelectorAll('[data-testid="fixture-run"]');
+    expect(rows.length).toBe(2);
+    const kindsPerRow = Array.from(rows).map((r) =>
+      Array.from(r.querySelectorAll('.fixture-run__scores app-status-badge')).map(
+        (b) => b.textContent!.trim().split(' ')[0],
+      ),
+    );
+    // Both rows show the same order despite the API's differing input order.
+    expect(kindsPerRow[0]).toEqual(kindsPerRow[1]);
+    expect(kindsPerRow[0]).toEqual(['LlmJudge', 'Regex']); // stable sort by kind
+  });
+
   it('shows an error when the run cannot be loaded', () => {
     const fixture = TestBed.createComponent(EvalRunDetail);
     fixture.detectChanges();

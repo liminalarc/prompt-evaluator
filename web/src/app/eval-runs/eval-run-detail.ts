@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { EvalRun } from '../eval-run';
+import { EvalRun, FixtureRunView, ScoreView } from '../eval-run';
 import { Fixture } from '../dataset';
 import { PromptsApiService } from '../prompts/prompts-api.service';
 import { DatasetsApiService } from '../datasets/datasets-api.service';
@@ -66,7 +66,7 @@ import { EvalRunsApiService } from './eval-runs-api.service';
               >
                 <span class="fixture-run__label">{{ fixtureLabel(fixtureRun.fixtureId) }}</span>
                 <span class="fixture-run__scores">
-                  @for (score of fixtureRun.scores; track score.scorerIdentity) {
+                  @for (score of orderedScores(fixtureRun); track score.scorerIdentity) {
                     <app-status-badge
                       [variant]="pass(score.passed).variant"
                       [label]="score.scorerKind + ' ' + score.value"
@@ -130,7 +130,7 @@ import { EvalRunsApiService } from './eval-runs-api.service';
                       </tr>
                     </thead>
                     <tbody>
-                      @for (score of fixtureRun.scores; track score.scorerIdentity) {
+                      @for (score of orderedScores(fixtureRun); track score.scorerIdentity) {
                         <tr [attr.data-scorer]="score.scorerKind">
                           <td><app-chip [label]="score.scorerKind" /></td>
                           <td>
@@ -280,6 +280,19 @@ export class EvalRunDetail implements OnInit {
     const next = new Set(this.expanded());
     next.has(fixtureId) ? next.delete(fixtureId) : next.add(fixtureId);
     this.expanded.set(next);
+  }
+
+  /**
+   * U21: render a fixture-run's scores in a stable order on every row (the API doesn't guarantee an
+   * order), so the badge/table columns line up for scanning. Sort by scorer kind, then by the stable
+   * scorer identity as a tie-break. Returns a sorted copy — never mutates the run.
+   */
+  protected orderedScores(fixtureRun: FixtureRunView): ScoreView[] {
+    return [...fixtureRun.scores].sort(
+      (a, b) =>
+        a.scorerKind.localeCompare(b.scorerKind) ||
+        a.scorerIdentity.localeCompare(b.scorerIdentity),
+    );
   }
 
   /** Fixture label if it has one, else a short form of its input, else the id — for the summary row. */
