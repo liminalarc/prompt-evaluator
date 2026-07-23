@@ -33,7 +33,9 @@ test('registers a prompt, records versions, and diffs them', async ({ page, requ
   await page.getByTestId('add-version').click();
   await expect(page.getByTestId('versions')).toContainText('claude-sonnet-5');
 
-  // Add second version.
+  // Add second version. The add-version form collapses after a successful add (2.23 U17), so
+  // re-open it before recording the next version.
+  await page.getByTestId('toggle-add-version').click();
   await page.fill('#content', 'Summarize concisely: {input}');
   await page.selectOption('#targetModel', 'claude-opus-4-8');
   await page.getByTestId('add-version').click();

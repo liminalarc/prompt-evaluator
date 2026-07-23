@@ -41,10 +41,12 @@ test('creates a dataset in a prompt workspace, captures a fixture, and filters b
 
   await expect(page.getByRole('heading', { name: datasetName })).toBeVisible();
 
-  // Capture a ground-truth fixture.
+  // Capture a ground-truth fixture. The manual origin now defaults to Synthetic (2.23 U18), so
+  // choose Captured explicitly for this ground-truth case.
   await page.getByTestId('toggle-capture').click();
   await page.fill('#promptInput', 'summarize this captured thread');
   await page.fill('#slmOutput', 'raw upstream slm output');
+  await page.getByTestId('fixture-origin').selectOption('Captured');
   await page.getByTestId('capture').click();
 
   const fixtures = page.getByTestId('fixtures');
