@@ -180,6 +180,17 @@ The operator-facing UI:
   unified **Compare** (Content · Scores · Rationale off one From→To). *Not* for small inline add/edit
   forms (those keep the 2.11 reveal + Cancel pattern) and *not* for always-on primary data.
 
+## Native `<select>` with dynamic options (from 2.23)
+
+- **Drive the selection with `[selected]` on each `<option>`, never `[value]` on the `<select>`.** A
+  `[value]` bound on a native `<select>` whose `<option>`s render from `@for` is assigned *before* the
+  options mount, so the box silently falls back to its first option (this shipped a Compare drawer that
+  compared v1→v2 but displayed "v1" in the To picker — U22). `[ngModel]` did **not** reflect
+  synchronously under the app's change detection either. The reliable pattern is `(change)` on the
+  select + `[selected]="opt.id === signal()"` on each option — Angular re-evaluates `[selected]` per
+  option every CD, so the rendered choice always tracks the signal. Applies to any signal-driven select
+  with `@for` options.
+
 ## E2e that needs a model (from 1.2)
 
 - An e2e that would trigger a live model call (synthetic generation) runs against a **stubbed

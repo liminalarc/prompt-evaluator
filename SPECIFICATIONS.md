@@ -27,7 +27,6 @@
 - **2.16** Data-conditional / per-fixture rubric scoring — `NOT STARTED` — [detail](specs/2.16.md)
 - **2.17** Asynchronous eval runs (job + poll) + repeat-N runs — `NOT STARTED` — [detail](specs/2.17.md)
 - **2.22** Simplify navigation — drop the dashboard, lead with Prompts (+ org gear for members) — `NOT STARTED` — [detail](specs/2.22.md)
-- **2.23** Eval-loop UX polish — collapse reveal forms after submit; test-case origin default/delete; taller input (golf-dna dogfood) — `IN PROGRESS` — [detail](specs/2.23.md)
 
 ## Phase 3 — Integrations & Ops
 - **3.1** Zatomic-backed Prompt Registry — `NOT STARTED` — [detail](specs/3.1.md)
@@ -42,6 +41,7 @@
 - **6.3** AI-usage ledger accuracy & scale follow-ups (from the 6.1/6.2 review) — `NOT STARTED` — [detail](specs/6.3.md)
 
 ## Archive
+- **2.23** Eval-loop UX polish — collapse reveal forms after submit; test-case origin default/delete; taller input; Compare picker fix (golf-dna dogfood) — `DONE` — [detail](specs/archive/2.23.md)
 - **1.20** Backport assistance (generate the artifact to ship the target — prompt or markdown) — `DONE` — [detail](specs/archive/1.20.md)
 - **2.9** Weighted composite scoring (per-dataset scorer weights → one overall score) — `DONE` — [detail](specs/archive/2.9.md)
 - **6.2** Unify Model Catalog display price with the authoritative ledger pricing table — `DONE` — [detail](specs/archive/6.2.md)
