@@ -135,9 +135,25 @@ describe('EvalRunDetail', () => {
       createdAt: '2026-07-12T12:00:00Z',
       results: [
         // f1: Regex then LlmJudge …
-        { fixtureId: 'f1', modelOutput: 'x', latencyMs: 1, inputTokens: 1, outputTokens: 1, costUsd: 0, scores: [regex, judge] },
+        {
+          fixtureId: 'f1',
+          modelOutput: 'x',
+          latencyMs: 1,
+          inputTokens: 1,
+          outputTokens: 1,
+          costUsd: 0,
+          scores: [regex, judge],
+        },
         // f2: LlmJudge then Regex — the reverse order from the API.
-        { fixtureId: 'f2', modelOutput: 'y', latencyMs: 1, inputTokens: 1, outputTokens: 1, costUsd: 0, scores: [judge, regex] },
+        {
+          fixtureId: 'f2',
+          modelOutput: 'y',
+          latencyMs: 1,
+          inputTokens: 1,
+          outputTokens: 1,
+          costUsd: 0,
+          scores: [judge, regex],
+        },
       ],
     });
     httpMock

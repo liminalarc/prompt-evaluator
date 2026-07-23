@@ -315,9 +315,7 @@ describe('DatasetDetail run form + scorer config', () => {
       expect(field.classList).toContain('input-source'); // roomy + monospace
     }
     // The capture form never mounts the markdown editor — inputs are data, not prose.
-    expect(
-      fixture.nativeElement.querySelector('.reveal-form app-markdown-editor'),
-    ).toBeNull();
+    expect(fixture.nativeElement.querySelector('.reveal-form app-markdown-editor')).toBeNull();
   });
 
   // U18 (2.23) — manual add-test-case origin defaults to Synthetic (hand entry is hand-written),
@@ -528,9 +526,7 @@ describe('DatasetDetail run form + scorer config', () => {
     const cmp = fixture.componentInstance as unknown as { toggleFixture: (id: string) => void };
     cmp.toggleFixture('f1');
     fixture.detectChanges();
-    expect(
-      fixture.nativeElement.querySelector('[data-testid="delete-fixture"]'),
-    ).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="delete-fixture"]')).not.toBeNull();
   });
 
   it('expands a scorer row to edit (reconfigure) or remove it [U9]', () => {
