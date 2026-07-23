@@ -5,6 +5,50 @@ SemVer (pre-1.0 `0.x`) across the API, web, and eval-runner. A release is a tagg
 as of `0.13.0` it also deploys to a hosted **dev** environment on every push to `main` (spec 3.2).
 There is no prod target yet.
 
+## [0.23.0] — 2026-07-23
+
+**Eval-loop UX polish + a green build.** The `golf-dna` dogfood round's friction findings (U17–U22)
+are fixed: add-forms now collapse after a successful submit, manual test cases default to an honest
+`Synthetic` origin and can be **deleted one at a time** (the recovery path for a mislabeled origin),
+the fixture inputs are roomy monospace fields, eval-run scorer badges line up in a stable order, and
+the Compare drawer's From/To pickers show the version actually selected. Also folds in the
+incremental **2.9a R9** backport-eligibility slice (already live on dev) and the **5.1** golf-dna
+dogfooding record, and clears a freshly-published dependency advisory (NU1903) that had been failing
+the `backend` and `compose-smoke` CI gates since 2026-07-22.
+
+### Added
+
+- **[#2.23] Eval-loop UX polish** ([detail](specs/archive/2.23.md)):
+  - **U17** — add-version, add-test-case and add-scorer reveal forms collapse (and reset) after a
+    successful add, reopening via `+` (reverses 2.4's stay-open behavior for these three).
+  - **U18** — the manual add-test-case `Origin` defaults to `Synthetic` (hand entry is hand-written).
+  - **U19** — a **per-test-case delete**: `Dataset.RemoveFixture` + `DeleteFixtureHandler` +
+    **`DELETE /api/prompts`-scoped `/api/datasets/{id}/fixtures/{fixtureId}`** (org-gated, `404` on a
+    missing dataset/fixture); a confirmed "Delete test case" action on the expanded fixture row. Other
+    cases/scorers/runs are untouched; origin stays immutable, so this is the mislabel recovery path.
+  - **U20** — the Prompt-input / Upstream-SLM-output / Expected-output fields are taller, monospace,
+    drag-resizable textareas (data/JSON, not prose — never the 2.10 markdown editor).
+  - **U21** — eval-run per-test-case scorer badges render in a **stable order** on every row (sorted
+    by scorer kind, then identity) so columns line up for scanning.
+- **[#2.9a] Subject-model-constant backport eligibility (R9)** ([detail](specs/2.9a.md)): backport
+  eligibility holds the subject model constant so a score delta reflects the prompt, not a model swap.
+
+### Fixed
+
+- **[#2.23] Compare drawer From/To picker (U22)**: a `[value]` bound on a native `<select>` whose
+  `<option>`s come from `@for` is assigned before the options mount, so the box fell back to its first
+  option (comparing v1→v2 while the To box read "v1"). Drive the selection with `[selected]` per option
+  instead — re-evaluated each change-detection pass so the rendered choice tracks the signal.
+- **[#2.23] Clear NU1903 dependency advisory**: bump the pinned AspNetCore/EFCore `10.0.9` packages to
+  the `10.0.10` servicing release across Api / Api.Tests / Infrastructure / Infrastructure.Tests, so the
+  fixed transitive `System.Security.Cryptography.Xml 10.0.10` flows in and the api image / dev deploy
+  build clean again.
+
+### Docs
+
+- **[#5.1] Dogfooding** ([detail](specs/5.1/5.1.md)): closed the `golf-dna` walk (T3 3/6) and homed its
+  findings into 2.23 / 2.17.
+
 ## [0.22.0] — 2026-07-20
 
 **Backport assistance.** Once LitmusAI flags the single backport target (1.16 / 2.9), the prompt
