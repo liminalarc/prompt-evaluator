@@ -812,9 +812,10 @@ export class DatasetDetail implements OnInit {
   protected readonly slmOutput = signal('');
   protected readonly expectedOutput = signal('');
   // Manual add-fixture metadata: label/description + operator-chosen origin (U7/U8).
+  // U18: manual entry is hand-written, so the honest default is Synthetic (was Captured).
   protected readonly fixtureLabel = signal('');
   protected readonly fixtureDescription = signal('');
-  protected readonly fixtureOrigin = signal<'Captured' | 'Synthetic'>('Captured');
+  protected readonly fixtureOrigin = signal<'Captured' | 'Synthetic'>('Synthetic');
   // Fixture rows expand to a detail panel with an inline metadata editor (U6/U7).
   protected readonly expandedFixtureId = signal<string | null>(null);
   protected readonly editFixtureLabel = signal('');
@@ -1001,7 +1002,7 @@ export class DatasetDetail implements OnInit {
           this.expectedOutput.set('');
           this.fixtureLabel.set('');
           this.fixtureDescription.set('');
-          this.fixtureOrigin.set('Captured');
+          this.fixtureOrigin.set('Synthetic');
           // U17: collapse the reveal form after a successful add — reopen via `+`.
           this.showCapture.set(false);
         },

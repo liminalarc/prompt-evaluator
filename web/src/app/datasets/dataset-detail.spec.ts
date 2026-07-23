@@ -293,6 +293,33 @@ describe('DatasetDetail run form + scorer config', () => {
     ]);
   });
 
+  // U18 (2.23) — manual add-test-case origin defaults to Synthetic (hand entry is hand-written),
+  // and resets back to Synthetic after a successful add.
+  it('defaults the manual add-test-case origin to Synthetic [U18]', () => {
+    const fixture = render();
+    const cmp = fixture.componentInstance as unknown as { fixtureOrigin: () => string };
+    expect(cmp.fixtureOrigin()).toBe('Synthetic');
+  });
+
+  it('resets the add-test-case origin to Synthetic after a successful capture [U18]', () => {
+    const fixture = render();
+    const api = TestBed.inject(DatasetsApiService) as unknown as {
+      captureFixtures: (id: string, t: unknown) => unknown;
+    };
+    api.captureFixtures = () => of(dataset);
+    const cmp = fixture.componentInstance as unknown as {
+      showCapture: { set: (v: boolean) => void };
+      promptInput: { set: (v: string) => void };
+      fixtureOrigin: { set: (v: string) => void } & (() => string);
+      capture: (e: Event) => void;
+    };
+    cmp.showCapture.set(true);
+    cmp.promptInput.set('another hand-written case');
+    cmp.fixtureOrigin.set('Captured'); // operator overrode it for this add
+    cmp.capture(new Event('submit'));
+    expect(cmp.fixtureOrigin()).toBe('Synthetic'); // resets to the honest default
+  });
+
   // U17 (2.23) — reveal forms collapse + reset after a successful add (reverses 2.4's stay-open).
   it('collapses the add-fixture form and resets fields after a successful capture [U17]', () => {
     const fixture = render();
