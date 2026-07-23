@@ -27,7 +27,7 @@
 - **2.16** Data-conditional / per-fixture rubric scoring — `NOT STARTED` — [detail](specs/2.16.md)
 - **2.17** Asynchronous eval runs (job + poll) + repeat-N runs — `NOT STARTED` — [detail](specs/2.17.md)
 - **2.22** Simplify navigation — drop the dashboard, lead with Prompts (+ org gear for members) — `NOT STARTED` — [detail](specs/2.22.md)
-- **2.23** Eval-loop UX polish — collapse reveal forms after submit; test-case origin default/delete; taller input (golf-dna dogfood) — `NOT STARTED` — [detail](specs/2.23.md)
+- **2.23** Eval-loop UX polish — collapse reveal forms after submit; test-case origin default/delete; taller input (golf-dna dogfood) — `IN PROGRESS` — [detail](specs/2.23.md)
 
 ## Phase 3 — Integrations & Ops
 - **3.1** Zatomic-backed Prompt Registry — `NOT STARTED` — [detail](specs/3.1.md)
