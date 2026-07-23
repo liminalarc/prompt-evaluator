@@ -234,7 +234,8 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                 <textarea
                   id="promptInput"
                   name="promptInput"
-                  rows="2"
+                  class="input-source"
+                  rows="6"
                   [ngModel]="promptInput()"
                   (ngModelChange)="promptInput.set($event)"
                 ></textarea>
@@ -244,7 +245,8 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                 <textarea
                   id="slmOutput"
                   name="slmOutput"
-                  rows="2"
+                  class="input-source"
+                  rows="4"
                   [ngModel]="slmOutput()"
                   (ngModelChange)="slmOutput.set($event)"
                 ></textarea>
@@ -254,7 +256,8 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
                 <textarea
                   id="expectedOutput"
                   name="expectedOutput"
-                  rows="2"
+                  class="input-source"
+                  rows="4"
                   [ngModel]="expectedOutput()"
                   (ngModelChange)="expectedOutput.set($event)"
                   data-testid="expected-output"
@@ -727,6 +730,21 @@ type OriginFilter = 'all' | 'Captured' | 'Synthetic';
       .fixture-row--open,
       .scorer-row--open {
         background: var(--sb-surface-raised);
+      }
+      /* U20: fixture inputs are data/JSON, not prose — roomy monospace textareas that grow with
+         content (field-sizing where supported) and stay drag-resizable. Plain textareas, never
+         the 2.10 markdown editor (that's gated to Content/Rubric). */
+      .input-source {
+        width: 100%;
+        box-sizing: border-box;
+        resize: vertical;
+        min-height: 7rem;
+        field-sizing: content;
+        max-height: 30rem;
+        font-family: var(--sb-font-mono);
+        font-size: var(--sb-type-small-size);
+        line-height: 1.5;
+        tab-size: 2;
       }
       /* W3/W21: Regex/JsonSchema configs are source (patterns/schemas) — monospace + resizable. */
       .config-source {

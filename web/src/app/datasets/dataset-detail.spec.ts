@@ -293,6 +293,32 @@ describe('DatasetDetail run form + scorer config', () => {
     ]);
   });
 
+  // U20 (2.23) — the fixture input / upstream / expected fields are roomy monospace textareas
+  // (data/JSON, not prose), still plain <textarea>s — never the 2.10 markdown editor.
+  it('renders the fixture input fields as taller monospace plain textareas [U20]', () => {
+    const fixture = render();
+    const cmp = fixture.componentInstance as unknown as {
+      showCapture: { set: (v: boolean) => void };
+    };
+    cmp.showCapture.set(true);
+    fixture.detectChanges();
+
+    const promptInput = fixture.nativeElement.querySelector('#promptInput') as HTMLTextAreaElement;
+    const slmOutput = fixture.nativeElement.querySelector('#slmOutput') as HTMLTextAreaElement;
+    const expected = fixture.nativeElement.querySelector(
+      '[data-testid="expected-output"]',
+    ) as HTMLTextAreaElement;
+
+    for (const field of [promptInput, slmOutput, expected]) {
+      expect(field.tagName).toBe('TEXTAREA'); // plain textarea, not a markdown editor
+      expect(field.classList).toContain('input-source'); // roomy + monospace
+    }
+    // The capture form never mounts the markdown editor — inputs are data, not prose.
+    expect(
+      fixture.nativeElement.querySelector('.reveal-form app-markdown-editor'),
+    ).toBeNull();
+  });
+
   // U18 (2.23) — manual add-test-case origin defaults to Synthetic (hand entry is hand-written),
   // and resets back to Synthetic after a successful add.
   it('defaults the manual add-test-case origin to Synthetic [U18]', () => {
