@@ -344,3 +344,8 @@
 - **O1 — Dev deployed without the Anthropic key set.** Provisioning shipped the secret as a placeholder;
   the first eval was the first thing to exercise it. The next environment shouldn't repeat this — add a
   post-deploy check that a real key is present. → *home: 3.2 / infra runbook*
+- **O2 (fixed) — flaky `auth.spec.ts` e2e broke `compose-smoke` intermittently.** The post-logout guard
+  assertion (`goto('/prompts')` → expect `/login`) raced the server cookie-clear: a full-page load's
+  initializer could still see a live session and admit `/prompts`. Passed locally 3/3 but reddened a release
+  CI run (2026-07-24). Fixed by gating on the real signal — `expect.poll` `/api/auth/me` until `401` before
+  the guard navigation — so the test can't outrun logout. → *home: built (web/e2e/auth.spec.ts).*

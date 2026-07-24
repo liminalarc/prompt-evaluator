@@ -42,7 +42,13 @@ test('register a new user, land authenticated, then logout', async ({ page, requ
   await expect(page).toHaveURL(/\/login/);
   await expect(page.getByTestId('logout')).toHaveCount(0);
 
-  // The guard still protects the app after logout.
+  // The guard still protects the app after logout. Gate on the *server* session actually being
+  // cleared before the guard test: a bare goto right after logout races the cookie-clear, so a
+  // full-page load's initializer can still see a live session and admit /prompts (a CI flake —
+  // 5.1 O2). Poll /api/auth/me until it is 401, then the guard is guaranteed to redirect.
+  await expect
+    .poll(async () => (await page.request.get('/api/auth/me')).status(), { timeout: 10_000 })
+    .toBe(401);
   await page.goto('/prompts');
   await expect(page).toHaveURL(/\/login/);
 });
