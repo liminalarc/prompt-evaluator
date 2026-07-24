@@ -24,7 +24,7 @@ type Tab = 'content' | 'scores' | 'rationale';
         <form class="compare__pickers">
           <div class="sb-field">
             <label for="cmp-from">From</label>
-            <!-- U22 (2.23): drive the selection with [selected] on each option, not [value] on the
+            <!-- U23 (2.23): drive the selection with [selected] on each option, not [value] on the
                  select. A [value] on a native <select> whose <option>s come from @for is assigned
                  before the options exist, so the box falls back to its first option (To showed v1
                  while toId was v2). [selected] is re-evaluated per option each CD, so the rendered

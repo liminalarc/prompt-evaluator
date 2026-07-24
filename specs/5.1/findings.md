@@ -333,6 +333,13 @@
   to the diff. Likely the stored version content is trimmed. Low priority. Caught verifying golf-dna v2 (used
   the newline-correct staged `backport/golf-dna.md` instead). → *home: **TBD** (1.20 `Prepare backport` follow-up).*
 
+- **U23 — Compare drawer From/To pickers show the wrong version.** Surfaced while reviewing the golf-dna
+  compare: the drawer was comparing v1→v2 but the To box displayed "v1". A `[value]` bound on a native
+  `<select>` whose `<option>`s render from `@for` is assigned before the options mount, so the box falls back
+  to its first option; `[ngModel]` didn't reflect synchronously either. Fix: drive selection with `[selected]`
+  per option. → *home: **[2.23](../../2.23.md)** (shipped v0.23.0). Numbered U23 — U22 above is the EOF-newline
+  finding; the 2.23 commit/tag predate this renumber and carry the old "U22" label.*
+
 ## Ops / infra
 - **O1 — Dev deployed without the Anthropic key set.** Provisioning shipped the secret as a placeholder;
   the first eval was the first thing to exercise it. The next environment shouldn't repeat this — add a

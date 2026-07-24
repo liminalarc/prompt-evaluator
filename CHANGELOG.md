@@ -7,7 +7,7 @@ There is no prod target yet.
 
 ## [0.23.0] — 2026-07-23
 
-**Eval-loop UX polish + a green build.** The `golf-dna` dogfood round's friction findings (U17–U22)
+**Eval-loop UX polish + a green build.** The `golf-dna` dogfood round's friction findings (U17–U21, U23)
 are fixed: add-forms now collapse after a successful submit, manual test cases default to an honest
 `Synthetic` origin and can be **deleted one at a time** (the recovery path for a mislabeled origin),
 the fixture inputs are roomy monospace fields, eval-run scorer badges line up in a stable order, and
@@ -35,7 +35,7 @@ the `backend` and `compose-smoke` CI gates since 2026-07-22.
 
 ### Fixed
 
-- **[#2.23] Compare drawer From/To picker (U22)**: a `[value]` bound on a native `<select>` whose
+- **[#2.23] Compare drawer From/To picker (U23)**: a `[value]` bound on a native `<select>` whose
   `<option>`s come from `@for` is assigned before the options mount, so the box fell back to its first
   option (comparing v1→v2 while the To box read "v1"). Drive the selection with `[selected]` per option
   instead — re-evaluated each change-detection pass so the rendered choice tracks the signal.
